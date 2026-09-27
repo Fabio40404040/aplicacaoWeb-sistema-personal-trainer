@@ -200,9 +200,9 @@
   position: absolute;
   z-index: 0;
   inset: 76px 0 0;
-  width: min(82vw, 1320px);
+  width: 100%;
   margin-inline: auto;
-  background: url('../assets/img/coach-cutout.png') center / contain no-repeat;
+  background: url('../assets/img/coach-cutout.png') center bottom / contain no-repeat;
   filter: saturate(1.03) contrast(1.02);
   -webkit-mask-image: none;
   mask-image: none;
