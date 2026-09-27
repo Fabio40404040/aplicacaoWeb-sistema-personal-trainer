@@ -1,0 +1,27 @@
+{
+  "name": "farisa-coach-dashboard",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write \"index.html\" \"src/**/*.{html,css,js}\" \"scripts/*.mjs\" \"backend/src/**/*.js\" \"backend/scripts/*.mjs\" \"*.{js,json}\" \"backend/*.{json,jsonc}\"",
+    "format:check": "prettier --check \"index.html\" \"src/**/*.{html,css,js}\" \"scripts/*.mjs\" \"backend/src/**/*.js\" \"backend/scripts/*.mjs\" \"*.{js,json}\" \"backend/*.{json,jsonc}\"",
+    "dev": "node scripts/dev.mjs",
+    "dev:frontend": "vite --open",
+    "dev:backend": "npm --prefix backend run dev",
+    "db:migrate:local": "npm --prefix backend run db:migrate:local",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.0",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

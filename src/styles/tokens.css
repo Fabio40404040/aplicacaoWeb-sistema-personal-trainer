@@ -1,0 +1,46 @@
+@font-face {
+  font-family: 'Ubuntu Sans';
+  src: url('../assets/fonts/UbuntuSans-Variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+}
+
+:root {
+  --blue-950: #071b4f;
+  --blue-900: #09276d;
+  --blue-700: #0d4be2;
+  --blue-600: #1764ff;
+  --blue-100: #e9f0ff;
+  --blue-50: #f3f7ff;
+  --cyan-600: #0784a8;
+  --cyan-100: #dff7fd;
+  --violet-600: #6d4ae8;
+  --violet-100: #eee9ff;
+  --green-600: #178555;
+  --green-100: #def7ea;
+  --amber-600: #ad6500;
+  --red-600: #d83a50;
+  --red-100: #ffe8ec;
+  --ink-900: #14213d;
+  --ink-700: #3f4c67;
+  --ink-500: #6d7890;
+  --ink-300: #aab3c3;
+  --line: #e6eaf1;
+  --canvas: #f5f7fb;
+  --white: #ffffff;
+  --public-surface: #edf1f6;
+  --public-card: #f8fafc;
+  --public-deep: #111827;
+  --shadow-sm: 0 1px 2px rgba(18, 31, 61, 0.04), 0 4px 16px rgba(18, 31, 61, 0.04);
+  --shadow-lg: 0 24px 60px rgba(6, 24, 73, 0.15);
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --header-height: 76px;
+  --sidebar-width: 252px;
+  font-family: 'Ubuntu Sans', sans-serif;
+  color: var(--ink-900);
+  background: var(--canvas);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "./backend/node_modules/wrangler/config-schema.json",
+  "name": "farisa-personal-trainer",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "farisa-coach",
+      "database_id": "COLE_AQUI_O_ID_DO_BANCO_FARISA",
+      "migrations_dir": "backend/migrations-d1",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "farisa-personal-media",
+    },
+  ],
+  "env": {
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "farisa-coach",
+          "database_id": "COLE_AQUI_O_ID_DO_BANCO_FARISA",
+          "migrations_dir": "backend/migrations-d1",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "farisa-personal-media",
+        },
+      ],
+      "vars": {
+        "ALLOWED_ORIGIN": "https://farisa-personal-trainer.pages.dev",
+        "PUBLIC_SITE_URL": "https://farisa-personal-trainer.pages.dev/",
+        "PUBLIC_API_URL": "https://farisa-personal-trainer.pages.dev",
+        "EMAIL_FROM": "contato@farisa.example",
+        "BREVO_FROM_NAME": "FARISA Personal Trainer",
+        "SESSION_TTL_SECONDS": "43200",
+      },
+    },
+  },
+}

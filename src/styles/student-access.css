@@ -1,0 +1,683 @@
+.student-access[hidden] {
+  display: none;
+}
+
+.registration-payment {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.registration-payment-title {
+  display: block;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.registration-payment-title[hidden] {
+  display: none;
+}
+.registration-payment[hidden] {
+  display: none;
+}
+.registration-payment strong {
+  color: #0e1b32;
+}
+.registration-payment p {
+  margin: 5px 0 0;
+  color: #66728a;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.registration-payment .button {
+  width: 100%;
+  text-align: center;
+}
+.pix-qr-code {
+  width: 190px;
+  max-width: 100%;
+  margin: 0 auto;
+  border: 8px solid #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(14, 27, 50, 0.12);
+}
+.pix-placeholder {
+  min-height: 170px;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  border: 2px dashed #aab7cb;
+  border-radius: 12px;
+  color: #60708c;
+  text-align: center;
+}
+.pix-placeholder span {
+  color: #0e1b32;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.pix-payment-details {
+  overflow: hidden;
+  border: 1px solid #ccd6e6;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(14, 27, 50, 0.08);
+}
+.pix-payment-details summary {
+  padding: 13px 15px;
+  color: #0e1b32;
+  font-weight: 800;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.pix-payment-details[open] summary {
+  border-bottom: 1px solid #e2e8f1;
+}
+.pix-payment-content {
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+}
+.card-payment-dialog {
+  width: min(94vw, 560px);
+  max-height: 92dvh;
+  border-radius: 20px;
+  background: #f8fafc;
+}
+.card-payment-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: 92dvh;
+}
+.card-payment-shell header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e1e7f0;
+  background: #fff;
+}
+.card-payment-shell header h2 {
+  margin: 3px 0 0;
+  font-size: 1.25rem;
+}
+.card-payment-dialog .modal-body {
+  gap: 14px;
+  padding: 18px 20px 20px;
+  overscroll-behavior: contain;
+}
+.mercado-pago-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 1px solid #d9e5ed;
+  border-radius: 12px;
+  background: #fff;
+  color: #526477;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.mercado-pago-brand img {
+  display: block;
+  width: 116px;
+  height: auto;
+}
+.card-order-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: #eaf7ff;
+  color: #10263f;
+}
+.card-order-summary div {
+  display: grid;
+  gap: 2px;
+}
+.card-order-summary span {
+  color: #60758b;
+  font-size: 0.72rem;
+}
+.card-order-summary > strong {
+  flex: 0 0 auto;
+  color: #007eb5;
+  font-size: 1.08rem;
+}
+.secure-card-form {
+  display: grid;
+  gap: 12px;
+}
+.mp-secure-field {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #c8d2e1;
+  border-radius: 10px;
+  background: #fff;
+}
+.mp-secure-field iframe {
+  display: block;
+  width: 100% !important;
+  height: 46px !important;
+}
+.secure-card-form .field-grid {
+  gap: 12px;
+}
+.secure-card-form .field input,
+.secure-card-form .field select {
+  min-height: 48px;
+  border-radius: 10px;
+  background: #fff;
+}
+.installments-field {
+  padding: 10px;
+  border: 1px solid #8dd8f8;
+  border-radius: 12px;
+  background: #effaff;
+}
+.installments-field select {
+  border-color: #009ee3;
+  color: #10263f;
+  font-weight: 800;
+}
+.installments-field small {
+  color: #527089;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.card-brand-field {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #d9e5ed;
+  border-radius: 12px;
+  background: #fff;
+  color: #233953;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.card-brand-result {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid #c8d2e1;
+  border-radius: 10px;
+  color: #526477;
+}
+.card-brand-result img {
+  width: 42px;
+  max-height: 27px;
+  object-fit: contain;
+}
+.card-brand-result strong {
+  font-size: 0.78rem;
+}
+.card-document-grid {
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+.card-pay-button {
+  min-height: 50px;
+  margin-top: 2px;
+  background: #009ee3;
+  box-shadow: 0 8px 20px rgba(0, 158, 227, 0.22);
+}
+.card-payment-progress {
+  width: 100%;
+  height: 4px;
+}
+.card-security-note {
+  display: block;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: #edf8f2;
+  color: #66728a;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.card-security-note strong {
+  color: #147a47;
+}
+@media (max-width: 640px) {
+  .card-payment-dialog {
+    width: min(96vw, 560px);
+    max-height: 94dvh;
+  }
+  .card-payment-shell {
+    max-height: 94dvh;
+  }
+  .card-payment-shell header,
+  .card-payment-dialog .modal-body {
+    padding-inline: 15px;
+  }
+  .mercado-pago-brand {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mercado-pago-brand img {
+    width: 108px;
+  }
+  .secure-card-form .card-meta-grid,
+  .secure-card-form .card-payment-options,
+  .secure-card-form .card-document-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .card-order-summary {
+    align-items: flex-start;
+  }
+}
+.password-control {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.password-control input {
+  width: 100%;
+  padding-right: 52px;
+}
+.password-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #355374;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.password-toggle svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.password-eye-slash {
+  display: none;
+}
+.password-toggle[aria-pressed="true"] .password-eye-slash {
+  display: block;
+}
+.password-toggle:focus-visible {
+  outline: 2px solid #3d8bfd;
+}
+.student-access {
+  min-height: 100vh;
+  background: #18212d;
+  color: #f5f7fb;
+  padding: 28px clamp(16px, 5vw, 70px);
+}
+.student-access > .brand {
+  color: #f5f7fb;
+  text-decoration: none;
+}
+.student-access-card {
+  display: grid;
+  gap: 20px;
+  width: min(100%, 510px);
+  margin: 42px auto;
+  padding: clamp(22px, 5vw, 42px);
+  background: #243244;
+  border: 1px solid #40546e;
+  border-radius: 20px;
+}
+.student-access-card fieldset {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.student-access-card fieldset:disabled {
+  opacity: 0.58;
+}
+.student-access-card h1,
+.student-access-card h2,
+.student-access-card p {
+  margin: 0;
+  color: inherit;
+}
+.student-access-card h1 {
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+}
+.student-access-card p {
+  color: #c1cee0;
+}
+.student-access-card .password-requirements {
+  margin-top: -10px;
+  padding: 12px 14px;
+  border-left: 3px solid #5aa7ff;
+  border-radius: 8px;
+  background: rgba(91, 168, 255, 0.09);
+  color: #d9e8fb;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.student-access-card a {
+  color: #91c5ff;
+}
+.student-access-card .field > span {
+  color: #eef4ff;
+}
+.student-access-card [role="status"]:empty {
+  display: none;
+}
+.student-access-card--panel {
+  width: min(100%, 900px);
+}
+.student-access-features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.student-access-features article {
+  padding: 20px;
+  border: 1px solid #40546e;
+  border-radius: 12px;
+}
+.student-access-features h2 {
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+.student-payment-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.student-payment-status:not(:empty) {
+  margin-top: 12px;
+}
+.student-pix-checkout:not(:empty) {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #fff;
+  color: #243244;
+  text-align: center;
+}
+.student-pix-checkout p {
+  color: #526477;
+}
+.student-pix-checkout .button {
+  width: min(100%, 280px);
+}
+.student-workout {
+  display: grid;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #40546e;
+}
+.student-workout:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.student-workout ol {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding-left: 22px;
+}
+.student-workout li {
+  padding-left: 4px;
+}
+.student-workout li p {
+  margin-top: 4px;
+}
+.student-muscle-group {
+  display: block;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #40546e;
+}
+.student-muscle-group summary {
+  margin: 0;
+  color: #dce9f8;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #18283b;
+  border: 1px solid #40546e;
+  user-select: none;
+}
+.student-muscle-group summary::-webkit-details-marker {
+  display: none;
+}
+.student-muscle-group summary::before {
+  content: "📁";
+  font-size: 1.05rem;
+}
+.student-muscle-group[open] > summary::before {
+  content: "📂";
+}
+.student-muscle-group summary::after {
+  content: "";
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #8ea3bd;
+  border-bottom: 2px solid #8ea3bd;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.student-muscle-group[open] > summary::after {
+  transform: rotate(45deg);
+}
+.student-muscle-group summary:hover {
+  border-color: #5c7396;
+}
+.student-muscle-group > ol {
+  margin-top: 12px;
+}
+.student-exercise-video {
+  width: min(100%, 520px);
+  aspect-ratio: 16 / 9;
+  display: block;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: #09111d;
+}
+.student-prescription-media {
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #40546e;
+  border-radius: 12px;
+  background: #18283b;
+}
+.student-prescription-media > strong {
+  color: #dce9f8;
+  font-size: 0.9rem;
+}
+.student-prescription-media .student-exercise-video {
+  margin-top: 0;
+}
+.student-video-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.student-video-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #40546e;
+  border-radius: 12px;
+  background: rgba(8, 18, 31, 0.28);
+}
+.student-video-card strong {
+  display: block;
+  margin-top: 10px;
+}
+.student-video-card p {
+  margin-top: 5px;
+}
+.exercise-3d-pending {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 6px 9px;
+  border: 1px dashed #607896;
+  border-radius: 8px;
+  color: #aebed2;
+  font-size: 0.78rem;
+}
+.student-feature-locked {
+  opacity: 0.78;
+  background: rgba(15, 25, 38, 0.24);
+}
+.student-card--login > a:last-child {
+  margin-top: 18px;
+}
+@media (max-width: 600px) {
+  .student-access-features {
+    grid-template-columns: 1fr;
+  }
+  .student-payment-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-exercise-gif {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 8px 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* GIF do exercício: toque para ampliar em tela cheia. */
+.student-exercise-gif {
+  cursor: zoom-in;
+}
+.student-gif-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 13, 24, 0.96);
+}
+.student-gif-viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.student-gif-viewer-bar span {
+  flex: 1;
+  min-width: 0;
+}
+.student-gif-viewer-close {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: #0b1220;
+  background: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-gif-viewer img {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  object-fit: contain;
+  padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+}
+
+/* Seta das pastas do treino: a mesma bolinha das bibliotecas do painel
+   (fundo azul-claro, contorno fino e seta azul), no lugar do risquinho. */
+.student-muscle-group summary::after {
+  content: "›";
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  border: 1px solid #c3d7ff;
+  border-radius: 999px;
+  color: var(--blue-700, #1d4ed8);
+  background: var(--blue-50, #eef4ff);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(90deg);
+}
+.student-muscle-group[open] > summary::after {
+  transform: rotate(-90deg);
+}
+
+/* Vídeo MP4 em tela cheia (mesma camada do GIF) e botão "Ver vídeo". */
+.student-gif-viewer video {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+  object-fit: contain;
+  background: transparent;
+}
+.student-watch-video {
+  display: inline-flex;
+  margin: 0 0 8px;
+}
+
+/* Check-in: resposta do personal. */
+.student-checkin-reply {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 3px solid #5b9bff;
+  border-radius: 10px;
+  background: #18283b;
+}
+.student-checkin-reply strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #dce9f8;
+  font-size: 0.85rem;
+}
+.student-checkin-reply p {
+  margin: 0;
+  color: #c7d5e6;
+  white-space: pre-wrap;
+}

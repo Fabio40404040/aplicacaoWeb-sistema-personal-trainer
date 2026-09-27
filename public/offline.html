@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="theme-color"
+      content="#18212d"
+    />
+    <title>FARISA Personal Trainer</title>
+    <style>
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        padding: 24px;
+        box-sizing: border-box;
+        color: #f5f7fb;
+        background: #18212d;
+        font-family: system-ui, sans-serif;
+      }
+      main {
+        max-width: 420px;
+        text-align: center;
+      }
+      img {
+        width: 88px;
+        height: 88px;
+        border-radius: 20px;
+      }
+      p {
+        color: #c1cee0;
+        line-height: 1.6;
+      }
+      button {
+        margin-top: 15px;
+        padding: 12px 20px;
+        border: 0;
+        border-radius: 10px;
+        color: white;
+        background: #1c67db;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img
+        src="/icons/icon-192.png"
+        alt=""
+      />
+      <h1>Você está sem conexão</h1>
+      <p>Conecte-se à internet para acessar sua conta, seus treinos e suas avaliações.</p>
+      <button
+        type="button"
+        onclick="location.reload()"
+      >
+        Tentar novamente
+      </button>
+    </main>
+  </body>
+</html>

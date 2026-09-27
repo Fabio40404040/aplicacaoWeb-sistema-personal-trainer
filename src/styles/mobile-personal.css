@@ -1,0 +1,54 @@
+@media (max-width: 860px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .login-screen,
+  .login-form-panel,
+  .app-shell,
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .sidebar {
+    justify-content: flex-start;
+    gap: 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .sidebar-footer {
+    gap: 12px;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .page[data-route='painel'] {
+    width: 100%;
+    max-width: 480px;
+    margin-inline: auto;
+  }
+
+  .page[data-route='painel'] .stats-grid,
+  .page[data-route='painel'] .dashboard-grid {
+    width: 100%;
+    max-width: 480px;
+    margin-inline: auto;
+  }
+
+  .page[data-route='painel'] .stat-card,
+  .page[data-route='painel'] .dashboard-grid > .panel {
+    width: 100%;
+    min-width: 0;
+    margin-inline: auto;
+  }
+}

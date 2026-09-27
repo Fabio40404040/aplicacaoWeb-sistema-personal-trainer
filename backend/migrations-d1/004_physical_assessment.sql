@@ -1,0 +1,16 @@
+ALTER TABLE assessments ADD COLUMN protocol TEXT NOT NULL DEFAULT 'Inicial';
+ALTER TABLE assessments ADD COLUMN height_cm REAL;
+ALTER TABLE assessments ADD COLUMN bmi REAL;
+ALTER TABLE assessments ADD COLUMN hip_cm REAL;
+ALTER TABLE assessments ADD COLUMN whr REAL;
+ALTER TABLE assessments ADD COLUMN chest_cm REAL;
+ALTER TABLE assessments ADD COLUMN arm_cm REAL;
+ALTER TABLE assessments ADD COLUMN thigh_cm REAL;
+ALTER TABLE assessments ADD COLUMN calf_cm REAL;
+ALTER TABLE assessments ADD COLUMN blood_pressure TEXT;
+ALTER TABLE assessments ADD COLUMN resting_hr INTEGER;
+ALTER TABLE assessments ADD COLUMN restriction TEXT;
+ALTER TABLE assessments ADD COLUMN parq TEXT;
+ALTER TABLE assessments ADD COLUMN push_ups INTEGER;
+ALTER TABLE assessments ADD COLUMN plank_seconds INTEGER;
+ALTER TABLE assessments ADD COLUMN sit_and_reach_cm REAL;

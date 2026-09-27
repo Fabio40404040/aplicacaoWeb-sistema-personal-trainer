@@ -1,0 +1,19 @@
+.personal-test-credentials {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--blue-50);
+  color: var(--ink-700);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.personal-test-credentials strong {
+  color: var(--blue-900);
+}
+
+.personal-test-credentials span {
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,8 @@
+SESSION_SECRET=troque-por-uma-chave-longa-e-aleatoria
+BREVO_API_KEY=xkeysib-sua-chave-aqui
+EMAIL_FROM=seu-remetente-verificado@seudominio.com
+BREVO_FROM_NAME=FARISA Personal Trainer
+# BREVO_REPLY_TO=contato@seudominio.com
+MERCADO_PAGO_PUBLIC_KEY=APP_USR-sua-chave-publica
+MERCADO_PAGO_ACCESS_TOKEN=APP_USR-sua-chave-privada
+MERCADO_PAGO_WEBHOOK_SECRET=sua-assinatura-secreta-do-webhook

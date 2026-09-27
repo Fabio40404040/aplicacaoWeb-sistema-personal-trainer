@@ -1,0 +1,2653 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="theme-color"
+      content="#18212d"
+    />
+    <meta
+      name="apple-mobile-web-app-capable"
+      content="yes"
+    />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta
+      name="apple-mobile-web-app-title"
+      content="FARISA Personal"
+    />
+    <meta
+      name="description"
+      content="FARISA Personal — musculação, avaliação física e acompanhamento personalizado."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/favicon.png"
+    />
+    <link
+      rel="manifest"
+      href="/app.webmanifest"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/icons/apple-touch-icon.png"
+    />
+    <link
+      rel="stylesheet"
+      href="/src/styles/main.css"
+    />
+    <title>FARISA Personal Trainer</title>
+  </head>
+  <body>
+    <svg
+      class="svg-definitions"
+      aria-hidden="true"
+    >
+      <symbol
+        id="icon-grid"
+        viewBox="0 0 24 24"
+      >
+        <rect
+          x="3"
+          y="3"
+          width="7"
+          height="7"
+          rx="2"
+        />
+        <rect
+          x="14"
+          y="3"
+          width="7"
+          height="7"
+          rx="2"
+        />
+        <rect
+          x="3"
+          y="14"
+          width="7"
+          height="7"
+          rx="2"
+        />
+        <rect
+          x="14"
+          y="14"
+          width="7"
+          height="7"
+          rx="2"
+        />
+      </symbol>
+      <symbol
+        id="icon-users"
+        viewBox="0 0 24 24"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle
+          cx="9"
+          cy="7"
+          r="4"
+        />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      </symbol>
+      <symbol
+        id="icon-dumbbell"
+        viewBox="0 0 24 24"
+      >
+        <path d="m6.5 6.5 11 11M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M3 10l7-7M14 21l7-7" />
+      </symbol>
+      <symbol
+        id="icon-activity"
+        viewBox="0 0 24 24"
+      >
+        <path d="M3 12h4l2-7 4 14 2-7h6" />
+      </symbol>
+      <symbol
+        id="icon-clipboard"
+        viewBox="0 0 24 24"
+      >
+        <rect
+          x="4"
+          y="3"
+          width="16"
+          height="18"
+          rx="2"
+        />
+        <path d="M9 3h6v4H9zM8 12h8M8 16h5" />
+      </symbol>
+      <symbol
+        id="icon-calendar"
+        viewBox="0 0 24 24"
+      >
+        <rect
+          x="3"
+          y="5"
+          width="18"
+          height="16"
+          rx="2"
+        />
+        <path d="M3 10h18M8 3v4M16 3v4" />
+      </symbol>
+      <symbol
+        id="icon-chart"
+        viewBox="0 0 24 24"
+      >
+        <path d="M3 3v18h18M7 16l4-5 4 3 5-7" />
+      </symbol>
+      <symbol
+        id="icon-search"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          cx="11"
+          cy="11"
+          r="7"
+        />
+        <path d="m20 20-4-4" />
+      </symbol>
+      <symbol
+        id="icon-bell"
+        viewBox="0 0 24 24"
+      >
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+      </symbol>
+      <symbol
+        id="icon-plus"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 5v14M5 12h14" />
+      </symbol>
+      <symbol
+        id="icon-arrow"
+        viewBox="0 0 24 24"
+      >
+        <path d="m9 18 6-6-6-6" />
+      </symbol>
+      <symbol
+        id="icon-menu"
+        viewBox="0 0 24 24"
+      >
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </symbol>
+      <symbol
+        id="icon-close"
+        viewBox="0 0 24 24"
+      >
+        <path d="m6 6 12 12M18 6 6 18" />
+      </symbol>
+      <symbol
+        id="icon-edit"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </symbol>
+      <symbol
+        id="icon-trash"
+        viewBox="0 0 24 24"
+      >
+        <path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6" />
+      </symbol>
+      <symbol
+        id="icon-logout"
+        viewBox="0 0 24 24"
+      >
+        <path d="M10 17l5-5-5-5M15 12H3M15 3h6v18h-6" />
+      </symbol>
+      <symbol
+        id="icon-check"
+        viewBox="0 0 24 24"
+      >
+        <path d="m5 12 4 4L19 6" />
+      </symbol>
+      <symbol
+        id="icon-lock"
+        viewBox="0 0 24 24"
+      >
+        <rect
+          x="5"
+          y="10"
+          width="14"
+          height="11"
+          rx="2"
+        />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+      </symbol>
+      <symbol
+        id="icon-message"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.2 9.2 0 0 1-3.8-.8L3 21l1.8-5a8.4 8.4 0 1 1 16.2-4.5Z"
+        />
+        <path d="M8.4 8.2c.5 2.2 2.2 3.9 4.4 4.5M14.5 13.1l1.4-1.4M8 6.8 6.7 8.1" />
+      </symbol>
+      <symbol
+        id="icon-mail"
+        viewBox="0 0 24 24"
+      >
+        <rect
+          x="3"
+          y="5"
+          width="18"
+          height="14"
+          rx="2"
+        />
+        <path d="m4 7 8 6 8-6" />
+      </symbol>
+      <symbol
+        id="icon-instagram"
+        viewBox="0 0 24 24"
+      >
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="5"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="4"
+        />
+        <circle
+          cx="17.5"
+          cy="6.5"
+          r=".8"
+          fill="currentColor"
+          stroke="none"
+        />
+      </symbol>
+      <symbol
+        id="icon-facebook"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M14 21v-8h3l.5-4H14V7c0-1.2.4-2 2.2-2H18V1.4c-.8-.1-1.7-.2-2.5-.2-3.7 0-5.5 2.2-5.5 5.5V9H7v4h3v8"
+        />
+      </symbol>
+      <symbol
+        id="icon-tiktok"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M15 3c.4 2.4 1.8 3.9 4 4.5v3.1c-1.5 0-2.8-.4-4-1.2v6.1a5.5 5.5 0 1 1-4.8-5.4v3.2a2.4 2.4 0 1 0 1.8 2.3V3Z"
+        />
+      </symbol>
+    </svg>
+
+    <section
+      class="public-screen"
+      data-public-screen
+    >
+      <header class="public-header">
+        <a
+          class="brand public-brand"
+          href="#inicio"
+          aria-label="FARISA Personal — início"
+          ><span class="brand-mark">FARISA</span><span class="brand-name">Personal</span></a
+        >
+        <nav
+          class="public-desktop-nav"
+          aria-label="Navegação principal"
+        >
+          <a href="#inicio">Home</a>
+          <a href="#consultoria">Avaliação física</a>
+          <a href="#planos">Planos</a>
+          <a href="#aluno">Área do Aluno</a>
+          <a href="#contato">Contato</a>
+          <a
+            class="personal-access-link"
+            href="#painel"
+            ><svg aria-hidden="true"><use href="#icon-lock"></use></svg>Área do Personal</a
+          >
+        </nav>
+        <div class="public-menu-wrap">
+          <button
+            class="public-install-button"
+            type="button"
+            data-install-app
+            aria-label="Adicionar à tela inicial"
+            hidden
+          >
+            <img
+              src="/icons/install-phone.png"
+              width="68"
+              height="68"
+              alt=""
+            />
+          </button>
+          <button
+            class="public-menu-toggle"
+            type="button"
+            aria-label="Abrir menu"
+            aria-controls="public-menu"
+            aria-expanded="false"
+            data-public-menu-toggle
+          >
+            <svg><use href="#icon-menu"></use></svg><span>Menu</span>
+          </button>
+          <nav
+            class="public-menu"
+            id="public-menu"
+            aria-label="Menu responsivo"
+            data-public-menu
+            hidden
+          >
+            <a href="#inicio"><span>01</span>Home</a>
+            <a href="#consultoria"><span>02</span>Avaliação física</a>
+            <a href="#planos"><span>03</span>Planos</a>
+            <a href="#aluno"><span>04</span>Área do Aluno</a>
+            <a href="#contato"><span>05</span>Contato</a>
+            <a
+              class="personal-access-link"
+              href="#painel"
+              ><svg aria-hidden="true"><use href="#icon-lock"></use></svg>Área do Personal</a
+            >
+          </nav>
+        </div>
+      </header>
+
+      <main class="public-main">
+        <section
+          class="public-hero"
+          id="inicio"
+          aria-labelledby="hero-title"
+        >
+          <div
+            class="public-hero-athlete"
+            aria-hidden="true"
+          ></div>
+          <div class="public-hero-overlay"></div>
+          <div class="public-hero-copy">
+            <span class="public-kicker">FARISA Personal Trainer</span>
+            <h1 id="hero-title">Consultoria Online <em>Personalizada</em></h1>
+            <p>Musculação, avaliação física e acompanhamento profissional sob medida</p>
+            <a
+              class="public-cta"
+              href="#planos"
+              >Começar agora <svg><use href="#icon-arrow"></use></svg
+            ></a>
+          </div>
+          <div
+            class="hero-proof-grid"
+            aria-label="Resultados reais de evolução física"
+          >
+            <figure class="hero-proof hero-proof--front">
+              <img
+                src="/src/assets/img/img4.jpg"
+                alt="Comparativo de evolução física frontal"
+              />
+              <figcaption><span>Resultado real</span><strong>Evolução frontal</strong></figcaption>
+            </figure>
+            <figure class="hero-proof hero-proof--back">
+              <img
+                src="/src/assets/img/img3.jpg"
+                alt="Comparativo de evolução física das costas"
+              />
+              <figcaption>
+                <span>Acompanhamento</span><strong>Evolução das costas</strong>
+              </figcaption>
+            </figure>
+          </div>
+          <a
+            class="hero-scroll"
+            href="#consultoria"
+            aria-label="Ir para a seção de consultoria"
+            ><span>Conheça o processo</span><i></i
+          ></a>
+        </section>
+
+        <section
+          class="public-section"
+          id="consultoria"
+        >
+          <div class="public-section-heading">
+            <span>Seu plano, seu ritmo</span>
+            <h2>Como Funciona a Consultoria</h2>
+            <p>Uma estratégia completa, construída para evoluir com você.</p>
+          </div>
+          <div class="public-card-grid public-card-grid--three">
+            <article class="public-info-card">
+              <span class="card-number">01</span>
+              <div class="card-icon">
+                <svg><use href="#icon-clipboard"></use></svg>
+              </div>
+              <h3>Avaliação Física Completa</h3>
+              <p>Anamnese, composição corporal, perímetros, postura e testes físicos.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">02</span>
+              <div class="card-icon">
+                <svg><use href="#icon-dumbbell"></use></svg>
+              </div>
+              <h3>Treino Personalizado</h3>
+              <p>Musculação ajustada ao seu nível, objetivo, rotina e equipamentos.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">03</span>
+              <div class="card-icon">
+                <svg><use href="#icon-message"></use></svg>
+              </div>
+              <h3>Acompanhamento</h3>
+              <p>Suporte semanal, ajustes e feedback contínuo.</p>
+            </article>
+          </div>
+        </section>
+
+        <section
+          class="public-section public-section--plans"
+          id="planos"
+        >
+          <div class="public-section-heading">
+            <span>Escolha seu próximo nível</span>
+            <h2>Planos de Consultoria</h2>
+            <p>Opções objetivas para diferentes metas e momentos.</p>
+          </div>
+          <div class="public-card-grid public-card-grid--three">
+            <article class="plan-card plan-card--single">
+              <div>
+                <span class="plan-label">Sem mensalidade</span>
+                <h3>Treinos Prontos</h3>
+              </div>
+              <ul>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Programa completo por objetivo
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Acesso permanente ao treino
+                </li>
+              </ul>
+              <p class="plan-price"><strong>R$ 2</strong><span>pagamento único</span></p>
+              <div class="plan-primary-actions">
+                <a href="#cadastro-aluno?plan=ready"
+                  >Escolher treino <svg><use href="#icon-arrow"></use></svg
+                ></a>
+                <a
+                  class="plan-preview-link"
+                  href="/docs/ficha-demonstrativa-peito-completo.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Ver prévia</a
+                >
+              </div>
+            </article>
+            <article class="plan-card">
+              <div>
+                <span class="plan-label">Essencial</span>
+                <h3>Básico</h3>
+              </div>
+              <ul>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Treino personalizado
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Avaliação inicial
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Mensal, trimestral, semestral ou anual
+                </li>
+              </ul>
+              <p class="plan-price"><strong>R$ 4</strong><span>/mês</span></p>
+              <a href="#cadastro-aluno?plan=basic"
+                >Quero este plano <svg><use href="#icon-arrow"></use></svg
+              ></a>
+            </article>
+            <article class="plan-card plan-card--featured">
+              <span class="plan-badge">Mais escolhido</span>
+              <div>
+                <span class="plan-label">Completo</span>
+                <h3>Premium</h3>
+              </div>
+              <ul>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Avaliação física completa
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Reavaliações e suporte semanal
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Mensal, trimestral, semestral ou anual
+                </li>
+              </ul>
+              <p class="plan-price"><strong>R$ 6</strong><span>/mês</span></p>
+              <a href="#cadastro-aluno?plan=premium"
+                >Quero este plano <svg><use href="#icon-arrow"></use></svg
+              ></a>
+            </article>
+            <article class="plan-card">
+              <div>
+                <span class="plan-label">Alta performance</span>
+                <h3>Atleta</h3>
+              </div>
+              <ul>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Preparação física
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Ajustes frequentes
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Testes de força e desempenho
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Mensal, trimestral, semestral ou anual
+                </li>
+              </ul>
+              <p class="plan-price"><strong>R$ 8</strong><span>/mês</span></p>
+              <a href="#cadastro-aluno?plan=athlete"
+                >Quero este plano <svg><use href="#icon-arrow"></use></svg
+              ></a>
+            </article>
+          </div>
+        </section>
+
+        <section
+          class="public-section"
+          id="aluno"
+        >
+          <div class="public-section-heading">
+            <span>Exclusivo para clientes</span>
+            <h2>Área do Aluno</h2>
+            <p>Seu acompanhamento organizado e sempre ao alcance.</p>
+          </div>
+          <div class="student-area-grid">
+            <article class="student-card student-card--login">
+              <div class="student-login-icon">
+                <svg><use href="#icon-lock"></use></svg>
+              </div>
+              <div>
+                <span>Acesso do aluno</span>
+                <h3>Login e cadastro</h3>
+                <p>Entre para acessar seu plano e acompanhar sua evolução.</p>
+              </div>
+              <a
+                class="public-cta"
+                href="#entrar-aluno"
+                >Entrar como aluno <svg><use href="#icon-arrow"></use></svg></a
+              ><a href="#cadastro-aluno">Ainda não tem conta? Cadastre-se</a>
+            </article>
+            <article class="student-card">
+              <div>
+                <span>Central do acompanhamento</span>
+                <h3>Painel do Aluno</h3>
+              </div>
+              <ul class="student-features">
+                <li><b>📋</b>Ficha de Treino</li>
+                <li><b>🩺</b>Avaliação Física</li>
+                <li><b>📊</b>Progresso</li>
+                <li><b>📅</b>Check-in semanal</li>
+                <li><b>💬</b>Suporte com o treinador</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section
+          class="public-section public-section--faq"
+          id="faq"
+        >
+          <div class="public-section-heading">
+            <span>Tire suas dúvidas</span>
+            <h2>Perguntas Frequentes</h2>
+            <p>Informações rápidas para começar com segurança.</p>
+          </div>
+          <div class="faq-list">
+            <details>
+              <summary>Como funciona a consultoria online?</summary>
+              <p>
+                Após a avaliação inicial, você recebe uma estratégia personalizada e segue com
+                acompanhamento remoto e ajustes periódicos.
+              </p>
+            </details>
+            <details>
+              <summary>O que está incluído no plano mensal?</summary>
+              <p>
+                Os itens variam conforme o plano escolhido e podem incluir treino personalizado,
+                avaliação física, reavaliações e suporte semanal.
+              </p>
+            </details>
+            <details>
+              <summary>Em quanto tempo vejo resultados?</summary>
+              <p>
+                O prazo depende do objetivo, da rotina e da constância. As avaliações ajudam a
+                acompanhar avanços e ajustar a estratégia.
+              </p>
+            </details>
+            <details>
+              <summary>A consultoria é personalizada para meu nível?</summary>
+              <p>
+                Sim. O planejamento considera seu nível atual, histórico, disponibilidade, objetivos
+                e limitações individuais.
+              </p>
+            </details>
+            <details>
+              <summary>Preciso treinar em academia?</summary>
+              <p>
+                Não necessariamente. O treino pode ser adaptado à academia, à sua casa ou aos
+                equipamentos disponíveis.
+              </p>
+            </details>
+            <details>
+              <summary>Como funciona o suporte e o acompanhamento?</summary>
+              <p>
+                Você envia seus check-ins e recebe orientações, feedbacks e ajustes conforme a
+                frequência prevista no plano.
+              </p>
+            </details>
+            <details>
+              <summary>A consultoria inclui plano alimentar?</summary>
+              <p>
+                Não. A prescrição nutricional é realizada exclusivamente por nutricionista. Quando
+                necessário, o aluno pode ser encaminhado a um profissional parceiro.
+              </p>
+            </details>
+            <details>
+              <summary>Como envio minhas avaliações?</summary>
+              <p>
+                A avaliação reúne anamnese, medidas, composição corporal, sinais vitais, registros
+                posturais e testes físicos adequados ao seu objetivo.
+              </p>
+            </details>
+            <details>
+              <summary>Posso cancelar quando quiser?</summary>
+              <p>
+                Sim. As condições e prazos de cancelamento são apresentados antes da contratação do
+                plano.
+              </p>
+            </details>
+            <details>
+              <summary>A consultoria é indicada para quem tem lesões?</summary>
+              <p>
+                Pode ser, desde que exista liberação médica quando necessária. O treino será
+                adaptado às recomendações do profissional de saúde.
+              </p>
+            </details>
+          </div>
+        </section>
+
+        <section
+          class="public-contact"
+          id="contato"
+        >
+          <div>
+            <span class="public-kicker">Vamos conversar</span>
+            <h2>Pronto para começar?</h2>
+            <p>Escolha seu canal preferido e dê o primeiro passo para treinar com estratégia.</p>
+            <address class="contact-details">
+              <span><strong>Endereço</strong>Rua Exemplo, 123 · Centro · Cidade Modelo</span
+              ><span><strong>E-mail</strong>contato@farisa.example</span
+              ><span><strong>Celular</strong>(00) 90000-0000</span>
+            </address>
+            <small class="contact-demo-note">Dados fictícios para demonstração.</small>
+          </div>
+          <div class="contact-links">
+            <a
+              href="https://wa.me/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Falar pelo WhatsApp"
+              ><svg><use href="#icon-message"></use></svg><span>WhatsApp</span></a
+            >
+            <a
+              href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=contato%40farisa.example"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Abrir Gmail com e-mail fictício de demonstração (abre em nova aba)"
+              ><svg><use href="#icon-mail"></use></svg><span>Gmail</span></a
+            >
+            <a
+              href="https://instagram.com/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Abrir Instagram"
+              ><svg><use href="#icon-instagram"></use></svg><span>Instagram</span></a
+            >
+            <a
+              href="https://facebook.com/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Abrir Facebook"
+              ><svg><use href="#icon-facebook"></use></svg><span>Facebook</span></a
+            >
+            <a
+              href="https://tiktok.com/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Abrir TikTok"
+              ><svg><use href="#icon-tiktok"></use></svg><span>TikTok</span></a
+            >
+          </div>
+        </section>
+      </main>
+
+      <footer class="public-footer">
+        <a
+          class="brand public-brand"
+          href="#inicio"
+          aria-label="Voltar ao início"
+          ><span class="brand-mark">FARISA</span><span class="brand-name">Personal</span></a
+        >
+        <p>© 2026 Personal Trainer Pro | Todos os direitos reservados.</p>
+        <a href="#inicio">Voltar ao topo <span>↑</span></a>
+      </footer>
+    </section>
+
+    <section
+      class="student-access"
+      data-student-screen="entrar-aluno"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form
+        class="student-access-card"
+        data-student-form="login"
+      >
+        <span class="eyebrow">Área do Aluno</span>
+        <h1>Entre na sua conta</h1>
+        <p>Acesse seu acompanhamento pessoal.</p>
+        <label class="field"
+          ><span>E-mail</span
+          ><input
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            maxlength="180"
+        /></label>
+        <label class="field"
+          ><span>Senha</span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            maxlength="128"
+        /></label>
+        <p
+          role="status"
+          aria-live="polite"
+        ></p>
+        <button
+          class="button button--primary"
+          type="submit"
+        >
+          Entrar como aluno
+        </button>
+        <a href="#recuperar-senha">Esqueci minha senha</a>
+        <a href="#cadastro-aluno">Criar minha conta de aluno</a>
+        <a href="#login">Sou personal trainer</a>
+      </form>
+    </section>
+    <section
+      class="student-access"
+      data-student-screen="cadastro-aluno"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form
+        class="student-access-card"
+        data-student-form="register"
+      >
+        <span class="eyebrow">Pré-cadastro do aluno</span>
+        <h1>Crie seu pré-cadastro</h1>
+        <p>
+          Informe seus dados e escolha o plano. Na próxima tela, você poderá pagar por PIX ou
+          cartão de crédito.
+        </p>
+        <label class="field"
+          ><span>Nome completo</span
+          ><input
+            name="name"
+            autocomplete="name"
+            required
+            minlength="3"
+            maxlength="140"
+        /></label>
+        <label class="field"
+          ><span>E-mail</span
+          ><input
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            maxlength="180"
+        /></label>
+        <label class="field"
+          ><span>Senha</span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            aria-describedby="student-password-requirements"
+            required
+            minlength="8"
+            maxlength="128"
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,128}"
+            title="Use no mínimo 8 caracteres, com letra maiúscula, letra minúscula, número e caractere especial."
+        /></label>
+        <p
+          class="password-requirements"
+          id="student-password-requirements"
+        >
+          A senha deve ter no mínimo 8 caracteres, incluindo uma letra maiúscula, uma letra
+          minúscula, um número e um caractere especial.
+        </p>
+        <p
+          role="status"
+          aria-live="polite"
+        ></p>
+        <button
+          class="button button--primary"
+          type="submit"
+        >
+          Criar pré-cadastro
+        </button>
+        <a href="#entrar-aluno">Já tenho conta. Entrar</a>
+      </form>
+    </section>
+    <section
+      class="student-access"
+      data-student-screen="recuperar-senha"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form
+        class="student-access-card"
+        data-student-form="forgot"
+      >
+        <h1>Esqueci minha senha</h1>
+        <p>Informe o e-mail da sua conta de aluno para solicitar um link de recuperação.</p>
+        <label class="field"
+          ><span>E-mail</span
+          ><input
+            name="email"
+            type="email"
+            autocomplete="email"
+            maxlength="180"
+            required
+        /></label>
+        <p
+          role="status"
+          aria-live="polite"
+        ></p>
+        <button
+          class="button button--primary"
+          type="submit"
+        >
+          Enviar link de recuperação
+        </button>
+        <a href="#entrar-aluno">Voltar ao login do aluno</a>
+      </form>
+    </section>
+    <section
+      class="student-access"
+      data-student-screen="nova-senha"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form
+        class="student-access-card"
+        data-student-form="reset"
+      >
+        <h1>Defina uma nova senha</h1>
+        <p
+          class="password-requirements"
+          id="student-reset-password-requirements"
+        >
+          Use no mínimo 8 caracteres, incluindo uma letra maiúscula, uma letra minúscula, um número
+          e um caractere especial.
+        </p>
+        <label class="field"
+          ><span>Nova senha</span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            aria-describedby="student-reset-password-requirements"
+            minlength="8"
+            maxlength="128"
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,128}"
+            title="Use no mínimo 8 caracteres, com letra maiúscula, letra minúscula, número e caractere especial."
+            required
+        /></label>
+        <p
+          role="status"
+          aria-live="polite"
+        ></p>
+        <button
+          class="button button--primary"
+          type="submit"
+        >
+          Salvar nova senha
+        </button>
+        <a href="#entrar-aluno">Entrar com minha senha</a
+        ><a href="#recuperar-senha">Solicitar outro link</a>
+      </form>
+    </section>
+    <section
+      class="student-access"
+      data-personal-screen="recuperar-senha-personal"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form
+        class="student-access-card"
+        data-personal-form="forgot"
+      >
+        <span class="eyebrow">Área do Personal</span>
+        <h1>Recuperar acesso</h1>
+        <p>Informe o e-mail da sua conta de personal para receber o link de recuperação.</p>
+        <label class="field"
+          ><span>E-mail</span
+          ><input
+            name="email"
+            type="email"
+            autocomplete="email"
+            maxlength="180"
+            required
+        /></label>
+        <p
+          role="status"
+          aria-live="polite"
+        ></p>
+        <button
+          class="button button--primary"
+          type="submit"
+        >
+          Enviar link de recuperação
+        </button>
+        <a href="#login">Voltar ao login do personal</a>
+      </form>
+    </section>
+    <section
+      class="student-access"
+      data-personal-screen="nova-senha-personal"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form
+        class="student-access-card"
+        data-personal-form="reset"
+      >
+        <span class="eyebrow">Área do Personal</span>
+        <h1>Defina uma nova senha</h1>
+        <p
+          class="password-requirements"
+          id="personal-reset-password-requirements"
+        >
+          Use no mínimo 8 caracteres, incluindo uma letra maiúscula, uma letra minúscula, um número
+          e um caractere especial.
+        </p>
+        <label class="field"
+          ><span>Nova senha</span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            aria-describedby="personal-reset-password-requirements"
+            minlength="8"
+            maxlength="128"
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,128}"
+            title="Use no mínimo 8 caracteres, com letra maiúscula, letra minúscula, número e caractere especial."
+            required
+        /></label>
+        <p
+          role="status"
+          aria-live="polite"
+        ></p>
+        <button
+          class="button button--primary"
+          type="submit"
+        >
+          Salvar nova senha
+        </button>
+        <a href="#login">Entrar no painel</a
+        ><a href="#recuperar-senha-personal">Solicitar outro link</a>
+      </form>
+    </section>
+    <section
+      class="student-access"
+      data-personal-screen="ativar-personal"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <form class="student-access-card">
+        <span class="eyebrow">Conta profissional</span>
+        <h1>Ativar conta do personal</h1>
+        <p>Esta página já está preparada, mas a ativação de novas contas ainda não foi liberada.</p>
+        <fieldset disabled>
+          <label class="field"
+            ><span>Nome completo</span
+            ><input
+              name="name"
+              autocomplete="name"
+          /></label>
+          <label class="field"
+            ><span>E-mail profissional</span
+            ><input
+              name="email"
+              type="email"
+              autocomplete="email"
+          /></label>
+          <label class="field"
+            ><span>CREF</span
+            ><input
+              name="cref"
+              autocomplete="off"
+          /></label>
+          <label class="field"
+            ><span>Telefone</span
+            ><input
+              name="phone"
+              type="tel"
+              autocomplete="tel"
+          /></label>
+        </fieldset>
+        <p
+          role="status"
+          aria-live="polite"
+        >
+          Ativação indisponível no momento.
+        </p>
+        <button
+          class="button button--primary"
+          type="submit"
+          disabled
+        >
+          Ativar minha conta
+        </button>
+        <a href="#login">Voltar ao login do personal</a>
+      </form>
+    </section>
+    <template id="password-toggle-template"
+      ><button
+        class="password-toggle"
+        type="button"
+        aria-label="Mostrar senha"
+        aria-pressed="false"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+          />
+          <path
+            class="password-eye-slash"
+            d="m3 3 18 18"
+          />
+        </svg></button
+    ></template>
+    <section
+      class="student-access"
+      data-student-screen="painel-aluno"
+      hidden
+    >
+      <a
+        class="brand"
+        href="#inicio"
+        ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
+      >
+      <div class="student-access-card student-access-card--panel">
+        <span class="eyebrow">Meu acompanhamento</span>
+        <h1 data-student-name>Área do Aluno</h1>
+        <p
+          role="status"
+          data-student-panel-status
+        ></p>
+        <div class="student-access-features">
+          <article>
+            <h2>Ficha de treino</h2>
+            <p>Aguardando liberação.</p>
+          </article>
+          <article>
+            <h2>Avaliação física</h2>
+            <p>Aguardando avaliação inicial.</p>
+          </article>
+          <article>
+            <h2>Progresso</h2>
+            <p>Nenhuma avaliação disponível.</p>
+          </article>
+          <article>
+            <h2>Check-in semanal</h2>
+            <p>Aguardando início do acompanhamento.</p>
+          </article>
+        </div>
+        <a href="#contato">Falar com o treinador</a>
+        <button
+          class="button button--secondary"
+          type="button"
+          data-student-logout
+        >
+          Sair da conta de aluno
+        </button>
+      </div>
+    </section>
+    <section
+      class="login-screen"
+      data-login-screen
+      hidden
+    >
+      <div class="login-brand-panel">
+        <a
+          class="brand brand--light"
+          href="#inicio"
+          aria-label="FARISA Personal — voltar ao início"
+          ><span class="brand-mark">FARISA</span><span class="brand-name">Personal</span></a
+        >
+        <div class="login-message">
+          <span class="eyebrow">Gestão inteligente</span>
+          <h1>Treinos melhores começam com uma gestão mais simples.</h1>
+          <p>Alunos, avaliações e evolução reunidos em um só lugar.</p>
+        </div>
+        <div
+          class="metric-orbit"
+          aria-hidden="true"
+        >
+          <div class="orbit-card orbit-card--main">
+            <span>Taxa de evolução</span><strong>+18,4%</strong>
+            <div class="mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="orbit-card orbit-card--small">
+            <span>Alunos ativos</span><strong>48</strong><em>+6 este mês</em>
+          </div>
+        </div>
+      </div>
+      <div class="login-form-panel">
+        <form
+          class="login-form"
+          data-login-form
+        >
+          <a
+            class="button button--secondary login-home-button"
+            href="#inicio"
+            >← Voltar para a página inicial</a
+          >
+          <div class="mobile-login-brand">
+            <span class="brand-mark">FARISA</span><span class="brand-name">Personal</span>
+          </div>
+          <div>
+            <span class="eyebrow eyebrow--blue">Exclusivo para o personal</span>
+            <h2>Painel do Personal</h2>
+            <p>Use sua conta profissional. <a href="#entrar-aluno">Sou aluno</a></p>
+          </div>
+          <label class="field"
+            ><span>E-mail</span
+            ><input
+              type="email"
+              name="email"
+              autocomplete="email"
+              required
+          /></label>
+          <label class="field"
+            ><span>Senha</span
+            ><input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              minlength="6"
+              required
+          /></label>
+          <div class="form-row">
+            <label class="checkbox"
+              ><input
+                type="checkbox"
+                name="remember"
+                checked
+              /><span>Lembrar de mim</span></label
+            ><a
+              class="link-button"
+              href="#recuperar-senha-personal"
+            >
+              Esqueci a senha
+            </a>
+          </div>
+          <button
+            class="button button--primary button--large"
+            type="submit"
+          >
+            Entrar no painel <svg><use href="#icon-arrow"></use></svg>
+          </button>
+          <a
+            class="button button--secondary button--large"
+            href="#ativar-personal"
+          >
+            Ativar conta do personal
+          </a>
+          <p
+            class="login-note"
+            role="status"
+            aria-live="polite"
+            data-personal-login-status
+          ></p>
+        </form>
+      </div>
+    </section>
+
+    <div
+      class="app-shell"
+      data-app-shell
+      hidden
+    >
+      <header class="topbar">
+        <div class="topbar-left">
+          <button
+            class="icon-button mobile-menu"
+            type="button"
+            data-menu-toggle
+            aria-label="Abrir menu"
+            aria-expanded="false"
+          >
+            <svg><use href="#icon-menu"></use></svg></button
+          ><a
+            class="brand"
+            href="#painel"
+            ><span class="brand-mark">FARISA</span><span class="brand-name">Personal</span></a
+          >
+        </div>
+        <div class="topbar-actions">
+          <label class="global-search"
+            ><svg><use href="#icon-search"></use></svg
+            ><input
+              type="search"
+              placeholder="Buscar aluno, treino..."
+              data-global-search
+            /><kbd>⌘ K</kbd></label
+          ><a
+            class="icon-button topbar-home-link"
+            href="#inicio"
+            data-go-public
+            aria-label="Voltar para a página inicial"
+            title="Voltar para a página inicial"
+          >
+            <svg><use href="#icon-arrow"></use></svg>
+          </a>
+          <button
+            class="icon-button notification-button"
+            type="button"
+            aria-label="Notificações"
+          >
+            <svg><use href="#icon-bell"></use></svg><span></span>
+          </button>
+          <div class="profile">
+            <span class="avatar">FR</span>
+            <div><strong>Fábio Santos</strong><small>Personal trainer</small></div>
+          </div>
+        </div>
+      </header>
+      <aside
+        class="sidebar"
+        data-sidebar
+      >
+        <nav aria-label="Navegação principal">
+          <p class="nav-label">Menu</p>
+          <a
+            class="nav-link is-active"
+            href="#painel"
+            data-route-link="painel"
+            ><svg><use href="#icon-grid"></use></svg><span>Painel</span></a
+          >
+          <a
+            class="nav-link"
+            href="#alunos"
+            data-route-link="alunos"
+            ><svg><use href="#icon-users"></use></svg><span>Alunos</span
+            ><small data-student-count>48</small></a
+          >
+          <a
+            class="nav-link"
+            href="#agenda"
+            data-route-link="agenda"
+            ><svg><use href="#icon-calendar"></use></svg><span>Agenda</span
+            ><small
+              data-agenda-count
+              hidden
+            ></small></a
+          >
+          <a
+            class="nav-link"
+            href="#treinos"
+            data-route-link="treinos"
+            ><svg><use href="#icon-dumbbell"></use></svg><span>Fichas de treino</span></a
+          >
+          <a
+            class="nav-link"
+            href="#exercicios"
+            data-route-link="exercicios"
+            ><svg><use href="#icon-activity"></use></svg><span>Biblioteca de exercícios</span></a
+          >
+          <a
+            class="nav-link"
+            href="#avaliacoes"
+            data-route-link="avaliacoes"
+            ><svg><use href="#icon-clipboard"></use></svg><span>Avaliação física</span></a
+          >
+          <a
+            class="nav-link"
+            href="#checkins"
+            data-route-link="checkins"
+            ><svg><use href="#icon-message"></use></svg><span>Check-ins</span
+            ><small
+              class="nav-count--alert"
+              data-checkin-count
+              hidden
+            ></small></a
+          >
+          <a
+            class="nav-link"
+            href="#evolucao"
+            data-route-link="evolucao"
+            ><svg><use href="#icon-chart"></use></svg><span>Evolução</span></a
+          >
+        </nav>
+        <div class="sidebar-footer">
+          <a
+            class="nav-link"
+            href="#inicio"
+            data-go-public
+          >
+            <svg><use href="#icon-arrow"></use></svg><span>Voltar ao site</span>
+          </a>
+          <div class="capacity">
+            <div><span>Plano profissional</span><small>38 de 60 alunos</small></div>
+            <progress
+              max="60"
+              value="38"
+            >
+              38 de 60
+            </progress>
+          </div>
+          <button
+            class="nav-link logout-button"
+            type="button"
+            data-logout
+          >
+            <svg><use href="#icon-logout"></use></svg><span>Sair da conta</span>
+          </button>
+        </div>
+      </aside>
+      <button
+        class="sidebar-backdrop"
+        type="button"
+        data-sidebar-backdrop
+        aria-label="Fechar menu"
+      ></button>
+
+      <main class="main-content">
+        <section
+          class="page is-active"
+          data-route="painel"
+        >
+          <div class="page-heading">
+            <div>
+              <span
+                class="eyebrow eyebrow--blue"
+                data-dashboard-date
+              ></span>
+              <h1 data-dashboard-greeting>Olá, Fábio.</h1>
+              <p>Acompanhe o que está acontecendo com seus alunos hoje.</p>
+            </div>
+            <button
+              class="button button--primary"
+              type="button"
+              data-open-modal="student"
+            >
+              <svg><use href="#icon-plus"></use></svg>Aluno presencial
+            </button>
+          </div>
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-icon stat-icon--blue">
+                <svg><use href="#icon-users"></use></svg>
+              </div>
+              <div>
+                <span>Alunos ativos</span><strong data-stat-students>48</strong
+                ><small
+                  class="trend"
+                  data-stat-students-detail
+                  >Dados atuais do sistema</small
+                >
+              </div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon stat-icon--cyan">
+                <svg><use href="#icon-dumbbell"></use></svg>
+              </div>
+              <div>
+                <span>Treinos ativos</span><strong data-stat-workouts>36</strong
+                ><small
+                  class="trend"
+                  data-stat-workouts-detail
+                  >Fichas publicadas</small
+                >
+              </div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon stat-icon--violet">
+                <svg><use href="#icon-clipboard"></use></svg>
+              </div>
+              <div>
+                <span>Avaliações pendentes</span><strong data-stat-assessments>0</strong
+                ><small
+                  class="trend trend--warn"
+                  data-stat-assessments-detail
+                  >Sem avaliação recente</small
+                >
+              </div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon stat-icon--green">
+                <svg><use href="#icon-chart"></use></svg>
+              </div>
+              <div>
+                <span>Evolução média</span><strong data-stat-evolution>—</strong
+                ><small
+                  class="trend"
+                  data-stat-evolution-detail
+                  >Aguardando reavaliações</small
+                >
+              </div>
+            </article>
+          </div>
+          <div class="dashboard-grid">
+            <article class="panel chart-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Evolução dos alunos</h2>
+                  <p data-dashboard-chart-subtitle>Aguardando avaliações suficientes</p>
+                </div>
+                <select
+                  aria-label="Métrica de evolução"
+                  data-dashboard-chart-metric
+                >
+                  <option value="weight">Peso médio</option>
+                  <option value="fat">Gordura corporal média</option>
+                </select>
+              </div>
+              <div class="chart-wrap">
+                <div class="chart-y">
+                  <span>30%</span><span>20%</span><span>10%</span><span>0%</span>
+                </div>
+                <svg
+                  class="line-chart"
+                  viewBox="0 0 700 240"
+                  preserveAspectRatio="none"
+                  role="img"
+                  aria-label="Gráfico crescente de evolução média"
+                >
+                  <defs>
+                    <linearGradient
+                      id="chart-fill"
+                      x1="0"
+                      x2="0"
+                      y1="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0"
+                        stop-color="#1764ff"
+                        stop-opacity=".22"
+                      />
+                      <stop
+                        offset="1"
+                        stop-color="#1764ff"
+                        stop-opacity="0"
+                      />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    class="chart-area"
+                    data-dashboard-chart-area
+                    d="M0 207 C70 196 90 175 145 179 S230 150 280 157 S370 119 420 128 S510 79 560 89 S650 48 700 32 L700 240 L0 240Z"
+                  />
+                  <path
+                    class="chart-line"
+                    data-dashboard-chart-line
+                    d="M0 207 C70 196 90 175 145 179 S230 150 280 157 S370 119 420 128 S510 79 560 89 S650 48 700 32"
+                  />
+                </svg>
+                <div
+                  class="chart-x"
+                  data-dashboard-chart-months
+                >
+                  <span>Abr</span><span>Mai</span><span>Jun</span><span>Jul</span><span>Ago</span
+                  ><span>Set</span>
+                </div>
+              </div>
+            </article>
+            <article class="panel schedule-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2 data-schedule-title>Agenda de hoje</h2>
+                  <p data-schedule-summary>Nenhum atendimento programado</p>
+                </div>
+                <button
+                  class="link-button"
+                  type="button"
+                  data-open-modal="appointment"
+                >
+                  Novo atendimento
+                </button>
+              </div>
+              <div
+                class="schedule-list"
+                data-schedule-list
+              ></div>
+            </article>
+          </div>
+          <article class="panel recent-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Alunos recentes</h2>
+                <p>Últimos alunos com atividade registrada</p>
+              </div>
+              <a
+                class="link-button"
+                href="#alunos"
+                >Ver todos <svg><use href="#icon-arrow"></use></svg
+              ></a>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Aluno</th>
+                    <th>Objetivo</th>
+                    <th>Treino atual</th>
+                    <th>Última atividade</th>
+                    <th>Status</th>
+                    <th><span class="sr-only">Ações</span></th>
+                  </tr>
+                </thead>
+                <tbody data-recent-students></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section
+          class="page"
+          data-route="alunos"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Gestão de alunos</span>
+              <h1>Alunos</h1>
+              <p>Cadastre, encontre e acompanhe seus alunos.</p>
+            </div>
+            <button
+              class="button button--primary"
+              type="button"
+              data-open-modal="student"
+            >
+              <svg><use href="#icon-plus"></use></svg>Aluno presencial
+            </button>
+          </div>
+          <article class="panel content-panel">
+            <div class="toolbar">
+              <label class="search-box"
+                ><svg><use href="#icon-search"></use></svg
+                ><input
+                  type="search"
+                  placeholder="Buscar por nome ou objetivo"
+                  data-table-search="students" /></label
+              ><select
+                data-student-filter
+                aria-label="Filtrar alunos"
+              >
+                <option value="all">Todos os alunos</option>
+                <option value="Ativo">Ativos</option>
+                <option value="Pausado">Pausados</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Aluno</th>
+                    <th>Objetivo</th>
+                    <th>Próxima avaliação</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody data-students-table></tbody>
+              </table>
+            </div>
+            <div
+              class="empty-state"
+              data-students-empty
+              hidden
+            >
+              <svg><use href="#icon-users"></use></svg>
+              <h3>Nenhum aluno encontrado</h3>
+              <p>Tente outro termo ou cadastre um novo aluno.</p>
+            </div>
+          </article>
+        </section>
+
+        <section
+          class="page"
+          data-route="agenda"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Atendimentos presenciais</span>
+              <h1>Agenda</h1>
+              <p>Organize a semana: avaliações, treinos presenciais e orientações.</p>
+            </div>
+            <button
+              class="button button--primary"
+              type="button"
+              data-agenda-new
+            >
+              <svg><use href="#icon-plus"></use></svg>Novo atendimento
+            </button>
+          </div>
+          <div class="agenda-toolbar">
+            <button
+              class="icon-button"
+              type="button"
+              data-agenda-prev
+              aria-label="Semana anterior"
+            >
+              ‹
+            </button>
+            <strong data-agenda-range></strong>
+            <button
+              class="icon-button"
+              type="button"
+              data-agenda-next
+              aria-label="Próxima semana"
+            >
+              ›
+            </button>
+            <button
+              class="button button--secondary"
+              type="button"
+              data-agenda-today
+            >
+              Hoje
+            </button>
+            <small data-agenda-summary></small>
+          </div>
+          <div
+            class="agenda-week"
+            data-agenda-week
+          ></div>
+        </section>
+
+        <section
+          class="page"
+          data-route="treinos"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Programação</span>
+              <h1>Treinos personalizados</h1>
+              <p>Monte, publique e gere o PDF individual de cada aluno da consultoria.</p>
+            </div>
+            <button
+              class="button button--primary workout-create-button"
+              type="button"
+              data-open-modal="workout"
+            >
+              <svg><use href="#icon-plus"></use></svg>Nova ficha
+            </button>
+          </div>
+          <div
+            class="cards-grid"
+            data-workouts-grid
+          ></div>
+          <div
+            class="empty-state panel"
+            data-workouts-empty
+            hidden
+          >
+            <svg><use href="#icon-dumbbell"></use></svg>
+            <h3>Nenhuma ficha cadastrada</h3>
+            <p>Crie a primeira ficha de treino para começar.</p>
+          </div>
+        </section>
+
+        <section
+          class="page"
+          data-route="exercicios"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Biblioteca</span>
+              <h1>Biblioteca de exercícios</h1>
+              <p>
+                Cadastre cada exercício e seu MP4 uma única vez. As fichas reutilizam esta
+                biblioteca.
+              </p>
+            </div>
+            <button
+              class="button button--primary"
+              type="button"
+              data-open-modal="exercise"
+            >
+              <svg><use href="#icon-plus"></use></svg>Novo exercício
+            </button>
+          </div>
+          <article class="panel content-panel">
+            <div class="toolbar">
+              <label class="search-box"
+                ><svg><use href="#icon-search"></use></svg
+                ><input
+                  type="search"
+                  placeholder="Buscar exercício"
+                  data-table-search="exercises" /></label
+              ><select
+                data-exercise-filter
+                aria-label="Filtrar grupo muscular"
+              >
+                <option value="all">Todos os grupos</option>
+                <option>Peitoral</option>
+                <option>Costas</option>
+                <option>Pernas</option>
+                <option>Ombros</option>
+                <option>Braços</option>
+              </select>
+            </div>
+            <div
+              class="exercise-list"
+              data-exercises-list
+            ></div>
+            <div
+              class="empty-state"
+              data-exercises-empty
+              hidden
+            >
+              <svg><use href="#icon-activity"></use></svg>
+              <h3>Nenhum exercício encontrado</h3>
+              <p>Altere a busca ou adicione um novo exercício.</p>
+            </div>
+          </article>
+        </section>
+
+        <section
+          class="page"
+          data-route="avaliacoes"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Ponto de partida e evolução</span>
+              <h1>Avaliação física</h1>
+              <p>Registre anamnese, composição corporal, medidas e testes de desempenho.</p>
+            </div>
+            <button
+              class="button button--primary"
+              type="button"
+              data-open-modal="assessment"
+            >
+              <svg><use href="#icon-plus"></use></svg>Nova avaliação
+            </button>
+          </div>
+          <div
+            class="assessment-protocol"
+            aria-label="Etapas da avaliação física"
+          >
+            <article>
+              <span>01</span>
+              <div>
+                <strong>Anamnese e segurança</strong><small>Histórico, PAR-Q e limitações</small>
+              </div>
+            </article>
+            <article>
+              <span>02</span>
+              <div>
+                <strong>Composição corporal</strong><small>Peso, percentual de gordura e IMC</small>
+              </div>
+            </article>
+            <article>
+              <span>03</span>
+              <div>
+                <strong>Medidas corporais</strong
+                ><small>Perímetros e relação cintura-quadril</small>
+              </div>
+            </article>
+            <article>
+              <span>04</span>
+              <div>
+                <strong>Capacidades físicas</strong><small>Força, mobilidade e resistência</small>
+              </div>
+            </article>
+          </div>
+          <div
+            class="assessment-grid"
+            data-assessments-grid
+          ></div>
+        </section>
+
+        <section
+          class="page"
+          data-route="checkins"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Acompanhamento semanal</span>
+              <h1>Check-ins</h1>
+              <p>Veja como foi a semana de cada aluno e responda direto por aqui.</p>
+            </div>
+            <div class="checkin-filters">
+              <select
+                data-checkin-filter-status
+                aria-label="Filtrar por situação"
+              >
+                <option value="pending">Aguardando resposta</option>
+                <option value="all">Todos os check-ins</option>
+                <option value="answered">Respondidos</option>
+              </select>
+              <select
+                data-checkin-filter-student
+                aria-label="Filtrar por aluno"
+              ></select>
+            </div>
+          </div>
+          <div
+            class="checkin-list"
+            data-checkin-list
+          ></div>
+        </section>
+
+        <section
+          class="page"
+          data-route="evolucao"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Resultados</span>
+              <h1>Evolução</h1>
+              <p>Compare indicadores e visualize o progresso individual.</p>
+            </div>
+            <select
+              class="student-select"
+              data-progress-student
+              aria-label="Selecionar aluno"
+            ></select>
+          </div>
+          <div class="progress-summary">
+            <article class="progress-profile panel">
+              <div class="profile-large">
+                <span
+                  class="avatar avatar--large avatar--coral"
+                  data-progress-avatar
+                  >MC</span
+                >
+                <div>
+                  <h2 data-progress-name>Mariana Costa</h2>
+                  <p data-progress-goal>Emagrecimento e condicionamento</p>
+                </div>
+              </div>
+              <dl>
+                <div>
+                  <dt>Início</dt>
+                  <dd data-progress-start>—</dd>
+                </div>
+                <div>
+                  <dt>Frequência</dt>
+                  <dd data-progress-frequency>—</dd>
+                </div>
+                <div>
+                  <dt>Aderência</dt>
+                  <dd
+                    class="positive"
+                    data-progress-adherence
+                  >
+                    —
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <article class="panel evolution-chart">
+              <div class="panel-heading">
+                <div>
+                  <h2>Evolução corporal</h2>
+                  <p>Últimos seis registros</p>
+                </div>
+                <select
+                  aria-label="Indicador"
+                  data-progress-metric
+                >
+                  <option value="weightKg">Peso (kg)</option>
+                  <option value="bodyFatPercent">Gordura corporal (%)</option>
+                </select>
+              </div>
+              <div
+                class="weight-chart"
+                data-progress-chart
+              >
+                <div
+                  class="weight-bars"
+                  data-progress-bars
+                ></div>
+                <div
+                  class="chart-x"
+                  data-progress-months
+                ></div>
+              </div>
+            </article>
+          </div>
+          <div class="kpi-grid">
+            <article
+              class="kpi-card"
+              data-progress-kpi="weight"
+            >
+              <span>Peso</span><strong>—</strong><small>Aguardando reavaliação</small>
+            </article>
+            <article
+              class="kpi-card"
+              data-progress-kpi="fat"
+            >
+              <span>Gordura corporal</span><strong>—</strong><small>Aguardando reavaliação</small>
+            </article>
+            <article
+              class="kpi-card"
+              data-progress-kpi="waist"
+            >
+              <span>Cintura</span><strong>—</strong><small>Aguardando reavaliação</small>
+            </article>
+            <article
+              class="kpi-card"
+              data-progress-kpi="performance"
+            >
+              <span>Aderência ao treino</span><strong>—</strong><small>Aguardando registros</small>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog
+      class="modal"
+      data-modal="student"
+    >
+      <form
+        method="dialog"
+        data-form="student"
+      >
+        <header>
+          <div>
+            <span class="eyebrow eyebrow--blue">Cadastro manual</span>
+            <h2>Adicionar aluno presencial</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            data-close-modal
+            aria-label="Fechar"
+          >
+            <svg><use href="#icon-close"></use></svg>
+          </button>
+        </header>
+        <div class="modal-body">
+          <div class="manual-registration-note" role="note">
+            <strong>Somente para atendimento presencial</strong>
+            <span
+              >O aluno começa como pausado e não será liberado
+              automaticamente. Confirme o pagamento presencial e libere o
+              acesso manualmente pelo painel.</span
+            >
+          </div>
+          <label class="field"
+            ><span>Nome completo</span
+            ><input
+              name="name"
+              required
+              placeholder="Ex.: Lucas Martins" /></label
+          ><label class="field"
+            ><span>E-mail</span
+            ><input
+              name="email"
+              type="email"
+              required
+              placeholder="aluno@email.com"
+          /></label>
+          <div class="field-grid">
+            <label class="field"
+              ><span>Objetivo principal</span
+              ><select
+                name="goal"
+                required
+              >
+                <option>A definir</option>
+                <option>Hipertrofia</option>
+                <option>Emagrecimento</option>
+                <option>Condicionamento</option>
+                <option>Força</option>
+              </select></label
+            ><label class="field"
+              ><span>Situação inicial</span
+              ><select name="status">
+                <option
+                  value="Pausado"
+                  selected
+                >
+                  Pausado — aguardando pagamento
+                </option>
+              </select></label
+            >
+          </div>
+          <label class="field"
+            ><span>Próxima avaliação</span
+            ><input
+              name="assessmentDate"
+              type="date"
+          /></label>
+          <div data-student-password-field>
+            <label class="field"
+              ><span>Senha de acesso do aluno</span
+              ><input
+                name="password"
+                type="text"
+                autocomplete="off"
+                aria-describedby="student-manual-password-requirements"
+                required
+                minlength="8"
+                maxlength="128"
+                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,128}"
+                title="Use no mínimo 8 caracteres, com letra maiúscula, letra minúscula, número e caractere especial."
+                placeholder="Ex.: Treino@2026"
+            /></label>
+            <button
+              class="button button--secondary"
+              type="button"
+              data-generate-password
+            >
+              Gerar senha automática
+            </button>
+            <p
+              class="password-requirements"
+              id="student-manual-password-requirements"
+            >
+              O aluno entra no portal com o e-mail acima e esta senha — anote
+              e entregue para ele. Mínimo de 8 caracteres, com letra
+              maiúscula, minúscula, número e caractere especial.
+            </p>
+          </div>
+        </div>
+        <footer>
+          <button
+            class="button button--secondary"
+            type="button"
+            data-close-modal
+          >
+            Cancelar</button
+          ><button
+            class="button button--primary"
+            value="default"
+            type="submit"
+          >
+            Adicionar aluno presencial
+          </button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog
+      class="modal"
+      data-modal="workout"
+    >
+      <form
+        method="dialog"
+        data-form="workout"
+      >
+        <header>
+          <div>
+            <span class="eyebrow eyebrow--blue">Programação</span>
+            <h2>Criar ficha personalizada</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            data-close-modal
+            aria-label="Fechar"
+          >
+            <svg><use href="#icon-close"></use></svg>
+          </button>
+        </header>
+        <div class="modal-body">
+          <label class="field"
+            ><span>Nome do programa</span
+            ><input
+              name="name"
+              required
+              placeholder="Ex.: Hipertrofia A/B/C" /></label
+          ><label class="field"
+            ><span>Aluno da consultoria</span
+            ><select
+              name="student"
+              data-student-options
+              required
+            ></select
+          ></label>
+          <div class="field-grid">
+            <label class="field"
+              ><span>Objetivo</span
+              ><select name="goal">
+                <option>Hipertrofia</option>
+                <option>Emagrecimento</option>
+                <option>Condicionamento</option>
+                <option>Força</option>
+              </select></label
+            ><label class="field"
+              ><span>Duração livre</span
+              ><input
+                name="duration"
+                required
+                placeholder="Ex.: 10 semanas"
+            /></label>
+          </div>
+        </div>
+        <footer>
+          <button
+            class="button button--secondary"
+            type="button"
+            data-close-modal
+          >
+            Cancelar</button
+          ><button
+            class="button button--primary"
+            value="default"
+            type="submit"
+          >
+            Salvar ficha personalizada
+          </button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog
+      class="modal"
+      data-modal="exercise"
+    >
+      <form
+        method="dialog"
+        data-form="exercise"
+      >
+        <header>
+          <div>
+            <span class="eyebrow eyebrow--blue">Biblioteca</span>
+            <h2>Adicionar exercício</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            data-close-modal
+            aria-label="Fechar"
+          >
+            <svg><use href="#icon-close"></use></svg>
+          </button>
+        </header>
+        <div class="modal-body">
+          <label class="field"
+            ><span>Nome do exercício</span
+            ><input
+              name="name"
+              required
+              placeholder="Ex.: Agachamento livre"
+          /></label>
+          <div class="field group-checkboxes-field">
+            <span>Grupo muscular</span>
+            <small class="field-hint"
+              >Marque mais de um quando o exercício trabalhar mais de um
+              grupo (ex.: afundo no smith = quadríceps e glúteos).</small
+            >
+            <div class="checkbox-grid" data-group-checkboxes></div>
+          </div>
+          <label class="field"
+            ><span>Equipamento</span
+            ><input
+              name="equipment"
+              required
+              placeholder="Ex.: Barra"
+          /></label>
+          <label class="field"
+            ><span>Orientação</span
+            ><textarea
+              name="instructions"
+              rows="3"
+              placeholder="Descreva a execução correta"
+            ></textarea>
+          </label>
+        </div>
+        <footer>
+          <button
+            class="button button--secondary"
+            type="button"
+            data-close-modal
+          >
+            Cancelar</button
+          ><button
+            class="button button--primary"
+            value="default"
+            type="submit"
+          >
+            Adicionar exercício
+          </button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog
+      class="modal"
+      data-modal="assessment"
+    >
+      <form
+        method="dialog"
+        data-form="assessment"
+      >
+        <header>
+          <div>
+            <span class="eyebrow eyebrow--blue">Protocolo completo</span>
+            <h2>Registrar avaliação física</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            data-close-modal
+            aria-label="Fechar"
+          >
+            <svg><use href="#icon-close"></use></svg>
+          </button>
+        </header>
+        <div class="modal-body">
+          <label class="field"
+            ><span>Aluno</span
+            ><select
+              name="student"
+              data-student-options
+              required
+            ></select
+          ></label>
+          <fieldset class="assessment-fieldset">
+            <legend>Anamnese e segurança</legend>
+            <div class="field-grid">
+              <label class="field"
+                ><span>Tipo de avaliação</span
+                ><select name="protocol">
+                  <option>Inicial</option>
+                  <option>Reavaliação</option>
+                  <option>Desempenho</option>
+                </select></label
+              ><label class="field"
+                ><span>Pressão arterial</span
+                ><input
+                  name="bloodPressure"
+                  placeholder="Ex.: 120/80 mmHg"
+              /></label>
+            </div>
+            <div class="field-grid">
+              <label class="field"
+                ><span>FC de repouso (bpm)</span
+                ><input
+                  name="restingHR"
+                  type="number"
+                  min="30"
+                  max="220"
+                  placeholder="Ex.: 68"
+              /></label>
+              <label class="field"
+                ><span>Restrição ou condição informada</span
+                ><input
+                  name="restriction"
+                  placeholder="Ex.: desconforto no joelho"
+              /></label>
+            </div>
+            <label class="check-field"
+              ><input
+                name="parq"
+                type="checkbox"
+                value="Sim"
+              /><span>Questionário de prontidão (PAR-Q) revisado com o aluno</span></label
+            >
+          </fieldset>
+          <fieldset class="assessment-fieldset">
+            <legend>Composição corporal</legend>
+            <div class="field-grid field-grid--three">
+              <label class="field"
+                ><span>Peso (kg)</span
+                ><input
+                  name="weight"
+                  type="number"
+                  step="0.1"
+                  required
+                  placeholder="70,4" /></label
+              ><label class="field"
+                ><span>Altura (cm)</span
+                ><input
+                  name="height"
+                  type="number"
+                  step="0.1"
+                  required
+                  placeholder="172" /></label
+              ><label class="field"
+                ><span>Gordura (%)</span
+                ><input
+                  name="fat"
+                  type="number"
+                  step="0.1"
+                  required
+                  placeholder="24,6"
+              /></label>
+            </div>
+          </fieldset>
+          <fieldset class="assessment-fieldset">
+            <legend>Perímetros corporais</legend>
+            <div class="field-grid field-grid--three">
+              <label class="field"
+                ><span>Cintura (cm)</span
+                ><input
+                  name="waist"
+                  type="number"
+                  step="0.1"
+                  required
+                  placeholder="77"
+              /></label>
+              <label class="field"
+                ><span>Quadril (cm)</span
+                ><input
+                  name="hip"
+                  type="number"
+                  step="0.1"
+                  placeholder="96"
+              /></label>
+              <label class="field"
+                ><span>Peitoral (cm)</span
+                ><input
+                  name="chest"
+                  type="number"
+                  step="0.1"
+                  placeholder="98"
+              /></label>
+              <label class="field"
+                ><span>Braço (cm)</span
+                ><input
+                  name="arm"
+                  type="number"
+                  step="0.1"
+                  placeholder="34"
+              /></label>
+              <label class="field"
+                ><span>Coxa (cm)</span
+                ><input
+                  name="thigh"
+                  type="number"
+                  step="0.1"
+                  placeholder="57"
+              /></label>
+              <label class="field"
+                ><span>Panturrilha (cm)</span
+                ><input
+                  name="calf"
+                  type="number"
+                  step="0.1"
+                  placeholder="38"
+              /></label>
+            </div>
+          </fieldset>
+          <fieldset class="assessment-fieldset">
+            <legend>Testes físicos</legend>
+            <div class="field-grid field-grid--three">
+              <label class="field"
+                ><span>Flexões (repetições)</span
+                ><input
+                  name="pushUps"
+                  type="number"
+                  min="0"
+                  placeholder="18"
+              /></label>
+              <label class="field"
+                ><span>Prancha (segundos)</span
+                ><input
+                  name="plank"
+                  type="number"
+                  min="0"
+                  placeholder="60"
+              /></label>
+              <label class="field"
+                ><span>Sentar e alcançar (cm)</span
+                ><input
+                  name="sitAndReach"
+                  type="number"
+                  step="0.1"
+                  placeholder="24"
+              /></label>
+            </div>
+          </fieldset>
+          <label class="field"
+            ><span>Observações</span
+            ><textarea
+              name="notes"
+              rows="3"
+              placeholder="Postura, mobilidade, limitações, resposta aos testes e condutas para o treino"
+            ></textarea>
+          </label>
+        </div>
+        <footer>
+          <button
+            class="button button--secondary"
+            type="button"
+            data-close-modal
+          >
+            Cancelar</button
+          ><button
+            class="button button--primary"
+            value="default"
+            type="submit"
+          >
+            Salvar avaliação
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <template id="student-row-template"
+      ><tr>
+        <td>
+          <div class="person-cell">
+            <span class="avatar"></span>
+            <div><strong></strong><small></small></div>
+          </div>
+        </td>
+        <td data-cell="goal"></td>
+        <td data-cell="date"></td>
+        <td><span class="status"></span></td>
+        <td>
+          <div class="row-actions">
+            <button
+              class="icon-button"
+              type="button"
+              data-action="edit"
+              aria-label="Editar aluno"
+            >
+              <svg><use href="#icon-edit"></use></svg></button
+            ><button
+              class="icon-button icon-button--danger"
+              type="button"
+              data-action="delete"
+              aria-label="Excluir aluno"
+            >
+              <svg><use href="#icon-trash"></use></svg>
+            </button>
+          </div>
+        </td></tr
+    ></template>
+    <template id="recent-row-template"
+      ><tr>
+        <td>
+          <div class="person-cell">
+            <span class="avatar"></span>
+            <div><strong></strong><small></small></div>
+          </div>
+        </td>
+        <td data-cell="goal"></td>
+        <td data-cell="workout"></td>
+        <td data-cell="activity"></td>
+        <td><span class="status"></span></td>
+        <td>
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Ver aluno"
+          >
+            <svg><use href="#icon-arrow"></use></svg>
+          </button>
+        </td></tr
+    ></template>
+    <template id="workout-card-template"
+      ><article class="workout-card panel">
+        <div class="workout-card-top">
+          <span class="stat-icon stat-icon--blue"
+            ><svg><use href="#icon-dumbbell"></use></svg
+          ></span>
+          <div class="row-actions">
+            <button
+              class="icon-button"
+              type="button"
+              data-action="edit"
+              aria-label="Editar ficha"
+            >
+              <svg><use href="#icon-edit"></use></svg></button
+            ><button
+              class="icon-button icon-button--danger"
+              type="button"
+              data-action="delete"
+              aria-label="Excluir ficha"
+            >
+              <svg><use href="#icon-trash"></use></svg>
+            </button>
+          </div>
+        </div>
+        <h2></h2>
+        <p data-card="student"></p>
+        <dl>
+          <div>
+            <dt>Objetivo</dt>
+            <dd data-card="goal"></dd>
+          </div>
+          <div>
+            <dt>Duração</dt>
+            <dd data-card="duration"></dd>
+          </div>
+        </dl>
+        <div class="workout-progress">
+          <div><span>Progresso</span><strong></strong></div>
+          <progress max="100"></progress>
+        </div>
+        <button
+          class="button button--secondary button--full"
+          type="button"
+        >
+          Abrir ficha <svg><use href="#icon-arrow"></use></svg>
+        </button></article
+    ></template>
+    <template id="exercise-item-template"
+      ><article class="exercise-item">
+        <span class="exercise-glyph"
+          ><svg><use href="#icon-activity"></use></svg
+        ></span>
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <span class="tag"></span
+        ><button
+          class="icon-button"
+          type="button"
+          data-action="edit"
+          aria-label="Editar exercício"
+        >
+          <svg><use href="#icon-edit"></use></svg>
+        </button></article
+    ></template>
+    <template id="assessment-card-template"
+      ><article class="assessment-card panel">
+        <header>
+          <div class="person-cell">
+            <span class="avatar"></span>
+            <div>
+              <h2></h2>
+              <p></p>
+            </div>
+          </div>
+          <span class="status status--success"
+            ><svg><use href="#icon-check"></use></svg>Concluída</span
+          >
+        </header>
+        <div class="assessment-values">
+          <div><span>Peso</span><strong data-value="weight"></strong></div>
+          <div><span>IMC</span><strong data-value="bmi"></strong></div>
+          <div><span>Gordura</span><strong data-value="fat"></strong></div>
+          <div><span>Cintura</span><strong data-value="waist"></strong></div>
+          <div><span>RCQ</span><strong data-value="whr"></strong></div>
+          <div><span>FC repouso</span><strong data-value="restingHR"></strong></div>
+        </div>
+        <footer>
+          <span data-value="date"></span><strong data-value="protocol"></strong>
+        </footer></article
+    ></template>
+    <div
+      class="toast"
+      role="status"
+      aria-live="polite"
+      data-toast
+    >
+      <svg><use href="#icon-check"></use></svg><span></span>
+    </div>
+    <dialog
+      class="install-dialog"
+      data-install-dialog
+    >
+      <h2>Adicionar FARISA Personal à tela inicial</h2>
+      <p data-install-instructions></p>
+      <button
+        type="button"
+        data-close-install
+      >
+        Entendi
+      </button>
+    </dialog>
+    <script
+      type="module"
+      src="/src/main.js"
+    ></script>
+  </body>
+</html>
