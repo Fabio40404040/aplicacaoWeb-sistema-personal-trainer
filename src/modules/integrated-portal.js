@@ -1709,7 +1709,7 @@ function connectPlanCards() {
     const link = card.querySelector('a:not(.plan-whatsapp-link)')
     if (!link || !mapping[index]) return
     link.href = `#cadastro-aluno?plan=${mapping[index]}`
-    link.textContent = index === 0 ? 'Escolher Treinos Prontos' : 'Escolher este plano'
+    link.textContent = 'Escolher plano'
     card.querySelector('.plan-whatsapp-link')?.remove()
   })
 }
