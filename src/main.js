@@ -17,6 +17,7 @@ import { initPwa } from './modules/pwa.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
+import { initWhatsappFloat } from './modules/whatsapp.js'
 
 function initialize(name, initializer) {
   try {
@@ -49,3 +50,4 @@ initialize('ferramentas web', initWebTools)
 initialize('menu público', initPublicMenu)
 initialize('acesso do personal', initPersonalAccess)
 initialize('aplicativo instalável', initPwa)
+initialize('WhatsApp flutuante', initWhatsappFloat)

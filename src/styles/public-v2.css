@@ -650,20 +650,6 @@
 .plan-primary-actions > a:hover {
   background: #347fe9;
 }
-.plan-card > a.plan-whatsapp-link {
-  min-height: 40px;
-  margin-top: 10px;
-  border-color: rgba(199, 216, 238, 0.28);
-  background: transparent;
-  color: var(--site-muted);
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-.plan-card > a.plan-whatsapp-link:hover {
-  border-color: rgba(199, 216, 238, 0.55);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-}
 .plan-card > a svg,
 .plan-primary-actions > a svg {
   width: 17px;
@@ -1088,5 +1074,51 @@
   }
   .public-footer p {
     order: 3;
+  }
+}
+
+/* Botão flutuante do WhatsApp */
+.whatsapp-float {
+  position: fixed;
+  z-index: 70;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  color: #fff;
+  background: #25d366;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.whatsapp-float svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+  stroke: none;
+}
+.whatsapp-float:hover {
+  transform: scale(1.07);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42);
+}
+.whatsapp-float:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+@media (max-width: 620px) {
+  .whatsapp-float {
+    right: 16px;
+    bottom: 16px;
+    width: 54px;
+    height: 54px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-float {
+    transition: none;
   }
 }

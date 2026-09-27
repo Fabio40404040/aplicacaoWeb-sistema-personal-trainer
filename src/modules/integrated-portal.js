@@ -15,7 +15,6 @@ import { getData } from './state.js'
 import { exerciseCatalog } from '../data/exercises.js'
 import { exerciseVideoLibrary, legGroupNames, muscleGroups } from '../data/library.js'
 import { askConfirm, exerciseGroups, showToast } from './utils.js'
-import { createWhatsappUrl, planNames } from './whatsapp.js'
 import {
   exerciseGifThumb,
   filesFromDrop,
@@ -1711,18 +1710,7 @@ function connectPlanCards() {
     if (!link || !mapping[index]) return
     link.href = `#cadastro-aluno?plan=${mapping[index]}`
     link.textContent = index === 0 ? 'Escolher Treinos Prontos' : 'Escolher este plano'
-    if (card.querySelector('.plan-whatsapp-link')) return
-    const whatsapp = document.createElement('a')
-    whatsapp.className = 'plan-whatsapp-link'
-    whatsapp.href = createWhatsappUrl({ planCode: mapping[index] })
-    whatsapp.target = '_blank'
-    whatsapp.rel = 'noreferrer'
-    whatsapp.textContent = 'Tirar dúvidas pelo WhatsApp'
-    whatsapp.setAttribute(
-      'aria-label',
-      `Tirar dúvidas sobre ${planNames[mapping[index]]} pelo WhatsApp`,
-    )
-    card.append(whatsapp)
+    card.querySelector('.plan-whatsapp-link')?.remove()
   })
 }
 

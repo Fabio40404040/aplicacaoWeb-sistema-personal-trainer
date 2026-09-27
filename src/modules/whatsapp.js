@@ -18,3 +18,16 @@ export function createWhatsappUrl({ name = '', planCode = '', planName = '', pur
   const destination = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/'
   return `${destination}?text=${encodeURIComponent(message)}`
 }
+
+export function createGeneralWhatsappUrl() {
+  const message = 'Olá! Vim pelo site da FARISA e gostaria de tirar algumas dúvidas.'
+  const destination = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/'
+  return `${destination}?text=${encodeURIComponent(message)}`
+}
+
+// Botão flutuante do WhatsApp no site público.
+export function initWhatsappFloat() {
+  document.querySelectorAll('[data-whatsapp-float]').forEach((link) => {
+    link.href = createGeneralWhatsappUrl()
+  })
+}
