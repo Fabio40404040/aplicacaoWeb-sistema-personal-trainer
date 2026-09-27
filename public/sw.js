@@ -1,4 +1,4 @@
-const CACHE_NAME = 'farisa-personal-static-v10'
+const CACHE_NAME = 'farisa-personal-static-v11'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE = [OFFLINE_URL, '/icons/icon-192.png', '/icons/icon-512.png']
 
