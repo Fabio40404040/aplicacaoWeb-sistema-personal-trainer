@@ -202,7 +202,7 @@
   inset: 76px 0 0;
   width: 100%;
   margin-inline: auto;
-  background: url('../assets/img/coach-illustration.svg') center bottom / contain no-repeat;
+  background: url('../assets/img/personal.png') center bottom / contain no-repeat;
   filter: saturate(1.03) contrast(1.02);
   -webkit-mask-image: none;
   mask-image: none;
@@ -1000,7 +1000,7 @@
     inset: 68px 0 auto;
     width: 100%;
     height: 66.67vw;
-    background-image: url('../assets/img/coach-illustration.svg'), url('../assets/img/gym-hero-wide.png');
+    background-image: url('../assets/img/personal.png'), url('../assets/img/gym-hero-wide.png');
     background-size:
       auto 100%,
       cover;
