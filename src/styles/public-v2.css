@@ -655,10 +655,17 @@
   width: 17px;
   height: 17px;
 }
+/* Treinos Prontos: "Escolher" e "Ver prévia" um embaixo do outro, cada um
+   com a largura toda do card, para o texto nunca quebrar em duas linhas. */
 .plan-primary-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 10px;
+}
+.plan-primary-actions > a {
+  padding-inline: 14px;
+  text-align: center;
+  white-space: nowrap;
 }
 .plan-primary-actions > a.plan-preview-link {
   border-color: rgba(199, 216, 238, 0.35);
