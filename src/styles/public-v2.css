@@ -373,28 +373,30 @@
 .public-install-button {
   display: none;
   align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  overflow: hidden;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--site-line);
+  border-radius: 10px;
+  color: var(--site-text);
+  background: rgba(255, 255, 255, 0.05);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
 .public-install-button[hidden] {
   display: none;
 }
-.public-install-button img {
-  width: 68px;
-  height: 68px;
-  max-width: none;
+.public-install-button svg {
+  width: 18px;
+  height: 18px;
   flex: none;
-  object-fit: contain;
-  opacity: 0.62;
 }
-.public-install-button:hover img {
-  opacity: 0.82;
+.public-install-button:hover {
+  border-color: rgba(119, 181, 255, 0.6);
+  background: rgba(61, 139, 253, 0.13);
 }
 .public-install-button:focus-visible {
   outline: 2px solid #cbd4df;

@@ -175,6 +175,12 @@
         <path d="M4 7h16M4 12h16M4 17h16" />
       </symbol>
       <symbol
+        id="icon-download"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+      </symbol>
+      <symbol
         id="icon-close"
         viewBox="0 0 24 24"
       >
@@ -312,15 +318,10 @@
             class="public-install-button"
             type="button"
             data-install-app
-            aria-label="Adicionar à tela inicial"
+            title="Adicionar o app à tela inicial"
             hidden
           >
-            <img
-              src="/icons/install-phone.png"
-              width="68"
-              height="68"
-              alt=""
-            />
+            <svg aria-hidden="true"><use href="#icon-download"></use></svg><span>Baixar app</span>
           </button>
           <button
             class="public-menu-toggle"
