@@ -18,6 +18,7 @@ import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
 import { initWhatsappFloat } from './modules/whatsapp.js'
+import { initDemoAccess } from './modules/demo-access.js'
 
 function initialize(name, initializer) {
   try {
@@ -51,3 +52,4 @@ initialize('menu público', initPublicMenu)
 initialize('acesso do personal', initPersonalAccess)
 initialize('aplicativo instalável', initPwa)
 initialize('WhatsApp flutuante', initWhatsappFloat)
+initialize('acesso de demonstração', initDemoAccess)

@@ -1,4 +1,5 @@
 import { readJson } from '../lib/http.js'
+import { isDemoEmail } from '../lib/demo.js'
 import { hasRecoveryEmailProvider, sendRecoveryEmail } from '../lib/recovery-email.js'
 import { createSession, hashPassword, isStrongPassword } from '../lib/session.js'
 
@@ -62,6 +63,8 @@ export async function personalRecovery(request, env, db, action) {
   )
     return { error: 'Informe um e-mail válido.', status: 400 }
 
+  // Conta demo do portfólio: a senha é pública e não pode ser trocada.
+  if (isDemoEmail(email)) return generic
   const requestUrl = new URL(request.url)
   const isLocal = ['localhost', '127.0.0.1'].includes(requestUrl.hostname)
   const siteUrl = env.PUBLIC_SITE_URL || request.headers.get('Origin') || env.ALLOWED_ORIGIN

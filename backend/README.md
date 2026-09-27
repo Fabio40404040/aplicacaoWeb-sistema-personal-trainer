@@ -51,3 +51,19 @@ Os tokens expiram em 30 minutos, são armazenados somente como hash e consumidos
 As migrações ficam em migrations-d1 e são aplicadas pelo Wrangler.
 
 Documentação: https://developers.cloudflare.com/d1/get-started/ e https://developers.brevo.com/docs/send-a-transactional-email
+
+## Conta de demonstração (portfólio)
+
+O arquivo `demo/demo-seed.sql` cria duas contas com dados fictícios:
+
+| Área | E-mail | Senha |
+|---|---|---|
+| Personal | `demo@farisa.example` | `Demo@2026` |
+| Aluno | `aluno.demo@farisa.example` | `Demo@2026` |
+
+- `npm run demo:reset:local` cria ou restaura a demo no banco do computador.
+- `npm run demo:reset:remote` faz o mesmo no banco do site publicado.
+
+O script apaga só a conta demo e seus dados, e pode rodar quantas vezes precisar. As outras contas não são tocadas.
+
+No servidor, as contas demo não recuperam senha, não enviam arquivos (PDF, vídeo, GIF) e não fazem pagamentos (`src/lib/demo.js`). No site, o quadro com o e-mail e a senha e o botão "Entrar como visitante" aparecem enquanto `VITE_DEMO_MODE` não for `false` (`src/modules/demo-access.js`). No site entregue a um cliente, use `VITE_DEMO_MODE=false`.
