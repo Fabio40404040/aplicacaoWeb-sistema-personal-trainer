@@ -395,24 +395,94 @@ function renderExercises() {
   )
   document.querySelector('[data-exercises-empty]').hidden = filtered.length > 0
 }
+// Avaliações agrupadas por aluno: uma pasta por aluno (fechada), com a
+// última avaliação e a variação no resumo. Ao clicar no nome, abrem os cards.
+const openAssessmentGroups = new Set()
+function assessmentCard(a) {
+  const card = cloneTemplate('assessment-card-template')
+  card.querySelector('.avatar').textContent = initials(a.student)
+  card.querySelector('h2').textContent = a.student
+  card.querySelector('.person-cell p').textContent = a.publishedAt
+    ? 'Publicada para o aluno'
+    : 'Rascunho do personal'
+  card.querySelector('[data-value="weight"]').textContent = a.weight
+  card.querySelector('[data-value="bmi"]').textContent = a.bmi || '—'
+  card.querySelector('[data-value="fat"]').textContent = a.fat
+  card.querySelector('[data-value="waist"]').textContent = a.waist
+  card.querySelector('[data-value="whr"]').textContent = a.whr || '—'
+  card.querySelector('[data-value="restingHR"]').textContent = a.restingHR || '—'
+  card.querySelector('[data-value="date"]').textContent = a.date
+  card.querySelector('[data-value="protocol"]').textContent = a.protocol || 'Avaliação física'
+  return card
+}
+function variationText(latest, first, unit) {
+  const now = numberFrom(latest)
+  const before = numberFrom(first)
+  if (now === null || before === null || now === before) return ''
+  const diff = now - before
+  return `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}${unit}`
+}
 function renderAssessments() {
-  document.querySelector('[data-assessments-grid]').replaceChildren(
-    ...getData().assessments.map((a) => {
-      const card = cloneTemplate('assessment-card-template')
-      card.querySelector('.avatar').textContent = initials(a.student)
-      card.querySelector('h2').textContent = a.student
-      card.querySelector('.person-cell p').textContent = a.publishedAt
-        ? 'Publicada para o aluno'
-        : 'Rascunho do personal'
-      card.querySelector('[data-value="weight"]').textContent = a.weight
-      card.querySelector('[data-value="bmi"]').textContent = a.bmi || '—'
-      card.querySelector('[data-value="fat"]').textContent = a.fat
-      card.querySelector('[data-value="waist"]').textContent = a.waist
-      card.querySelector('[data-value="whr"]').textContent = a.whr || '—'
-      card.querySelector('[data-value="restingHR"]').textContent = a.restingHR || '—'
-      card.querySelector('[data-value="date"]').textContent = a.date
-      card.querySelector('[data-value="protocol"]').textContent = a.protocol || 'Avaliação física'
-      return card
+  const container = document.querySelector('[data-assessments-grid]')
+  const groups = new Map()
+  // A lista já vem da mais recente para a mais antiga.
+  getData().assessments.forEach((a) => {
+    const key = a.studentId || a.student
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(a)
+  })
+  container.replaceChildren(
+    ...[...groups.entries()].map(([key, items]) => {
+      const latest = items[0]
+      const first = items[items.length - 1]
+      const group = document.createElement('details')
+      group.className = 'assessment-group'
+      group.open = openAssessmentGroups.has(key)
+      group.addEventListener('toggle', () => {
+        if (group.open) openAssessmentGroups.add(key)
+        else openAssessmentGroups.delete(key)
+      })
+
+      const summary = document.createElement('summary')
+      const avatar = document.createElement('span')
+      avatar.className = 'avatar'
+      avatar.textContent = initials(latest.student)
+      const info = document.createElement('div')
+      info.className = 'assessment-group-info'
+      const name = document.createElement('strong')
+      name.textContent = latest.student
+      const meta = document.createElement('small')
+      meta.textContent = `${items.length} ${items.length === 1 ? 'avaliação' : 'avaliações'} · última em ${latest.date}`
+      info.append(name, meta)
+
+      const highlights = document.createElement('div')
+      highlights.className = 'assessment-group-highlights'
+      const addHighlight = (label, value, change) => {
+        if (!value) return
+        const item = document.createElement('span')
+        const title = document.createElement('small')
+        title.textContent = label
+        const strong = document.createElement('strong')
+        strong.textContent = value
+        item.append(title, strong)
+        if (change) {
+          const badge = document.createElement('em')
+          badge.textContent = change
+          badge.className = change.startsWith('−') ? 'is-down' : 'is-up'
+          item.append(badge)
+        }
+        highlights.append(item)
+      }
+      const several = items.length > 1
+      addHighlight('Peso', latest.weight, several ? variationText(latest.weight, first.weight, ' kg') : '')
+      addHighlight('Gordura', latest.fat, several ? variationText(latest.fat, first.fat, ' pts') : '')
+
+      summary.append(avatar, info, highlights)
+      const body = document.createElement('div')
+      body.className = 'assessment-grid assessment-group-body'
+      body.append(...items.map(assessmentCard))
+      group.append(summary, body)
+      return group
     }),
   )
 }
