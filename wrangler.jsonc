@@ -8,7 +8,7 @@
     {
       "binding": "DB",
       "database_name": "farisa-coach",
-      "database_id": "COLE_AQUI_O_ID_DO_BANCO_FARISA",
+      "database_id": "989f69b1-a78f-422b-b53a-dfe1769a71d4",
       "migrations_dir": "backend/migrations-d1",
     },
   ],
@@ -24,7 +24,7 @@
         {
           "binding": "DB",
           "database_name": "farisa-coach",
-          "database_id": "COLE_AQUI_O_ID_DO_BANCO_FARISA",
+          "database_id": "989f69b1-a78f-422b-b53a-dfe1769a71d4",
           "migrations_dir": "backend/migrations-d1",
         },
       ],
@@ -38,7 +38,7 @@
         "ALLOWED_ORIGIN": "https://farisa-personal-trainer.pages.dev",
         "PUBLIC_SITE_URL": "https://farisa-personal-trainer.pages.dev/",
         "PUBLIC_API_URL": "https://farisa-personal-trainer.pages.dev",
-        "EMAIL_FROM": "farisa@gmail.com",
+        "EMAIL_FROM": "fabiogisel7@gmail.com",
         "BREVO_FROM_NAME": "FARISA Personal Trainer",
         "SESSION_TTL_SECONDS": "43200",
       },
