@@ -2933,3 +2933,24 @@ video.gif-lightbox-image {
   margin-left: 8px;
   vertical-align: middle;
 }
+
+/* Painel do administrador (admin-panel.js) */
+.admin-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--blue-50, #eaf2ff);
+  color: var(--blue-700, #1d4ed8);
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.admin-table td > strong {
+  display: block;
+}
+.admin-muted {
+  display: block;
+  color: var(--ink-500, #64748b);
+  font-size: 0.75rem;
+}

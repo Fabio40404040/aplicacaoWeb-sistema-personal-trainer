@@ -17,37 +17,3 @@
 .personal-test-credentials span {
   overflow-wrap: anywhere;
 }
-
-/* Quadro "Acesso de demonstração" das telas de login (demo-access.js) */
-.demo-access {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border: 1px dashed rgba(61, 139, 253, 0.6);
-  border-radius: 12px;
-  background: rgba(61, 139, 253, 0.08);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-.demo-access strong {
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #3d8bfd;
-}
-.demo-access code {
-  font-family: inherit;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-  user-select: all;
-}
-.demo-access small {
-  opacity: 0.75;
-}
-.demo-access__button {
-  margin-top: 6px;
-  width: 100%;
-}
-.demo-access__button--next {
-  margin-top: 0;
-}

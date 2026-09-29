@@ -15,10 +15,7 @@
     "preview": "vite preview",
     "senha": "node backend/scripts/trocar-senha-personal.mjs",
     "db:migrate:remote": "npm --prefix backend run db:migrate:remote",
-    "demo:reset:local": "npm --prefix backend run demo:reset:local",
-    "demo:reset:remote": "npm --prefix backend run demo:reset:remote",
-    "demo:reset": "npm run demo:reset:local && npm run demo:reset:remote",
-    "demo:deploy": "cd demo-reset && ../backend/node_modules/.bin/wrangler deploy",
+    "demo:remover": "npm --prefix backend run demo:remover:local && npm --prefix backend run demo:remover:remote",
     "wrangler:login": "npm --prefix backend exec -- wrangler login"
   },
   "devDependencies": {

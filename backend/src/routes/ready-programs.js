@@ -160,7 +160,6 @@ export async function setReadyProgramSitePreview(db, trainerId, id, body) {
     });
   await db.batch(queries);
   // Só o personal dono do site (o primeiro cadastrado) muda a prévia pública.
-  // Na conta demo a marcação funciona no painel, mas o site não muda.
   const owner = (await db.query("SELECT id FROM trainers ORDER BY created_at LIMIT 1")).rows[0];
   return { data: { id, sitePreview: enabled, affectsSite: owner?.id === trainerId } };
 }

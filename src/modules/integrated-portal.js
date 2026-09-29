@@ -1334,7 +1334,7 @@ function renderReadyWorkoutLibrary() {
           program.sitePreview
             ? 'Este treino deixou de ser a prévia do site.'
             : result?.affectsSite === false
-              ? 'Marcado como prévia. Na conta de demonstração o site continua com a prévia padrão.'
+              ? 'Marcado como prévia. O site mostra a prévia do personal dono do site.'
               : 'Pronto! O “Ver prévia” do site agora mostra este treino.',
         )
         window.dispatchEvent(new Event('farisa:remote-refresh'))

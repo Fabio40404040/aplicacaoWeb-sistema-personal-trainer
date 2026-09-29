@@ -12,6 +12,12 @@ export async function login(request, env, db) {
   const trainer = result.rows[0]
   if (!trainer || !(await verifyPassword(password, trainer.password_hash)))
     return { error: 'E-mail ou senha incorretos.', status: 401 }
+  // Último acesso (migração 020). Sem a migração, o login segue normal.
+  try {
+    await db.query('UPDATE trainers SET last_login_at=CURRENT_TIMESTAMP WHERE id=$1', [trainer.id])
+  } catch {
+    /* coluna ainda não existe */
+  }
   return {
     data: {
       token: await createSession(trainer, env),

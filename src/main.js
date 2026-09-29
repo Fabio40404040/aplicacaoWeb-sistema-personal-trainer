@@ -18,7 +18,7 @@ import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
 import { initWhatsappFloat } from './modules/whatsapp.js'
-import { initDemoAccess } from './modules/demo-access.js'
+import { initAdminPanel } from './modules/admin-panel.js'
 import { initPlanPreview } from './modules/plan-preview.js'
 
 function initialize(name, initializer) {
@@ -38,6 +38,7 @@ initialize('controles de senha', initPasswordControls)
 initialize('acesso do aluno', initStudentAccess)
 initialize('acesso de teste do personal', initPersonalTestAccess)
 initialize('autenticação do personal', initAuth)
+initialize('painel do administrador', initAdminPanel)
 initialize('navegação', initNavigation)
 initialize('portal integrado', initIntegratedPortal)
 initialize('biblioteca de GIFs', initExerciseGifs)
@@ -53,5 +54,4 @@ initialize('menu público', initPublicMenu)
 initialize('acesso do personal', initPersonalAccess)
 initialize('aplicativo instalável', initPwa)
 initialize('WhatsApp flutuante', initWhatsappFloat)
-initialize('acesso de demonstração', initDemoAccess)
 initialize('prévia dos treinos prontos', initPlanPreview)

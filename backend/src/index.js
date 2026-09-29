@@ -1,7 +1,7 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { readSession } from "./lib/session.js";
-import { demoBlocked, isDemoEmail } from "./lib/demo.js";
+import { adminTrainers, isPlatformAdmin } from "./routes/admin.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
 import { studentAuth } from "./routes/student-auth.js";
@@ -127,13 +127,6 @@ async function handle(request, env) {
   if (segments[0] === "student") {
     if (session.role !== "student")
       return { error: "Use sua conta de aluno.", status: 403 };
-    // Conta demo do portfólio: sem pagamentos nem troca de plano.
-    if (
-      isDemoEmail(session.email) &&
-      request.method !== "GET" &&
-      (segments[1] === "payments" || route === "student/plan-request")
-    )
-      return demoBlocked;
     return withDb(env, async (db) => {
       if (request.method === "GET" && route === "student/me") {
         await reconcileStudentPayments(
@@ -197,6 +190,14 @@ async function handle(request, env) {
     );
     if (!trainer.rows.length)
       return { error: "Sessão inválida ou expirada.", status: 401 };
+    // Painel do administrador da plataforma (dono do SaaS).
+    if (segments[0] === "admin") {
+      if (!(await isPlatformAdmin(db, env, session)))
+        return { error: "Acesso exclusivo do administrador.", status: 403 };
+      if (request.method === "GET" && route === "admin/trainers")
+        return { data: await adminTrainers(db) };
+      return { error: "Rota não encontrada.", status: 404 };
+    }
     if (request.method === "GET" && segments[0] === "dashboard")
       return { data: await dashboard(db, session.sub) };
     if (

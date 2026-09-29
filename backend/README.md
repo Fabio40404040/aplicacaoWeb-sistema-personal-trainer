@@ -52,32 +52,21 @@ As migrações ficam em migrations-d1 e são aplicadas pelo Wrangler.
 
 Documentação: https://developers.cloudflare.com/d1/get-started/ e https://developers.brevo.com/docs/send-a-transactional-email
 
-## Conta de demonstração (portfólio)
+## Painel do administrador
 
-O arquivo `demo/demo-seed.sql` cria duas contas com dados fictícios:
+O menu "Administração" do painel aparece só para o administrador da plataforma. Ele lista todos os personal trainers cadastrados, com o número de alunos, alunos com acesso, fichas, data de cadastro e último acesso.
 
-| Área | E-mail | Senha |
-|---|---|---|
-| Personal | `demo@farisa.example` | `Demo@2026` |
-| Aluno (consultoria Premium) | `aluno.demo@farisa.example` | `Demo@2026` |
-| Aluno (Treinos Prontos) | `aluno.pronto@farisa.example` | `Demo@2026` |
+Quem é administrador:
 
-- `npm run demo:reset:local` cria ou restaura a demo no banco do computador.
-- `npm run demo:reset:remote` faz o mesmo no banco do site publicado.
+- os e-mails em `ADMIN_EMAILS` (separados por vírgula), se essa variável existir no `wrangler.jsonc`;
+- sem `ADMIN_EMAILS`, o personal dono do site (o primeiro cadastrado).
 
-O script apaga só a conta demo e seus dados, e pode rodar quantas vezes precisar. As outras contas não são tocadas.
+O servidor confere isso em toda chamada de `/api/admin/*` (`src/routes/admin.js`). O último acesso vem da migração 020.
 
-No servidor, as contas demo não recuperam senha e não fazem pagamentos. O envio de arquivos (GIFs, vídeos e PDFs) é livre, e a restauração diária apaga do R2 tudo o que a demo enviou. No site, o quadro com o e-mail e a senha e o botão "Entrar como visitante" aparecem enquanto `VITE_DEMO_MODE` não for `false` (`src/modules/demo-access.js`). No site entregue a um cliente, use `VITE_DEMO_MODE=false`.
+## Recuperação de senha
 
-### Restauração automática diária
+"Esqueci a senha" funciona para personal e aluno. No site publicado, o e-mail sai pela Brevo: cadastre o segredo `BREVO_API_KEY` no Cloudflare. `EMAIL_FROM` precisa ser um remetente validado na Brevo.
 
-A pasta `demo-reset/`, na raiz do projeto, tem um worker pequeno que roda o mesmo `demo-seed.sql` todo dia às 06:00 UTC (03:00 em Brasília). Ele não tem rota pública: só o agendamento do Cloudflare dispara a restauração.
+## Remoção da antiga conta de demonstração
 
-Publique uma vez, e de novo sempre que alterar o `demo-seed.sql`:
-
-```bash
-cd demo-reset
-npx wrangler deploy
-```
-
-Para ver se rodou: Cloudflare → Workers & Pages → `farisa-demo-reset` → Logs (mensagem "Demo restaurada").
+`npm run demo:remover` (na pasta principal) apaga a conta `demo@farisa.example`, os alunos fictícios e tudo deles, no banco do computador e no do site publicado (`scripts/remover-demo.sql`). As outras contas não são tocadas.

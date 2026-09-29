@@ -114,16 +114,6 @@ async function main() {
   startInput()
   console.log('\nTrocar a senha do painel do personal\n')
   const email = (await ask('E-mail da conta [admin@farisa.example]: ')) || 'admin@farisa.example'
-  if (/^(demo|aluno\.demo)@farisa\.example$/iu.test(email)) {
-    console.log(
-      'Essa é uma conta de demonstração: a senha dela é sempre Demo@2026.
-' +
-        'Para restaurar a demo, use "npm run demo:reset". Para o seu login, use admin@farisa.example.',
-    )
-    rl.close()
-    process.exit(1)
-  }
-
   let password = ''
   for (;;) {
     password = await askHidden('Nova senha: ')
