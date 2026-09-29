@@ -496,7 +496,7 @@ function renderReadyWorkoutLibrary(container, data) {
       // O nome do aluno cadastrado, não o rótulo do programa.
       void downloadWorkoutPdf(
         { ...workout, readyProgram: true },
-        data.name,
+        { name: data.name, email: data.email },
         loadStudentGifFrame,
       ),
     );
@@ -542,7 +542,11 @@ function renderPortal(container, data) {
       );
       download.type = "button";
       download.addEventListener("click", () =>
-        void downloadWorkoutPdf(workout, data.name, loadStudentGifFrame),
+        void downloadWorkoutPdf(
+          workout,
+          { name: data.name, email: data.email },
+          loadStudentGifFrame,
+        ),
       );
       workoutBlock.append(download);
       if (!workout.exercises.length)

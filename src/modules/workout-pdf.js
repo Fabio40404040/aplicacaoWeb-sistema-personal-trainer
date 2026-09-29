@@ -69,6 +69,22 @@ function truncate(value, length) {
     : content;
 }
 
+// Marca do personal: vai na marca d'água, no cabeçalho e no rodapé de todas
+// as páginas. No SaaS, cada personal terá a própria marca (workout.brandName).
+const DEFAULT_BRAND = "FARISA PERSONAL";
+const brandOf = (workout) =>
+  ascii(workout?.brandName || DEFAULT_BRAND).trim().toUpperCase() || DEFAULT_BRAND;
+
+// Aceita só o nome (texto) ou { name, email }.
+function studentInfo(student) {
+  if (student && typeof student === "object")
+    return {
+      name: String(student.name || "Aluno(a)"),
+      email: String(student.email || ""),
+    };
+  return { name: String(student || "Aluno(a)"), email: "" };
+}
+
 // Em vez de cortar o nome do aluno com "...", diminui a fonte quando o nome
 // é mais comprido do que o espaço reservado — assim o nome completo sempre
 // aparece por inteiro na ficha.
@@ -267,7 +283,8 @@ function drawExerciseFigure(commands, x, top, number, frameBytes, gifLinkUri) {
   );
 }
 
-function drawHeader(commands, workout, studentName, continuation = false) {
+function drawHeader(commands, workout, student, continuation = false) {
+  const { name: studentName, email: studentEmail } = student;
   rect(commands, 25, 20, 545, 52, COLORS.blue);
   const titleFit = fitText(
     continuation ? "FICHA DE TREINO (CONT.)" : "FICHA DE TREINO",
@@ -279,7 +296,8 @@ function drawHeader(commands, workout, studentName, continuation = false) {
     bold: true,
     color: COLORS.white,
   });
-  text(commands, "FARISA PERSONAL TRAINER", 414, 37, 9, {
+  const headerBrand = fitText(brandOf(workout), 24, 9, 6);
+  text(commands, headerBrand.text, 414, 37, headerBrand.size, {
     bold: true,
     color: COLORS.white,
   });
@@ -288,8 +306,12 @@ function drawHeader(commands, workout, studentName, continuation = false) {
   // Orçamento de caracteres calibrado para o espaço real até a coluna
   // PROGRAMA (x=255), pra nomes compridos nunca mais invadirem o campo
   // vizinho.
-  const alunoFit = fitText(studentName, 22, 13, 7);
-  text(commands, alunoFit.text, 39, 105, alunoFit.size, { bold: true });
+  const alunoFit = fitText(studentName, 22, 12, 7);
+  text(commands, alunoFit.text, 39, 103, alunoFit.size, { bold: true });
+  if (studentEmail) {
+    const emailFit = fitText(studentEmail, 40, 7.5, 5.5);
+    text(commands, emailFit.text, 39, 119, emailFit.size, { color: COLORS.muted });
+  }
   text(commands, "PROGRAMA", 255, 92, 7, { bold: true, color: COLORS.muted });
   const programFit = fitText(workout.name, 27, 11, 8);
   text(commands, programFit.text, 255, 105, programFit.size, { bold: true });
@@ -306,7 +328,8 @@ function drawHeader(commands, workout, studentName, continuation = false) {
   return 146;
 }
 
-function drawCover(workout, studentName) {
+function drawCover(workout, student) {
+  const { name: studentName, email: studentEmail } = student;
   const commands = [];
   rect(commands, 0, 0, PAGE_WIDTH, PAGE_HEIGHT, COLORS.ink);
   rect(commands, 25, 25, 545, 7, COLORS.cyan);
@@ -364,7 +387,9 @@ function drawCover(workout, studentName) {
     bold: true,
     color: COLORS.white,
   });
-  text(commands, "Treinamento com orientação profissional", 42, 662, 11, {
+  if (studentEmail)
+    text(commands, truncate(studentEmail, 70), 42, 642, 10, { color: COLORS.cyan });
+  text(commands, "Treinamento com orientação profissional", 42, 668, 11, {
     color: COLORS.line,
   });
   rect(commands, 42, 738, 82, 52, COLORS.blue);
@@ -488,10 +513,11 @@ function normalizedExercises(workout) {
     );
 }
 
-function buildPages(workout, studentName) {
-  const pages = [drawCover(workout, studentName)];
+function buildPages(workout, studentInput) {
+  const student = studentInfo(studentInput);
+  const pages = [drawCover(workout, student)];
   let commands = [];
-  let top = drawHeader(commands, workout, studentName);
+  let top = drawHeader(commands, workout, student);
   let previousSession = "";
   const exercises = normalizedExercises(workout);
   if (!exercises.length) {
@@ -515,7 +541,7 @@ function buildPages(workout, studentName) {
     if (top + needed > 803) {
       pages.push(commands);
       commands = [];
-      top = drawHeader(commands, workout, studentName, true);
+      top = drawHeader(commands, workout, student, true);
       previousSession = "";
     }
     if (exercise.sessionLabel !== previousSession) {
@@ -537,23 +563,19 @@ function buildPages(workout, studentName) {
     top += 136;
   });
   pages.push(commands);
-  const footerName = ascii(studentName).trim() || "Aluno(a)";
+  const brand = brandOf(workout);
+  const footerName = ascii(student.name).trim() || "Aluno(a)";
+  const footerText = truncate(
+    `${brand} - Aluno(a): ${footerName}${student.email ? ` - ${student.email}` : ""}`,
+    110,
+  );
   pages.forEach((page, index) => {
     line(page, 25, 818, 570, 818);
-    text(
-      page,
-      `FARISA Personal Trainer - Aluno(a): ${footerName}`,
-      25,
-      824,
-      7,
-      {
-        color: COLORS.muted,
-      },
-    );
+    text(page, footerText, 25, 824, 7, { color: COLORS.muted });
     text(page, `Pagina ${index + 1} de ${pages.length}`, 515, 824, 7, {
       color: COLORS.muted,
     });
-    drawWatermark(page, workout.sitePreview ? "PREVIA - FARISA" : "FARISA-PERSONAL");
+    drawWatermark(page, workout.sitePreview ? `PREVIA - ${brand}` : brand);
   });
   return pages;
 }
@@ -565,7 +587,7 @@ function buildPages(workout, studentName) {
 // visualmente aquele ponto específico — o efeito fica uniforme na página
 // inteira. Evita a faixa do cabeçalho (título, nome, programa) e do
 // rodapé, pra nunca cruzar com esse texto fino.
-function drawWatermark(commands, text = "FARISA-PERSONAL") {
+function drawWatermark(commands, text = DEFAULT_BRAND) {
   const label = escapePdf(text);
   const angle = (30 * Math.PI) / 180;
   const cos = Math.cos(angle).toFixed(4);
@@ -738,7 +760,7 @@ export async function downloadWorkoutPdf(workout, studentName, loadFrame) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = `${
-    ascii(`${studentName}-${workout.name}`)
+    ascii(`${studentInfo(studentName).name}-${workout.name}`)
       .toLowerCase()
       .replace(/[^a-z0-9]+/gu, "-") || "ficha-treino"
   }.pdf`;

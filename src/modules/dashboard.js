@@ -1060,7 +1060,12 @@ export function initDashboard() {
         }
       void downloadWorkoutPdf(
         { ...workout, exercises: workout.exercisePrescriptions },
-        workout.student || 'Aluno',
+        {
+          name: workout.student || 'Aluno',
+          email:
+            getData().students.find((item) => String(item.id) === String(workout.studentId))
+              ?.email || '',
+        },
         loadExerciseGifFrame,
       ).catch((error) => showToast(error.message))
     }
