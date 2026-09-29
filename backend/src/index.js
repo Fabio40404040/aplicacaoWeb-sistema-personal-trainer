@@ -122,14 +122,14 @@ async function handle(request, env) {
       return demoBlocked;
     return withDb(env, async (db) => {
       if (request.method === "GET" && route === "student/me") {
-        const reconcileResult = await reconcileStudentPayments(
+        await reconcileStudentPayments(
           db,
           session.sub,
           env,
         );
         const data = await studentPortal(db, session.sub, session.version);
         return data
-          ? { data: { ...data, _reconcileDebug: reconcileResult } } // DIAGNÓSTICO TEMPORÁRIO — remover depois
+          ? { data }
           : { error: "Conta não encontrada.", status: 401 };
       }
       if (request.method === "POST" && route === "student/profile")

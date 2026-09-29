@@ -736,8 +736,7 @@ export function initStudentAccess() {
       // digitando era apagado. Agora só redesenha se algo mudou de verdade e
       // se você não está no meio de um formulário, mantendo pastas abertas
       // e a posição da página.
-      const { _reconcileDebug, ...stableData } = data;
-      const signature = JSON.stringify(stableData);
+      const signature = JSON.stringify(data);
       const changed = signature !== lastSignature;
       if (changed && (!hasRendered || !isEditing(container))) {
         const openFolders = hasRendered ? folderState(container) : null;

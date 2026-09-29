@@ -67,3 +67,16 @@ O arquivo `demo/demo-seed.sql` cria duas contas com dados fictícios:
 O script apaga só a conta demo e seus dados, e pode rodar quantas vezes precisar. As outras contas não são tocadas.
 
 No servidor, as contas demo não recuperam senha, não enviam arquivos (PDF, vídeo, GIF) e não fazem pagamentos (`src/lib/demo.js`). No site, o quadro com o e-mail e a senha e o botão "Entrar como visitante" aparecem enquanto `VITE_DEMO_MODE` não for `false` (`src/modules/demo-access.js`). No site entregue a um cliente, use `VITE_DEMO_MODE=false`.
+
+### Restauração automática diária
+
+A pasta `demo-reset/`, na raiz do projeto, tem um worker pequeno que roda o mesmo `demo-seed.sql` todo dia às 06:00 UTC (03:00 em Brasília). Ele não tem rota pública: só o agendamento do Cloudflare dispara a restauração.
+
+Publique uma vez, e de novo sempre que alterar o `demo-seed.sql`:
+
+```bash
+cd demo-reset
+npx wrangler deploy
+```
+
+Para ver se rodou: Cloudflare → Workers & Pages → `farisa-demo-reset` → Logs (mensagem "Demo restaurada").

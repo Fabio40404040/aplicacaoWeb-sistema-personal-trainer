@@ -1,7 +1,8 @@
 // Troca a senha de entrada do painel do personal.
 //
 // Uso (dentro da pasta backend):
-//   node scripts/trocar-senha-personal.mjs
+//   npm run senha            (na pasta principal)
+//   node scripts/trocar-senha-personal.mjs   (na pasta backend)
 //
 // O script pergunta o e-mail, a nova senha (digitada sem aparecer na tela, duas
 // vezes) e onde trocar: no computador (npm run dev), no site publicado ou nos
@@ -84,7 +85,9 @@ function runUpdate(target, sql) {
   )
   const start = output.indexOf('[')
   const result = JSON.parse(output.slice(start))
-  return Number(result?.[0]?.meta?.changes ?? 0)
+  // Conta as linhas devolvidas pelo RETURNING: o banco local não informa
+  // "changes", e por isso antes dizia "não existe conta" mesmo trocando.
+  return Array.isArray(result?.[0]?.results) ? result[0].results.length : 0
 }
 
 function updatePassword(target, email, hash) {
@@ -94,12 +97,12 @@ function updatePassword(target, email, hash) {
     // auth_version+1 desconecta quem estava logado com a senha antiga.
     return runUpdate(
       target,
-      `UPDATE trainers SET password_hash='${hash}', auth_version=auth_version+1 ${where}`,
+      `UPDATE trainers SET password_hash='${hash}', auth_version=auth_version+1 ${where} RETURNING id`,
     )
   } catch (error) {
     const text = `${error.stdout || ''}${error.stderr || ''}${error.message}`
     if (!/no such column: auth_version/u.test(text)) throw error
-    return runUpdate(target, `UPDATE trainers SET password_hash='${hash}' ${where}`)
+    return runUpdate(target, `UPDATE trainers SET password_hash='${hash}' ${where} RETURNING id`)
   }
 }
 
@@ -110,7 +113,16 @@ async function main() {
   }
   startInput()
   console.log('\nTrocar a senha do painel do personal\n')
-  const email = (await ask('E-mail da conta [contato@farisa.example]: ')) || 'contato@farisa.example'
+  const email = (await ask('E-mail da conta [admin@farisa.example]: ')) || 'admin@farisa.example'
+  if (/^(demo|aluno\.demo)@farisa\.example$/iu.test(email)) {
+    console.log(
+      'Essa é uma conta de demonstração: a senha dela é sempre Demo@2026.
+' +
+        'Para restaurar a demo, use "npm run demo:reset". Para o seu login, use admin@farisa.example.',
+    )
+    rl.close()
+    process.exit(1)
+  }
 
   let password = ''
   for (;;) {
@@ -155,6 +167,8 @@ async function main() {
         .slice(0, 3)
         .join('\n')
       console.log(`✘ Não consegui trocar no ${target}.\n${detail || error.message}`)
+      if (/7403|not authorized/u.test(String(error.stderr || error.message)))
+        console.log('  Dica: o login do wrangler expirou. Rode "npx wrangler login" na pasta backend e tente de novo.')
     }
   }
   console.log(
