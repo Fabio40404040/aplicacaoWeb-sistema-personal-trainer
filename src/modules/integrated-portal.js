@@ -1116,9 +1116,37 @@ function createReadyWorkoutLibraryPanel() {
 function renderReadyWorkoutLibrary() {
   const grid = document.querySelector('[data-ready-workout-grid]')
   if (!grid) return
-  const programs = getData().readyPrograms || []
+  // A prévia do site fica separada, no topo, para não se misturar com os
+  // treinos que vão para quem comprou Treinos Prontos.
+  const programs = [...(getData().readyPrograms || [])].sort(
+    (a, b) => Number(Boolean(b.sitePreview)) - Number(Boolean(a.sitePreview)),
+  )
   grid.replaceChildren()
+  const hasPreview = programs.some((program) => program.sitePreview)
+  const addSectionTitle = (title, text) => {
+    const heading = document.createElement('div')
+    heading.className = 'ready-library-section'
+    const strong = document.createElement('strong')
+    strong.textContent = title
+    const small = document.createElement('small')
+    small.textContent = text
+    heading.append(strong, small)
+    grid.append(heading)
+  }
+  let buyersTitleAdded = false
+  if (hasPreview)
+    addSectionTitle(
+      'Prévia do site',
+      'Aparece para os visitantes no botão “Ver prévia” do card Treinos Prontos.',
+    )
   programs.forEach((program) => {
+    if (hasPreview && !program.sitePreview && !buyersTitleAdded) {
+      buyersTitleAdded = true
+      addSectionTitle(
+        'Treinos dos compradores',
+        'Os publicados aparecem para quem comprou Treinos Prontos.',
+      )
+    }
     try {
       program.exercisePrescriptions = JSON.parse(program.exercisePrescriptionsJson || '[]')
     } catch {
@@ -1129,7 +1157,16 @@ function renderReadyWorkoutLibrary() {
     ].sort()
     const card = document.createElement('section')
     card.className = 'media-library-card'
-    card.innerHTML = `<div><span class="tag">${program.published ? 'Publicado' : 'Rascunho'}</span>${program.sitePreview ? ' <span class="tag tag--preview">Prévia do site</span>' : ''}<h3></h3><p></p><small></small></div><div class="media-library-actions"></div>`
+    card.innerHTML = `<div><span class="tag">${program.published ? 'Publicado para compradores' : 'Rascunho'}</span>${program.sitePreview ? ' <span class="tag tag--preview">Prévia do site</span>' : ''}<h3></h3><p></p><small></small></div><div class="media-library-actions"></div>`
+    if (program.sitePreview) {
+      card.classList.add('media-library-card--preview')
+      const note = document.createElement('p')
+      note.className = 'ready-preview-note'
+      note.textContent = program.published
+        ? 'Este treino também está liberado para os compradores.'
+        : 'Só os visitantes do site veem este treino. Ele não vai para os compradores.'
+      card.querySelector('div').append(note)
+    }
     card.querySelector('h3').textContent = program.name
     card.querySelector('p').textContent =
       program.description || `${program.goal} · ${program.level}`
