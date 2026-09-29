@@ -3,6 +3,7 @@
 // baixado por quem abre /admin.
 import './admin.css'
 import { paintAvatar } from '../modules/profile-kit.js'
+import { initPasswordControls } from '../modules/password-controls.js'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const TOKEN_KEY = 'farisa-admin-token'
@@ -123,11 +124,24 @@ function render() {
   $('[data-admin-empty]').hidden = list.length > 0
 }
 
+// Telas da entrada: login, "esqueci a senha" e "nova senha" (link do e-mail).
+function showScreen(name) {
+  document.querySelectorAll('[data-admin-screen]').forEach((screen) => {
+    screen.hidden = screen.dataset.adminScreen !== name
+  })
+}
+
 function showLogin(message = '') {
   $('[data-admin-shell]').hidden = true
   $('[data-admin-login]').hidden = false
+  showScreen('login')
   $('[data-admin-login-status]').textContent = message
 }
+
+const resetToken = () =>
+  location.hash.startsWith('#nova-senha')
+    ? new URLSearchParams(location.hash.split('?')[1] || '').get('token')
+    : null
 
 async function showPanel() {
   const me = await api('/admin/me')
@@ -166,8 +180,84 @@ function init() {
       button.disabled = false
     }
   })
+  document.querySelectorAll('[data-admin-go]').forEach((button) =>
+    button.addEventListener('click', () => {
+      if (button.dataset.adminGo === 'login') history.replaceState(null, '', location.pathname)
+      showScreen(button.dataset.adminGo)
+      document.querySelectorAll('[data-admin-login] [role="status"]').forEach((node) => {
+        node.textContent = ''
+      })
+    }),
+  )
+
+  const forgot = $('[data-admin-forgot-form]')
+  forgot.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const status = $('[data-admin-forgot-status]')
+    const button = forgot.querySelector('[type="submit"]')
+    button.disabled = true
+    status.textContent = 'Enviando…'
+    try {
+      const result = await api('/admin/auth/forgot', {
+        method: 'POST',
+        body: JSON.stringify({ email: forgot.elements.email.value.trim() }),
+      })
+      status.textContent = result?.message || 'Pedido enviado.'
+      // No computador, sem e-mail configurado, o servidor devolve o link direto.
+      if (result?.resetUrl) {
+        const open = el('a', 'button button--secondary', 'Abrir link de recuperação')
+        open.href = result.resetUrl
+        status.append(document.createElement('br'), open)
+      }
+      forgot.reset()
+    } catch (error) {
+      status.textContent = error.message
+    } finally {
+      button.disabled = false
+    }
+  })
+
+  const reset = $('[data-admin-reset-form]')
+  reset.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const status = $('[data-admin-reset-status]')
+    const { password, confirm } = reset.elements
+    if (password.value !== confirm.value) {
+      status.textContent = 'As duas senhas não são iguais.'
+      return
+    }
+    const button = reset.querySelector('[type="submit"]')
+    button.disabled = true
+    status.textContent = 'Salvando…'
+    try {
+      const result = await api('/admin/auth/reset', {
+        method: 'POST',
+        body: JSON.stringify({ token: resetToken(), password: password.value }),
+      })
+      setToken(result.token)
+      reset.reset()
+      history.replaceState(null, '', location.pathname)
+      await showPanel()
+    } catch (error) {
+      status.textContent = error.message
+    } finally {
+      button.disabled = false
+    }
+  })
+
+  const openFromHash = () => {
+    if (!resetToken()) return false
+    setToken(null)
+    $('[data-admin-shell]').hidden = true
+    $('[data-admin-login]').hidden = false
+    showScreen('nova-senha')
+    return true
+  }
+  window.addEventListener('hashchange', openFromHash)
+  if (openFromHash()) return
   if (getToken()) showPanel().catch(() => showLogin())
   else showLogin()
 }
 
+initPasswordControls()
 init()

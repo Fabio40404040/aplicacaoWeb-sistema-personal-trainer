@@ -2,6 +2,7 @@ import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { readSession } from "./lib/session.js";
 import { adminLogin, adminTrainers, currentAdmin } from "./routes/admin.js";
+import { adminRecovery } from "./routes/admin-recovery.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
 import { studentAuth } from "./routes/student-auth.js";
@@ -125,6 +126,13 @@ async function handle(request, env) {
   // Área do administrador da plataforma (/admin): login e sessão próprios.
   if (request.method === "POST" && route === "admin/auth/login")
     return withDb(env, (db) => adminLogin(request, env, db));
+  if (
+    request.method === "POST" &&
+    ["admin/auth/forgot", "admin/auth/reset"].includes(route)
+  )
+    return withDb(env, (db) =>
+      adminRecovery(request, env, db, segments[2]),
+    );
 
   const session = await readSession(request, env);
   if (!session) return { error: "Sessão inválida ou expirada.", status: 401 };

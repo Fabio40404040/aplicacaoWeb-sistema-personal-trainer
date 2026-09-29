@@ -66,8 +66,10 @@
       </symbol>
 </svg>
 
+    <template id="password-toggle-template"><button class="password-toggle" type="button" aria-label="Mostrar senha" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /><path class="password-eye-slash" d="m3 3 18 18" /></svg></button></template>
+
     <main class="admin-login" data-admin-login hidden>
-      <form class="admin-login-card panel" data-admin-login-form>
+      <form class="admin-login-card panel" data-admin-screen="login" data-admin-login-form>
         <span class="brand-mark">FARISA</span>
         <div>
           <span class="eyebrow eyebrow--blue">Plataforma FARISA</span>
@@ -76,8 +78,36 @@
         </div>
         <label class="field"><span>E-mail</span><input type="email" name="email" autocomplete="username" required /></label>
         <label class="field"><span>Senha</span><input type="password" name="password" autocomplete="current-password" required /></label>
+        <button class="link-button admin-link" type="button" data-admin-go="esqueci">Esqueci a senha</button>
         <button class="button button--primary button--large" type="submit">Entrar</button>
         <p class="admin-login-status" role="status" aria-live="polite" data-admin-login-status></p>
+      </form>
+
+      <form class="admin-login-card panel" data-admin-screen="esqueci" data-admin-forgot-form hidden>
+        <span class="brand-mark">FARISA</span>
+        <div>
+          <span class="eyebrow eyebrow--blue">Administração</span>
+          <h1>Esqueci a senha</h1>
+          <p>Informe o e-mail do administrador. Enviaremos um link para criar uma nova senha, válido por 30 minutos.</p>
+        </div>
+        <label class="field"><span>E-mail</span><input type="email" name="email" autocomplete="username" required /></label>
+        <button class="button button--primary button--large" type="submit">Enviar link</button>
+        <button class="link-button admin-link" type="button" data-admin-go="login">← Voltar para o login</button>
+        <p class="admin-login-status admin-login-status--info" role="status" aria-live="polite" data-admin-forgot-status></p>
+      </form>
+
+      <form class="admin-login-card panel" data-admin-screen="nova-senha" data-admin-reset-form hidden>
+        <span class="brand-mark">FARISA</span>
+        <div>
+          <span class="eyebrow eyebrow--blue">Administração</span>
+          <h1>Criar nova senha</h1>
+          <p>Use letra maiúscula, minúscula, número e símbolo, com pelo menos 8 caracteres.</p>
+        </div>
+        <label class="field"><span>Nova senha</span><input type="password" name="password" autocomplete="new-password" required minlength="8" /></label>
+        <label class="field"><span>Repita a nova senha</span><input type="password" name="confirm" autocomplete="new-password" required minlength="8" /></label>
+        <button class="button button--primary button--large" type="submit">Salvar e entrar</button>
+        <button class="link-button admin-link" type="button" data-admin-go="login">← Voltar para o login</button>
+        <p class="admin-login-status" role="status" aria-live="polite" data-admin-reset-status></p>
       </form>
     </main>
 

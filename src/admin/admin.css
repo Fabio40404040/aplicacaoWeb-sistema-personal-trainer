@@ -101,3 +101,61 @@
     width: 100%;
   }
 }
+
+/* Olho de mostrar/ocultar a senha (password-controls.js) */
+.password-control {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.password-control input {
+  width: 100%;
+  padding-right: 52px;
+}
+.password-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #355374;
+  cursor: pointer;
+}
+.password-toggle svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.password-eye-slash {
+  display: none;
+}
+.password-toggle[aria-pressed='true'] .password-eye-slash {
+  display: block;
+}
+.password-toggle:focus-visible {
+  outline: 2px solid #3d8bfd;
+}
+.admin-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue-600, #1764ff);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-login-status--info {
+  color: var(--ink-600, #475569);
+}
+.admin-login-status .button {
+  margin-top: 10px;
+}
