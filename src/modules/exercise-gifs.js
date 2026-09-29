@@ -875,7 +875,7 @@ function createGifLibraryPanel() {
       </div>
       <label class="field"><span>Grupo muscular</span>
         <select name="group" required data-gif-loose-group></select></label>
-      <small>Somente GIF, com no máximo 12 MB. Este grupo também é usado quando você arrasta arquivos soltos, sem pasta.</small>
+      <small>Somente GIF, de qualquer tamanho (até 100 MB, o máximo do Cloudflare). Este grupo também é usado quando você arrasta arquivos soltos, sem pasta.</small>
       <button class="button button--primary" type="submit">Enviar GIF</button>
       <p role="status" aria-live="polite"></p>
     </form>

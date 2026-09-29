@@ -1,4 +1,6 @@
-const MAX_GIF_BYTES = 12 * 1024 * 1024;
+// Sem limite próprio de tamanho: o único teto é o do Cloudflare, que
+// recusa envios acima de 100 MB por requisição.
+const MAX_GIF_BYTES = 100 * 1024 * 1024;
 const MAX_FRAME_BYTES = 1024 * 1024;
 
 const selectFields = `id,name,muscle_group AS "group",original_filename AS "originalFilename",
@@ -50,7 +52,7 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
   )
     return { error: "Selecione um arquivo GIF válido.", status: 400 };
   if (!file.size || file.size > MAX_GIF_BYTES)
-    return { error: "Cada GIF deve ter no máximo 12 MB.", status: 400 };
+    return { error: "Este GIF passa de 100 MB, o máximo aceito pelo Cloudflare.", status: 400 };
 
   const name = String(form.get("name") || "").trim();
   const group = String(form.get("group") || "").trim();

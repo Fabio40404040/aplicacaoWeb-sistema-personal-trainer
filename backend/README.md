@@ -66,7 +66,7 @@ O arquivo `demo/demo-seed.sql` cria duas contas com dados fictícios:
 
 O script apaga só a conta demo e seus dados, e pode rodar quantas vezes precisar. As outras contas não são tocadas.
 
-No servidor, as contas demo não recuperam senha e não fazem pagamentos. O envio de arquivos funciona com limites: até 30 GIFs de 4 MB, 3 vídeos MP4 de 20 MB e 3 PDFs de 6 MB (`src/lib/demo.js`). A restauração diária apaga esses arquivos do R2. No site, o quadro com o e-mail e a senha e o botão "Entrar como visitante" aparecem enquanto `VITE_DEMO_MODE` não for `false` (`src/modules/demo-access.js`). No site entregue a um cliente, use `VITE_DEMO_MODE=false`.
+No servidor, as contas demo não recuperam senha e não fazem pagamentos. O envio de arquivos (GIFs, vídeos e PDFs) é livre, e a restauração diária apaga do R2 tudo o que a demo enviou. No site, o quadro com o e-mail e a senha e o botão "Entrar como visitante" aparecem enquanto `VITE_DEMO_MODE` não for `false` (`src/modules/demo-access.js`). No site entregue a um cliente, use `VITE_DEMO_MODE=false`.
 
 ### Restauração automática diária
 

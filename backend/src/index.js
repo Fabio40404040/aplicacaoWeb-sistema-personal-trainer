@@ -1,7 +1,7 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { readSession } from "./lib/session.js";
-import { demoBlocked, demoUploadCheck, isDemoEmail } from "./lib/demo.js";
+import { demoBlocked, isDemoEmail } from "./lib/demo.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
 import { studentAuth } from "./routes/student-auth.js";
@@ -197,12 +197,6 @@ async function handle(request, env) {
     );
     if (!trainer.rows.length)
       return { error: "Sessão inválida ou expirada.", status: 401 };
-    // Conta demo do portfólio: envio de arquivos liberado com limites
-    // (quantidade e tamanho). Tudo é apagado na restauração diária.
-    if (isDemoEmail(session.email) && request.method === "POST") {
-      const limited = await demoUploadCheck(request, db, session.sub, route);
-      if (limited) return limited;
-    }
     if (request.method === "GET" && segments[0] === "dashboard")
       return { data: await dashboard(db, session.sub) };
     if (
