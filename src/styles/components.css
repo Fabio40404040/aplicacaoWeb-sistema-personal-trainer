@@ -2934,7 +2934,7 @@ video.gif-lightbox-image {
   vertical-align: middle;
 }
 
-/* Painel do administrador (admin-panel.js) */
+/* Área do administrador (/admin, src/admin/admin.js) */
 .admin-badge {
   display: inline-block;
   margin-left: 6px;

@@ -1,20 +1,56 @@
-// Painel do administrador da plataforma (o dono do SaaS).
-// Quem é administrador: os e-mails listados em ADMIN_EMAILS (separados por
-// vírgula, no wrangler.jsonc). Sem ADMIN_EMAILS, o administrador é o personal
-// dono do site (o primeiro cadastrado).
-export async function isPlatformAdmin(db, env, session) {
-  const emails = String(env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean)
-  if (emails.length) {
-    const trainer = (
-      await db.query('SELECT email FROM trainers WHERE id=$1 LIMIT 1', [session.sub])
+// Área do administrador da plataforma (o dono do SaaS), em /admin.
+// A conta de administrador fica na tabela platform_admins, separada das
+// contas de personal. As rotas /api/admin/* só aceitam sessão com papel
+// "admin" (criada por adminLogin) — sessão de personal ou aluno é recusada.
+import { createSession, verifyPassword } from '../lib/session.js'
+import { readJson } from '../lib/http.js'
+
+export async function adminLogin(request, env, db) {
+  const { email, password } = await readJson(request)
+  if (typeof email !== 'string' || typeof password !== 'string')
+    return { error: 'Credenciais inválidas.', status: 400 }
+  let admin
+  try {
+    admin = (
+      await db.query(
+        'SELECT id, name, email, password_hash, auth_version FROM platform_admins WHERE lower(email)=lower($1) LIMIT 1',
+        [email.trim()],
+      )
     ).rows[0]
-    return Boolean(trainer && emails.includes(String(trainer.email).toLowerCase()))
+  } catch {
+    return {
+      error: 'Área do administrador ainda não configurada (rode a migração 021).',
+      status: 503,
+    }
   }
-  const owner = (await db.query('SELECT id FROM trainers ORDER BY created_at LIMIT 1')).rows[0]
-  return owner?.id === session.sub
+  if (!admin || !(await verifyPassword(password, admin.password_hash)))
+    return { error: 'E-mail ou senha incorretos.', status: 401 }
+  await db.query('UPDATE platform_admins SET last_login_at=CURRENT_TIMESTAMP WHERE id=$1', [
+    admin.id,
+  ])
+  return {
+    data: {
+      token: await createSession(admin, env, 'admin'),
+      user: { id: admin.id, name: admin.name, email: admin.email },
+    },
+  }
+}
+
+// Confere se a sessão ainda vale (senha trocada = auth_version muda).
+export async function currentAdmin(db, session) {
+  if (session?.role !== 'admin') return null
+  try {
+    return (
+      (
+        await db.query(
+          'SELECT id, name, email FROM platform_admins WHERE id=$1 AND auth_version=$2 LIMIT 1',
+          [session.sub, session.version || 0],
+        )
+      ).rows[0] || null
+    )
+  } catch {
+    return null
+  }
 }
 
 const counts = `

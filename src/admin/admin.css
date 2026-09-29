@@ -1,0 +1,103 @@
+@import url('../styles/tokens.css');
+@import url('../styles/base.css');
+@import url('../styles/layout.css');
+@import url('../styles/components.css');
+@import url('../styles/responsive.css');
+@import url('../styles/profile-notifications.css');
+
+.admin-body {
+  min-height: 100vh;
+  background: var(--surface-muted, #f5f7fb);
+}
+.admin-login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+  background: linear-gradient(160deg, #0b1b3f, #1764ff);
+}
+.admin-login[hidden],
+.admin-shell[hidden] {
+  display: none;
+}
+.admin-login-card {
+  display: grid;
+  gap: 16px;
+  width: min(420px, 100%);
+  padding: 28px;
+}
+.admin-login-card h1 {
+  margin: 4px 0;
+  font-size: 1.6rem;
+}
+.admin-login-card p {
+  margin: 0;
+  color: var(--ink-500, #64748b);
+}
+.admin-login-card .brand-mark {
+  justify-self: start;
+}
+.admin-login-status {
+  min-height: 1.2em;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+.admin-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  background: #fff;
+}
+.admin-topbar-brand,
+.admin-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-topbar-user span {
+  color: var(--ink-500, #64748b);
+  font-size: 0.9rem;
+}
+.admin-main {
+  display: grid;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+@media (max-width: 640px) {
+  .admin-topbar,
+  .admin-main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Celular: sem rolagem lateral da página; só a tabela rola. */
+.admin-main,
+.admin-main > * {
+  min-width: 0;
+}
+.admin-main .table-wrap {
+  overflow-x: auto;
+}
+.admin-table {
+  min-width: 640px;
+}
+@media (max-width: 640px) {
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-main .toolbar {
+    display: block;
+  }
+  .admin-main .search-box {
+    height: auto;
+    min-height: 44px;
+    width: 100%;
+  }
+}

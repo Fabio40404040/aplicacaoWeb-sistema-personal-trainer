@@ -75,10 +75,6 @@ export async function login(credentials, signal) {
   sessionStorage.setItem(TOKEN_KEY, result.token);
   return result;
 }
-export async function fetchAdminTrainers() {
-  const result = await request("/admin/trainers");
-  return Array.isArray(result) ? result : result?.data || [];
-}
 export function clearApiSession() {
   sessionStorage.removeItem(TOKEN_KEY);
 }

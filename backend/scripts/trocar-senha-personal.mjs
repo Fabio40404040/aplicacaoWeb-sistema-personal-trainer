@@ -18,7 +18,7 @@ import path from 'node:path'
 import readline from 'node:readline'
 
 const BACKEND_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const WRANGLER = path.join(BACKEND_DIR, 'node_modules', '.bin', 'wrangler')
+export const WRANGLER = path.join(BACKEND_DIR, 'node_modules', '.bin', 'wrangler')
 
 export function isStrongPassword(password) {
   return (
@@ -47,7 +47,7 @@ let rl = null
 let hideTyping = false
 const lines = []
 const waiting = []
-function startInput() {
+export function startInput() {
   rl = readline.createInterface({ input: process.stdin, output: process.stdout })
   rl._writeToOutput = (text) => {
     if (!hideTyping) rl.output.write(text)
@@ -55,18 +55,21 @@ function startInput() {
   rl.on('line', (line) => (waiting.length ? waiting.shift()(line) : lines.push(line)))
   rl.on('close', () => waiting.splice(0).forEach((resolve) => resolve(null)))
 }
+export function closeInput() {
+  rl?.close()
+}
 function nextLine() {
   return lines.length ? Promise.resolve(lines.shift()) : new Promise((r) => waiting.push(r))
 }
 
-async function ask(question) {
+export async function ask(question) {
   process.stdout.write(question)
   const answer = await nextLine()
   if (answer === null) throw new Error('Entrada encerrada antes de terminar.')
   return answer.trim()
 }
 
-async function askHidden(question) {
+export async function askHidden(question) {
   process.stdout.write(question)
   hideTyping = true
   const answer = await nextLine()
@@ -76,7 +79,7 @@ async function askHidden(question) {
   return answer
 }
 
-function runUpdate(target, sql) {
+export function runUpdate(target, sql) {
   const flag = target === 'site' ? '--remote' : '--local'
   const output = execFileSync(
     WRANGLER,

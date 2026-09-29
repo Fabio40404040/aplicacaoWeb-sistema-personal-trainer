@@ -52,16 +52,14 @@ As migrações ficam em migrations-d1 e são aplicadas pelo Wrangler.
 
 Documentação: https://developers.cloudflare.com/d1/get-started/ e https://developers.brevo.com/docs/send-a-transactional-email
 
-## Painel do administrador
+## Área do administrador (/admin)
 
-O menu "Administração" do painel aparece só para o administrador da plataforma. Ele lista todos os personal trainers cadastrados, com o número de alunos, alunos com acesso, fichas, data de cadastro e último acesso.
+A área do dono da plataforma fica numa página separada: `/admin` no site publicado (`/admin.html` no `npm run dev`). Ela tem login próprio e não aparece no painel dos personais nem no site público.
 
-Quem é administrador:
-
-- os e-mails em `ADMIN_EMAILS` (separados por vírgula), se essa variável existir no `wrangler.jsonc`;
-- sem `ADMIN_EMAILS`, o personal dono do site (o primeiro cadastrado).
-
-O servidor confere isso em toda chamada de `/api/admin/*` (`src/routes/admin.js`). O último acesso vem da migração 020.
+- A conta de administrador fica na tabela `platform_admins` (migração 021), separada das contas de personal.
+- Criar ou trocar a senha do administrador: `npm run admin` (na pasta principal). O script pede nome, e-mail e senha e grava no computador, no site ou nos dois.
+- As rotas `/api/admin/*` só aceitam sessão de administrador. Sessão de personal ou aluno recebe 403, e a sessão de administrador não abre o painel do personal nem a área do aluno.
+- Hoje a página lista os personais cadastrados com alunos, alunos com acesso, fichas, cadastro e último acesso.
 
 ## Recuperação de senha
 

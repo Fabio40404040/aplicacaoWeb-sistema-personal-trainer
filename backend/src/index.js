@@ -1,7 +1,7 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { readSession } from "./lib/session.js";
-import { adminTrainers, isPlatformAdmin } from "./routes/admin.js";
+import { adminLogin, adminTrainers, currentAdmin } from "./routes/admin.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
 import { studentAuth } from "./routes/student-auth.js";
@@ -122,8 +122,26 @@ async function handle(request, env) {
   )
     return withDb(env, (db) => studentAuth(request, env, db, segments[2]));
 
+  // Área do administrador da plataforma (/admin): login e sessão próprios.
+  if (request.method === "POST" && route === "admin/auth/login")
+    return withDb(env, (db) => adminLogin(request, env, db));
+
   const session = await readSession(request, env);
   if (!session) return { error: "Sessão inválida ou expirada.", status: 401 };
+  if (segments[0] === "admin" || session.role === "admin") {
+    if (session.role !== "admin")
+      return { error: "Acesso exclusivo do administrador.", status: 403 };
+    if (segments[0] !== "admin")
+      return { error: "A sessão do administrador só vale na área /admin.", status: 403 };
+    return withDb(env, async (db) => {
+      const admin = await currentAdmin(db, session);
+      if (!admin) return { error: "Sessão inválida ou expirada.", status: 401 };
+      if (request.method === "GET" && route === "admin/me") return { data: admin };
+      if (request.method === "GET" && route === "admin/trainers")
+        return { data: await adminTrainers(db) };
+      return { error: "Rota não encontrada.", status: 404 };
+    });
+  }
   if (segments[0] === "student") {
     if (session.role !== "student")
       return { error: "Use sua conta de aluno.", status: 403 };
@@ -190,14 +208,6 @@ async function handle(request, env) {
     );
     if (!trainer.rows.length)
       return { error: "Sessão inválida ou expirada.", status: 401 };
-    // Painel do administrador da plataforma (dono do SaaS).
-    if (segments[0] === "admin") {
-      if (!(await isPlatformAdmin(db, env, session)))
-        return { error: "Acesso exclusivo do administrador.", status: 403 };
-      if (request.method === "GET" && route === "admin/trainers")
-        return { data: await adminTrainers(db) };
-      return { error: "Rota não encontrada.", status: 404 };
-    }
     if (request.method === "GET" && segments[0] === "dashboard")
       return { data: await dashboard(db, session.sub) };
     if (
