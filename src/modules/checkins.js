@@ -146,6 +146,54 @@ function checkinCard(checkin, { compact = false } = {}) {
   return card
 }
 
+// Um bloco por aluno: o check-in mais recente fica à vista e os anteriores
+// ficam guardados numa lista que abre ao clicar (e continua aberta quando a
+// página se atualiza sozinha).
+const openHistories = new Set()
+function studentBlock(items, { compact = false, key } = {}) {
+  const block = document.createElement('section')
+  block.className = 'checkin-student'
+  const [latest, ...older] = items
+  block.append(checkinCard(latest, { compact }))
+  if (older.length) {
+    const history = document.createElement('details')
+    history.className = 'checkin-history'
+    history.open = openHistories.has(key)
+    history.addEventListener('toggle', () => {
+      if (history.open) openHistories.add(key)
+      else openHistories.delete(key)
+    })
+    const summary = document.createElement('summary')
+    const pending = older.filter((item) => !item.trainerFeedback).length
+    summary.textContent = `Check-ins anteriores de ${latest.student} (${older.length})`
+    if (pending) {
+      const mark = document.createElement('b')
+      mark.textContent = ` · ${pending} sem resposta`
+      summary.append(mark)
+    }
+    const list = document.createElement('div')
+    list.className = 'checkin-history-list'
+    list.append(...older.map((item) => checkinCard(item, { compact: true })))
+    history.append(summary, list)
+    block.append(history)
+  }
+  return block
+}
+
+function groupByStudent(checkins) {
+  const groups = new Map()
+  checkins.forEach((checkin) => {
+    const key = String(checkin.studentId || checkin.student)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(checkin)
+  })
+  // Mais recente primeiro dentro de cada aluno; alunos pelo check-in mais novo.
+  const time = (item) => parseDate(item.createdAt)?.getTime() || 0
+  return [...groups.entries()]
+    .map(([key, items]) => [key, items.sort((a, b) => time(b) - time(a))])
+    .sort((a, b) => time(b[1][0]) - time(a[1][0]))
+}
+
 // Não redesenha enquanto você digita uma resposta (a lista se atualiza sozinha).
 function isTyping(container) {
   const active = document.activeElement
@@ -194,7 +242,9 @@ function renderCheckinsPage() {
     list.replaceChildren(empty)
     return
   }
-  list.replaceChildren(...visible.map((checkin) => checkinCard(checkin)))
+  list.replaceChildren(
+    ...groupByStudent(visible).map(([key, items]) => studentBlock(items, { key: `page:${key}` })),
+  )
 }
 
 function paintMenuCount() {
@@ -229,11 +279,17 @@ function renderProgressCheckins() {
   heading.className = 'panel-heading'
   heading.innerHTML = '<div><h2>Check-ins semanais</h2><p></p></div>'
   heading.querySelector('p').textContent = history.length
-    ? `${history.length} check-in(s) de ${name || 'aluno'}, do mais recente para o mais antigo.`
+    ? `${history.length} check-in(s) de ${name || 'aluno'}. O mais recente fica à vista; os anteriores ficam guardados logo abaixo.`
     : `${name || 'Este aluno'} ainda não enviou check-in.`
   const list = document.createElement('div')
-  list.className = 'checkin-list checkin-list--compact'
-  history.slice(0, 12).forEach((checkin) => list.append(checkinCard(checkin, { compact: true })))
+  list.className = 'checkin-list checkin-list--single'
+  if (history.length)
+    list.append(
+      studentBlock(groupByStudent(history)[0][1], {
+        compact: true,
+        key: `progress:${student?.id || name}`,
+      }),
+    )
   panel.replaceChildren(heading, list)
 }
 
