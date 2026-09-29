@@ -31,10 +31,21 @@ async function videoLinkReady(db) {
 
 import { trainerProfile } from "./profile.js";
 
+// A foto do aluno (student_accounts.avatar) chegou na migração 018.
+async function studentAvatarReady(db) {
+  try {
+    await db.query("SELECT avatar FROM student_accounts LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function dashboard(db, trainerId) {
   const withGifs = await gifSchemaReady(db);
   const withCustomGroups = await customGroupsReady(db);
   const withVideoLink = await videoLinkReady(db);
+  const withStudentAvatar = await studentAvatarReady(db);
   const gifColumn =
     (withGifs ? ',gif_id AS "gifId"' : "") +
     (withVideoLink ? ',video_id AS "videoId"' : "");
@@ -60,6 +71,7 @@ export async function dashboard(db, trainerId) {
        s.access_status AS "accessStatus", s.plan_code AS "planCode", s.access_type AS "accessType", s.billing_cycle AS "billingCycle",
        s.access_expires_at AS "accessExpiresAt", s.payment_status AS "paymentStatus",
        s.payment_method AS "paymentMethod", s.account_id AS "accountId",
+       ${withStudentAvatar ? '(SELECT a.avatar FROM student_accounts a WHERE a.id=s.account_id) AS avatar,' : ""}
        COALESCE((SELECT name FROM workouts WHERE student_id=s.id AND trainer_id=s.trainer_id ORDER BY created_at DESC LIMIT 1),'Aguardando ficha') AS workout,
        CASE WHEN s.account_id IS NOT NULL AND s.payment_status='pending' THEN 'Pré-cadastro aguardando pagamento'
             WHEN s.account_id IS NOT NULL THEN 'Cadastro pelo aplicativo' ELSE 'Aluno presencial — liberação manual' END AS activity
