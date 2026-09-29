@@ -375,25 +375,49 @@ function renderWorkoutExerciseCatalog(form) {
             : `${exercise.equipment || 'Sem equipamento'} · usado no Treino ${assignment.sessionLabel}`
           : exercise.equipment || 'Sem equipamento'
         checkbox.addEventListener('change', () => {
+          const active = form.workoutActiveSession
+          const current = form.workoutPrescriptionMap.get(exerciseId)
           if (checkbox.checked) {
             form.workoutPrescriptionMap.set(exerciseId, {
-              ...(assignment || {}),
+              ...(current || {}),
               exerciseId,
-              sessionLabel: form.workoutActiveSession,
-              sets: assignment?.sets || '3',
-              repetitions: assignment?.repetitions || '10-12',
-              restSeconds: assignment?.restSeconds ?? '60',
-              notes: assignment?.notes || '',
-              position: assignment?.position || form.workoutPrescriptionMap.size + 1,
+              sessionLabel: active,
+              sets: current?.sets || '3',
+              repetitions: current?.repetitions || '10-12',
+              restSeconds: current?.restSeconds ?? '60',
+              notes: current?.notes || '',
+              // Entra no fim da lista, na ordem em que foi marcado.
+              position:
+                current?.sessionLabel === active && current?.position
+                  ? current.position
+                  : Math.max(
+                      0,
+                      ...[...form.workoutPrescriptionMap.values()].map(
+                        (item) => Number(item.position) || 0,
+                      ),
+                    ) + 1,
             })
-          } else if (assignment?.sessionLabel === form.workoutActiveSession) {
+          } else if (current?.sessionLabel === active) {
             form.workoutPrescriptionMap.delete(exerciseId)
           }
-          renderWorkoutWizard(form)
-          const reopened = [...catalog.querySelectorAll('details')].find(
-            (item) => item.querySelector('summary strong')?.textContent === group.name,
+          // Atualiza só este item e o contador do grupo, sem redesenhar a
+          // lista: assim ela não rola de volta para o início.
+          const now = form.workoutPrescriptionMap.get(exerciseId)
+          label.querySelector('small').textContent = now
+            ? now.sessionLabel === active
+              ? `${exercise.equipment || 'Sem equipamento'} · neste treino`
+              : `${exercise.equipment || 'Sem equipamento'} · usado no Treino ${now.sessionLabel}`
+            : exercise.equipment || 'Sem equipamento'
+          const count = items.filter(
+            (item) => form.workoutPrescriptionMap.get(String(item.id))?.sessionLabel === active,
+          ).length
+          paintGroupCount(
+            details.querySelector('summary span'),
+            items.length,
+            count,
+            `selecionado${count === 1 ? '' : 's'}`,
           )
-          if (reopened) reopened.open = true
+          renderWorkoutPrescriptionBuilder(form)
         })
         options.append(label)
       })
@@ -900,20 +924,21 @@ function renderReadyExerciseCatalog(form) {
           : exercise.equipment || 'Sem equipamento'
         checkbox.addEventListener('change', () => {
           captureReadyPrescriptionFields(form)
+          const active = form.readyActiveSession
+          const current = form.readyPrescriptionMap.get(String(exercise.id))
           if (checkbox.checked) {
             form.readyPrescriptionMap.set(String(exercise.id), {
-              ...(assignment || {}),
+              ...(current || {}),
               exerciseId: String(exercise.id),
-              sessionLabel: form.readyActiveSession,
-              sets: assignment?.sets || 3,
-              repetitions: assignment?.repetitions || '10-12',
-              restSeconds: assignment?.restSeconds ?? 60,
-              notes: assignment?.notes || '',
-              // Novo exercício entra sempre no fim da lista, na ordem em que
-              // foi marcado (antes podia repetir posição e embaralhar).
+              sessionLabel: active,
+              sets: current?.sets || 3,
+              repetitions: current?.repetitions || '10-12',
+              restSeconds: current?.restSeconds ?? 60,
+              notes: current?.notes || '',
+              // Entra no fim da lista, na ordem em que foi marcado.
               position:
-                assignment?.sessionLabel === form.readyActiveSession && assignment?.position
-                  ? assignment.position
+                current?.sessionLabel === active && current?.position
+                  ? current.position
                   : Math.max(
                       0,
                       ...[...form.readyPrescriptionMap.values()].map(
@@ -921,10 +946,26 @@ function renderReadyExerciseCatalog(form) {
                       ),
                     ) + 1,
             })
-          } else if (assignment?.sessionLabel === form.readyActiveSession) {
+          } else if (current?.sessionLabel === active) {
             form.readyPrescriptionMap.delete(String(exercise.id))
           }
-          renderReadyWizard(form)
+          // Atualiza só este item e o contador do grupo, sem redesenhar a
+          // lista: assim ela não rola de volta para o início.
+          const now = form.readyPrescriptionMap.get(String(exercise.id))
+          label.querySelector('small').textContent = now
+            ? now.sessionLabel === active
+              ? `${exercise.equipment || 'Sem equipamento'} · selecionado neste treino`
+              : `${exercise.equipment || 'Sem equipamento'} · atualmente no Treino ${now.sessionLabel}`
+            : exercise.equipment || 'Sem equipamento'
+          paintGroupCount(
+            details.querySelector('summary span'),
+            items.length,
+            items.filter(
+              (item) => form.readyPrescriptionMap.get(String(item.id))?.sessionLabel === active,
+            ).length,
+            'neste treino',
+          )
+          renderReadyPrescriptionBuilder(form)
         })
         options.append(label)
       })
