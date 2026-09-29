@@ -1,6 +1,6 @@
 {
   "$schema": "./backend/node_modules/wrangler/config-schema.json",
-  "name": "farisa-personal-trainer",
+  "name": "aplicacaoweb-sistema-personal-trainer",
   "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-09-12",
   "compatibility_flags": ["nodejs_compat"],
@@ -35,10 +35,10 @@
         },
       ],
       "vars": {
-        "ALLOWED_ORIGIN": "https://farisa-personal-trainer.pages.dev",
-        "PUBLIC_SITE_URL": "https://farisa-personal-trainer.pages.dev/",
-        "PUBLIC_API_URL": "https://farisa-personal-trainer.pages.dev",
-        "EMAIL_FROM": "farisa@gmail.com",
+        "ALLOWED_ORIGIN": "https://aplicacaoweb-sistema-personal-trainer.pages.dev",
+        "PUBLIC_SITE_URL": "https://aplicacaoweb-sistema-personal-trainer.pages.dev/",
+        "PUBLIC_API_URL": "https://aplicacaoweb-sistema-personal-trainer.pages.dev",
+        "EMAIL_FROM": "fabiogisel7@gmail.com",
         "BREVO_FROM_NAME": "FARISA Personal Trainer",
         "SESSION_TTL_SECONDS": "43200",
       },

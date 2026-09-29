@@ -8,10 +8,10 @@
 	],
 	"keep_vars": true,
 	"vars": {
-		"ALLOWED_ORIGIN": "https://farisa-personal-trainer.pages.dev",
-		"PUBLIC_SITE_URL": "https://farisa-personal-trainer.pages.dev/",
+		"ALLOWED_ORIGIN": "https://aplicacaoweb-sistema-personal-trainer.pages.dev",
+		"PUBLIC_SITE_URL": "https://aplicacaoweb-sistema-personal-trainer.pages.dev/",
 		"PUBLIC_API_URL": "https://farisa-coach-api.SEU-SUBDOMINIO.workers.dev",
-		"EMAIL_FROM": "farisa@gmail.com",
+		"EMAIL_FROM": "fabiogisel7@gmail.com",
 		"BREVO_FROM_NAME": "FARISA Personal Trainer",
 		"SESSION_TTL_SECONDS": "43200",
 	},
