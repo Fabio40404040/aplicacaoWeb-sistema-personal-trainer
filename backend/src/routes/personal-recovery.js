@@ -119,8 +119,20 @@ export async function personalRecovery(request, env, db, action) {
       },
       tokenHash,
     )
-    if (!delivery?.ok) throw new Error('Delivery failed')
-  } catch {
+    if (!delivery?.ok) {
+      // Mostra no terminal (npm run dev) ou nos logs do Cloudflare o motivo
+      // exato da recusa da Brevo. Nunca inclui a chave.
+      const detail = delivery ? await delivery.text().catch(() => '') : 'sem provedor de e-mail'
+      console.error(
+        `[recuperação de senha] envio recusado (${delivery?.status || '-'}) de ${
+          env.EMAIL_FROM || env.BREVO_FROM_EMAIL || '(sem remetente)'
+        }: ${String(detail).slice(0, 500)}`,
+      )
+      throw new Error('Delivery failed')
+    }
+  } catch (error) {
+    if (error?.message !== 'Delivery failed')
+      console.error('[recuperação de senha] erro ao chamar a Brevo:', error?.message || error)
     await db.query(
       'DELETE FROM trainer_password_resets WHERE trainer_id = $1 AND token_hash = $2',
       [trainer.id, tokenHash],
