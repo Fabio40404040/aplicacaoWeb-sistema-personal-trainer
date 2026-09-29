@@ -3059,3 +3059,32 @@ video.gif-lightbox-image {
     grid-column: 2;
   }
 }
+
+/* Plano do aluno nas listas de alunos (dashboard.js) */
+.plan-chip {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.plan-chip--ready {
+  background: #ecfdf5;
+  color: #047857;
+}
+.plan-chip--premium,
+.plan-chip--athlete {
+  background: #fff7ed;
+  color: #c2410c;
+}
+.plan-chip--none {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.person-cell small {
+  display: block;
+}

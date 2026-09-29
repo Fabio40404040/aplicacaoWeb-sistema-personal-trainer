@@ -115,8 +115,35 @@ const billingCycleLabels = {
   annual: 'anual',
   permanent: 'permanente',
 }
-const planSummary = (student) =>
-  `${student.planCode || 'sem plano'} · ${billingCycleLabels[student.billingCycle] || 'período não definido'}`
+// Plano do aluno com o nome por extenso (não o código "ready"/"premium").
+const PLAN_NAMES = {
+  ready: 'Treinos Prontos',
+  basic: 'Consultoria Básica',
+  premium: 'Consultoria Premium',
+  athlete: 'Performance Atleta',
+}
+const planName = (student) =>
+  (getData().plans || []).find((plan) => plan.code === student.planCode)?.name ||
+  PLAN_NAMES[student.planCode] ||
+  'Sem plano'
+function planLabel(student) {
+  const cycle =
+    student.accessType === 'permanent' || student.billingCycle === 'permanent'
+      ? 'Permanente'
+      : { monthly: 'Mensal', quarterly: 'Trimestral', semiannual: 'Semestral', annual: 'Anual' }[
+          student.billingCycle
+        ]
+  return cycle ? `${planName(student)} · ${cycle}` : planName(student)
+}
+function paintPlanChip(cell, student) {
+  const holder = cell.querySelector('.person-cell > div')
+  if (!holder) return
+  holder.querySelector('.plan-chip')?.remove()
+  const chip = document.createElement('span')
+  chip.className = `plan-chip plan-chip--${student.planCode || 'none'}`
+  chip.textContent = planLabel(student)
+  holder.append(chip)
+}
 // Acesso liberado = situação ativa + pagamento confirmado OU liberado pelo
 // personal sem pagamento ('waived').
 export const hasAccess = (student) =>
@@ -241,7 +268,8 @@ function renderStudents() {
       paintAvatar(row.querySelector('.avatar'), student)
       row.querySelector('.person-cell strong').textContent = student.name
       row.querySelector('.person-cell small').textContent =
-        `${student.email} · ${planSummary(student)}`
+        student.email
+      paintPlanChip(row, student)
       row.querySelector('[data-cell="goal"]').textContent = student.goal
       row.querySelector('[data-cell="date"]').textContent = formatDate(student.assessmentDate)
       const status = row.querySelector('.status')
@@ -271,7 +299,8 @@ function renderRecentStudents() {
       row.dataset.id = s.id
       paintAvatar(row.querySelector('.avatar'), s)
       row.querySelector('.person-cell strong').textContent = s.name
-      row.querySelector('.person-cell small').textContent = `${s.email} · ${planSummary(s)}`
+      row.querySelector('.person-cell small').textContent = s.email
+      paintPlanChip(row, s)
       row.querySelector('[data-cell="goal"]').textContent = s.goal
       row.querySelector('[data-cell="workout"]').textContent = s.workout || 'Aguardando ficha'
       row.querySelector('[data-cell="activity"]').textContent = s.activity || 'Novo cadastro'
