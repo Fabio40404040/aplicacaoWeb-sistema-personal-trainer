@@ -792,8 +792,9 @@ export function previewWorkoutPdf(workout, studentName) {
 
 // Abre o PDF numa aba nova. A aba é aberta já no clique (antes de montar o
 // arquivo) para o navegador não bloquear como pop-up.
-export function openWorkoutPdfInTab(workout, studentName, openedTab = null) {
-  const blob = new Blob([buildWorkoutPdfBytes(workout, studentName)], {
+export async function openWorkoutPdfInTab(workout, studentName, openedTab = null, loadFrame = null) {
+  const prepared = await withGifFrames(workout, loadFrame);
+  const blob = new Blob([buildWorkoutPdfBytes(prepared, studentName)], {
     type: "application/pdf",
   });
   const url = URL.createObjectURL(blob);

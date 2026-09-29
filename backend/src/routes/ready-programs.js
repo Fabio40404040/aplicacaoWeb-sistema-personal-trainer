@@ -1,3 +1,5 @@
+import { trainerExerciseGifFile } from "./exercise-gifs.js";
+
 function normalizePrescriptions(body) {
   const items = Array.isArray(body?.exercisePrescriptions)
     ? body.exercisePrescriptions
@@ -78,7 +80,7 @@ export async function createReadyProgram(db, trainerId, body) {
         String(body.level || "Intermediário"),
         String(body.duration || "8 semanas"),
         String(body.description || "").trim() || null,
-        String(body.colorTheme || "red"),
+        String(body.colorTheme || "blue"),
         body.published ? 1 : 0,
       ],
     )
@@ -101,7 +103,7 @@ export async function updateReadyProgram(db, trainerId, id, body) {
         String(body?.level || "Intermediário"),
         String(body?.duration || "8 semanas"),
         String(body?.description || "").trim() || null,
-        String(body?.colorTheme || "red"),
+        String(body?.colorTheme || "blue"),
         body?.published ? 1 : 0,
       ],
     )
@@ -157,7 +159,39 @@ export async function setReadyProgramSitePreview(db, trainerId, id, body) {
       values: [id, trainerId],
     });
   await db.batch(queries);
-  return { data: { id, sitePreview: enabled } };
+  // Só o personal dono do site (o primeiro cadastrado) muda a prévia pública.
+  // Na conta demo a marcação funciona no painel, mas o site não muda.
+  const owner = (await db.query("SELECT id FROM trainers ORDER BY created_at LIMIT 1")).rows[0];
+  return { data: { id, sitePreview: enabled, affectsSite: owner?.id === trainerId } };
+}
+
+async function gifColumnReady(db) {
+  try {
+    await db.query("SELECT gif_id FROM exercises LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Quadro parado do GIF de um exercício da prévia (para a foto no PDF).
+// Só entrega GIFs usados no treino marcado como prévia do dono do site.
+export async function publicReadyPreviewFrame(env, db, gifId) {
+  if (!gifId || !/^[a-f0-9-]{16,40}$/u.test(gifId) || !(await sitePreviewReady(db)))
+    return { error: "Arquivo não encontrado.", status: 404 };
+  const owner = (await db.query("SELECT id FROM trainers ORDER BY created_at LIMIT 1")).rows[0];
+  if (!owner) return { error: "Arquivo não encontrado.", status: 404 };
+  const used = (
+    await db.query(
+      `SELECT 1 FROM ready_workout_programs p
+       JOIN ready_program_exercises r ON r.program_id=p.id
+       JOIN exercises e ON e.id=r.exercise_id
+       WHERE p.trainer_id=$1 AND p.is_site_preview=1 AND e.gif_id=$2 LIMIT 1`,
+      [owner.id, gifId],
+    )
+  ).rows[0];
+  if (!used) return { error: "Arquivo não encontrado.", status: 404 };
+  return trainerExerciseGifFile(env, db, owner.id, gifId, "frame");
 }
 
 // Rota pública (sem login): devolve só o treino marcado como prévia pelo
@@ -178,6 +212,7 @@ export async function publicReadyPreview(db) {
   program.exercises = (
     await db.query(
       `SELECT e.name,e.muscle_group AS "group",e.equipment,e.instructions,e.difficulty,
+         ${(await gifColumnReady(db)) ? 'e.gif_id AS "gifId",' : ""}
          r.position,r.sets,r.repetitions,r.rest_seconds AS "restSeconds",r.notes,
          r.session_label AS "sessionLabel"
        FROM ready_program_exercises r JOIN exercises e ON e.id=r.exercise_id

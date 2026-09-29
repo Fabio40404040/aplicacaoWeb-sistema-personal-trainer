@@ -64,6 +64,7 @@ import {
   createReadyProgram,
   deleteReadyProgram,
   publicReadyPreview,
+  publicReadyPreviewFrame,
   setReadyProgramSitePreview,
   updateReadyProgram,
 } from "./routes/ready-programs.js";
@@ -91,6 +92,14 @@ async function handle(request, env) {
   // Prévia do card "Treinos Prontos" no site (pública, só leitura).
   if (request.method === "GET" && route === "public/ready-preview")
     return withDb(env, (db) => publicReadyPreview(db));
+  if (
+    request.method === "GET" &&
+    segments[0] === "public" &&
+    segments[1] === "ready-preview" &&
+    segments[2] === "frame" &&
+    segments[3]
+  )
+    return withDb(env, (db) => publicReadyPreviewFrame(env, db, segments[3]));
   if (request.method === "POST" && route === "payments/mercadopago/webhook")
     return withDb(env, (db) => mercadoPagoWebhook(request, env, db));
   if (request.method === "POST" && route === "payments/webhook")
@@ -238,10 +247,7 @@ async function handle(request, env) {
       segments[1] &&
       segments[2] === "site-preview"
     )
-      // A conta demo não controla a prévia do site (ela é do dono do site).
-      return isDemoEmail(session.email)
-        ? demoBlocked
-        : setReadyProgramSitePreview(
+      return setReadyProgramSitePreview(
         db,
         session.sub,
         segments[1],

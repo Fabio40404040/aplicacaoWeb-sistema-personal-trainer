@@ -2,7 +2,7 @@
 // Se o personal marcou um treino pronto como prévia no painel, o PDF é montado
 // na hora a partir dele (com a marca "PRÉVIA"). Se não houver treino marcado,
 // ou a API não responder, abre o PDF fixo que já está no link.
-import { fetchReadyPreview } from './api-client.js'
+import { fetchReadyPreview, loadPublicPreviewFrame } from './api-client.js'
 import { openWorkoutPdfInTab } from './workout-pdf.js'
 
 export function initPlanPreview() {
@@ -21,10 +21,11 @@ export function initPlanPreview() {
       try {
         const preview = await fetchReadyPreview()
         if (!preview?.exercises?.length) throw new Error('Sem prévia marcada')
-        openWorkoutPdfInTab(
+        await openWorkoutPdfInTab(
           { ...preview, readyProgram: true, sitePreview: true },
           'Prévia',
           tab,
+          loadPublicPreviewFrame,
         )
       } catch {
         if (tab && !tab.closed) tab.location.href = fallbackUrl

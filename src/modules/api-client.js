@@ -105,6 +105,11 @@ export function setReadyProgramSitePreview(id, enabled) {
     body: JSON.stringify({ enabled }),
   });
 }
+export async function loadPublicPreviewFrame(id) {
+  const response = await fetch(`${API_URL}/api/public/ready-preview/frame/${id}`);
+  if (!response.ok) return null;
+  return new Uint8Array(await response.arrayBuffer());
+}
 export function fetchReadyPreview() {
   return request("/public/ready-preview");
 }

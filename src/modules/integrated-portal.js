@@ -909,16 +909,22 @@ function renderReadyExerciseCatalog(form) {
               repetitions: assignment?.repetitions || '10-12',
               restSeconds: assignment?.restSeconds ?? 60,
               notes: assignment?.notes || '',
-              position: assignment?.position || form.readyPrescriptionMap.size + 1,
+              // Novo exercício entra sempre no fim da lista, na ordem em que
+              // foi marcado (antes podia repetir posição e embaralhar).
+              position:
+                assignment?.sessionLabel === form.readyActiveSession && assignment?.position
+                  ? assignment.position
+                  : Math.max(
+                      0,
+                      ...[...form.readyPrescriptionMap.values()].map(
+                        (item) => Number(item.position) || 0,
+                      ),
+                    ) + 1,
             })
           } else if (assignment?.sessionLabel === form.readyActiveSession) {
             form.readyPrescriptionMap.delete(String(exercise.id))
           }
           renderReadyWizard(form)
-          const reopened = [...catalog.querySelectorAll('details')].find(
-            (item) => item.querySelector('summary strong')?.textContent === group.name,
-          )
-          if (reopened) reopened.open = true
         })
         options.append(label)
       })
@@ -930,9 +936,9 @@ function renderReadyExerciseCatalog(form) {
 function renderReadyPrescriptionBuilder(form) {
   const builder = form.querySelector('[data-ready-prescriptions]')
   builder.replaceChildren()
-  const selected = [...form.readyPrescriptionMap.values()].filter(
-    (item) => item.sessionLabel === form.readyActiveSession,
-  )
+  const selected = [...form.readyPrescriptionMap.values()]
+    .filter((item) => item.sessionLabel === form.readyActiveSession)
+    .sort((a, b) => Number(a.position || 0) - Number(b.position || 0))
   selected.forEach((current, index) => {
     const exercise = getData().exercises.find(
       (item) => String(item.id) === String(current.exerciseId),
@@ -970,9 +976,25 @@ function renderReadyPrescriptionBuilder(form) {
 }
 
 function renderReadyWizard(form) {
+  // Guarda a rolagem e os grupos abertos para a tela não pular para o topo
+  // a cada exercício marcado.
+  const dialog = form.closest('dialog')
+  const body = form.querySelector('.modal-body')
+  const scrollPositions = [dialog, form, body].map((element) => element?.scrollTop || 0)
+  const openGroups = new Set(
+    [...form.querySelectorAll('.ready-exercise-group[open] summary strong')].map(
+      (item) => item.textContent,
+    ),
+  )
   renderReadySessionTabs(form)
   renderReadyExerciseCatalog(form)
+  form.querySelectorAll('.ready-exercise-group').forEach((group) => {
+    if (openGroups.has(group.querySelector('summary strong')?.textContent)) group.open = true
+  })
   renderReadyPrescriptionBuilder(form)
+  ;[dialog, form, body].forEach((element, index) => {
+    if (element) element.scrollTop = scrollPositions[index]
+  })
   const labels = readySessionLabels(form)
   const currentIndex = labels.indexOf(form.readyActiveSession)
   const next = form.querySelector('[data-ready-next]')
@@ -1003,7 +1025,7 @@ function openReadyProgramDialog(program = null) {
   form.elements.level.value = program?.level || 'Intermediário'
   form.elements.durationWeeks.value = Number.parseInt(program?.duration, 10) || 12
   form.elements.description.value = program?.description || ''
-  form.elements.colorTheme.value = program?.colorTheme || 'red'
+  form.elements.colorTheme.value = program?.colorTheme || 'blue'
   form.elements.published.checked = program ? Boolean(program.published) : true
   let prescriptions
   try {
@@ -1047,7 +1069,7 @@ function createReadyWorkoutLibraryPanel() {
   const dialog = document.createElement('dialog')
   dialog.className = 'modal modal--wide'
   dialog.dataset.readyProgramDialog = ''
-  dialog.innerHTML = `<form method="dialog"><header><div><span class="eyebrow eyebrow--blue">Ficha geral</span><h2>Montar treino pronto completo</h2></div><button class="icon-button" type="button" data-ready-close aria-label="Fechar">×</button></header><div class="modal-body"><label class="field"><span>Nome do programa</span><input name="name" required placeholder="Ex.: Hipertrofia avançada"></label><div class="field-grid field-grid--three"><label class="field"><span>Objetivo</span><select name="goal"><option>Hipertrofia</option><option>Emagrecimento</option><option>Condicionamento</option><option>Força</option></select></label><label class="field"><span>Nível</span><select name="level"><option>Iniciante</option><option selected>Intermediário</option><option>Avançado</option></select></label><label class="field"><span>Quantidade de semanas</span><input name="durationWeeks" type="number" min="1" max="104" value="12" required></label></div><div class="field-grid field-grid--three"><label class="field"><span>Divisão do treino</span><select name="division"><option value="fullbody">Full body</option><option value="ab">AB</option><option value="abc">ABC</option><option value="abcd">ABCD</option><option value="abcde" selected>ABCDE</option><option value="abcdef">ABCDEF</option></select></label><label class="field"><span>Cor da ficha</span><select name="colorTheme"><option value="red">Vermelho e grafite</option><option value="blue">Azul FARISA</option><option value="green">Verde</option><option value="black">Preto</option></select></label><label class="field"><span>Descrição</span><input name="description" placeholder="Resumo e orientações gerais"></label></div><section class="ready-workout-wizard"><div class="ready-session-tabs" data-ready-session-tabs></div><div class="ready-wizard-heading"><div><span class="eyebrow eyebrow--blue">Etapa atual</span><h3 data-ready-current-title></h3></div><p>Abra um grupo muscular e marque os exercícios desta etapa.</p></div><div class="ready-exercise-catalog" data-ready-exercise-catalog></div><button class="button button--secondary ready-next-button" type="button" data-ready-next></button><div class="workout-prescription-builder" data-ready-prescriptions></div></section><label class="check-field"><input name="published" type="checkbox" value="1"><span>Publicar para todos que compraram Treinos Prontos</span></label><p role="status" aria-live="polite"></p></div><footer><button class="button button--secondary" type="button" data-ready-close>Cancelar</button><button class="button button--primary" type="submit">Salvar treino pronto</button></footer></form>`
+  dialog.innerHTML = `<form method="dialog"><header><div><span class="eyebrow eyebrow--blue">Ficha geral</span><h2>Montar treino pronto completo</h2></div><button class="icon-button" type="button" data-ready-close aria-label="Fechar">×</button></header><div class="modal-body"><label class="field"><span>Nome do programa</span><input name="name" required placeholder="Ex.: Hipertrofia avançada"></label><div class="field-grid field-grid--three"><label class="field"><span>Objetivo</span><select name="goal"><option>Hipertrofia</option><option>Emagrecimento</option><option>Condicionamento</option><option>Força</option></select></label><label class="field"><span>Nível</span><select name="level"><option>Iniciante</option><option selected>Intermediário</option><option>Avançado</option></select></label><label class="field"><span>Quantidade de semanas</span><input name="durationWeeks" type="number" min="1" max="104" value="12" required></label></div><div class="field-grid field-grid--three"><label class="field"><span>Divisão do treino</span><select name="division"><option value="fullbody">Full body</option><option value="ab">AB</option><option value="abc">ABC</option><option value="abcd">ABCD</option><option value="abcde" selected>ABCDE</option><option value="abcdef">ABCDEF</option></select></label><label class="field"><span>Cor da ficha</span><select name="colorTheme"><option value="blue">Azul FARISA</option><option value="red">Vermelho e grafite</option><option value="green">Verde</option><option value="black">Preto</option></select></label><label class="field"><span>Descrição</span><input name="description" placeholder="Resumo e orientações gerais"></label></div><section class="ready-workout-wizard"><div class="ready-session-tabs" data-ready-session-tabs></div><div class="ready-wizard-heading"><div><span class="eyebrow eyebrow--blue">Etapa atual</span><h3 data-ready-current-title></h3></div><p>Abra um grupo muscular e marque os exercícios desta etapa.</p></div><div class="ready-exercise-catalog" data-ready-exercise-catalog></div><button class="button button--secondary ready-next-button" type="button" data-ready-next></button><div class="workout-prescription-builder" data-ready-prescriptions></div></section><label class="check-field"><input name="published" type="checkbox" value="1"><span>Publicar para todos que compraram Treinos Prontos</span></label><p role="status" aria-live="polite"></p></div><footer><button class="button button--secondary" type="button" data-ready-close>Cancelar</button><button class="button button--primary" type="submit">Salvar treino pronto</button></footer></form>`
   document.body.append(dialog)
   const form = dialog.querySelector('form')
   form.elements.division.addEventListener('change', () => {
@@ -1252,11 +1274,13 @@ function renderReadyWorkoutLibrary() {
     sitePreview.addEventListener('click', async () => {
       sitePreview.disabled = true
       try {
-        await setReadyProgramSitePreview(program.id, !program.sitePreview)
+        const result = await setReadyProgramSitePreview(program.id, !program.sitePreview)
         showToast(
           program.sitePreview
-            ? 'O site voltou a mostrar a prévia padrão.'
-            : 'Pronto! O “Ver prévia” do site agora mostra este treino.',
+            ? 'Este treino deixou de ser a prévia do site.'
+            : result?.affectsSite === false
+              ? 'Marcado como prévia. Na conta de demonstração o site continua com a prévia padrão.'
+              : 'Pronto! O “Ver prévia” do site agora mostra este treino.',
         )
         window.dispatchEvent(new Event('farisa:remote-refresh'))
       } catch (error) {
