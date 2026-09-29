@@ -52,11 +52,13 @@ export async function updateStudentAccess(db, trainerId, studentId, body) {
   const accessStatus = ['active', 'pending', 'paused', 'cancelled'].includes(body?.accessStatus)
     ? body.accessStatus
     : 'active'
-  const paymentStatus = ['paid', 'pending', 'refunded'].includes(body?.paymentStatus)
+  // 'waived' = liberado pelo personal sem cobrança (cortesia, pagamento
+  // combinado depois etc.). Libera o conteúdo sem registrar pagamento.
+  const paymentStatus = ['paid', 'pending', 'refunded', 'waived'].includes(body?.paymentStatus)
     ? body.paymentStatus
     : 'paid'
-  const paymentMethod = String(body?.paymentMethod || 'manual')
-  const active = accessStatus === 'active' && paymentStatus === 'paid'
+  const paymentMethod = String(body?.paymentMethod || (paymentStatus === 'waived' ? 'courtesy' : 'manual'))
+  const active = accessStatus === 'active' && ['paid', 'waived'].includes(paymentStatus)
   const expiresAt = active ? expiryFor(plan, body?.expiresAt, billingCycle) : null
   const updated = (
     await db.query(
@@ -87,7 +89,11 @@ export async function updateStudentAccess(db, trainerId, studentId, body) {
       values: [
         trainerId,
         studentId,
-        active ? 'access_activated' : `access_${accessStatus}`,
+        active
+          ? paymentStatus === 'waived'
+            ? 'access_released_without_payment'
+            : 'access_activated'
+          : `access_${accessStatus}`,
         plan.code,
         `${paymentMethod}:${billingCycle}`,
       ],

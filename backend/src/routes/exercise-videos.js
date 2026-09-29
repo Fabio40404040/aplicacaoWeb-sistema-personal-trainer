@@ -150,7 +150,7 @@ export async function studentExerciseVideoFile(env, db, accountId, id) {
        JOIN plans p ON p.code=s.plan_code
        JOIN exercise_videos v ON v.trainer_id=s.trainer_id
        WHERE a.id=$1 AND v.id=$2 AND v.published=1
-         AND s.access_status='active' AND s.payment_status='paid'
+         AND s.access_status='active' AND s.payment_status IN ('paid','waived')
          AND instr(p.features_json, '"exercises"') > 0
          AND (s.access_type='permanent' OR datetime(s.access_expires_at) > datetime('now'))
        LIMIT 1`,

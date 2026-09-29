@@ -189,7 +189,8 @@ function trainerNotifications() {
     .filter(
       (student) =>
         student.accessStatus !== 'cancelled' &&
-        (student.accessStatus !== 'active' || student.paymentStatus !== 'paid'),
+        (student.accessStatus !== 'active' ||
+          !['paid', 'waived'].includes(student.paymentStatus)),
     )
     .forEach((student) =>
       items.push({
@@ -199,7 +200,7 @@ function trainerNotifications() {
         title: `${student.name} aguarda liberação`,
         detail:
           student.paymentStatus === 'pending'
-            ? 'Pagamento pendente. Confirme o pagamento para liberar o acesso.'
+            ? 'Pagamento pendente. Confirme o pagamento ou use "Liberar acesso".'
             : 'Acesso ainda não liberado.',
         href: '#alunos',
       }),

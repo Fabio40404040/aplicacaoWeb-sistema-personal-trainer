@@ -19,7 +19,7 @@ function hasCurrentAccess(student) {
   if (
     !student ||
     student.accessStatus !== "active" ||
-    student.paymentStatus !== "paid"
+    !["paid", "waived"].includes(student.paymentStatus)
   )
     return false;
   if (student.accessType === "permanent") return true;

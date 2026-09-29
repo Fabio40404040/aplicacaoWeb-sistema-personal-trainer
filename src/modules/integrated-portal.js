@@ -12,6 +12,7 @@ import {
   uploadExerciseVideo,
 } from './api-client.js'
 import { downloadWorkoutPdf } from './workout-pdf.js'
+import { quickReleaseAccess } from './dashboard.js'
 import { getData } from './state.js'
 import { exerciseCatalog } from '../data/exercises.js'
 import { exerciseVideoLibrary, legGroupNames, muscleGroups } from '../data/library.js'
@@ -1789,7 +1790,7 @@ function createAccessDialog() {
   const dialog = document.createElement('dialog')
   dialog.className = 'modal'
   dialog.dataset.accessDialog = ''
-  dialog.innerHTML = `<form method="dialog" data-access-form><header><div><span class="eyebrow eyebrow--blue">Plano e pagamento</span><h2>Liberar acesso do aluno</h2></div><button class="icon-button" type="button" data-access-close aria-label="Fechar">×</button></header><div class="modal-body"><p data-access-student></p><label class="field"><span>Plano</span><select name="planCode"><option value="ready">Treinos Prontos — permanente</option><option value="basic">Consultoria Básica</option><option value="premium">Consultoria Premium</option><option value="athlete">Performance Atleta</option></select></label><label class="field" data-access-billing-field><span>Período</span><select name="billingCycle"><option value="monthly">Mensal — 30 dias</option><option value="quarterly">Trimestral — 90 dias, recomendado</option><option value="semiannual">Semestral — 180 dias</option><option value="annual">Anual — 365 dias</option></select></label><div class="field-grid"><label class="field"><span>Situação</span><select name="accessStatus"><option value="active">Liberar acesso</option><option value="pending">Aguardando</option><option value="paused">Pausar</option><option value="cancelled">Cancelar</option></select></label><label class="field"><span>Pagamento</span><select name="paymentStatus"><option value="paid">Confirmado</option><option value="pending">Pendente</option><option value="refunded">Estornado</option></select></label></div><label class="field"><span>Forma de pagamento</span><select name="paymentMethod"><option value="whatsapp">WhatsApp / pessoalmente</option><option value="pix">PIX manual</option><option value="cash">Dinheiro</option><option value="webapp">WebApp</option></select></label><label class="field"><span>Validade personalizada (opcional)</span><input name="expiresAt" type="date"></label><p class="password-requirements">A validade é calculada pelo período: 30, 90, 180 ou 365 dias. Treinos Prontos não expiram.</p><p role="status"></p></div><footer><button class="button button--secondary" type="button" data-access-close>Cancelar</button><button class="button button--primary" type="submit">Salvar acesso</button></footer></form>`
+  dialog.innerHTML = `<form method="dialog" data-access-form><header><div><span class="eyebrow eyebrow--blue">Plano e pagamento</span><h2>Liberar acesso do aluno</h2></div><button class="icon-button" type="button" data-access-close aria-label="Fechar">×</button></header><div class="modal-body"><p data-access-student></p><label class="field"><span>Plano</span><select name="planCode"><option value="ready">Treinos Prontos — permanente</option><option value="basic">Consultoria Básica</option><option value="premium">Consultoria Premium</option><option value="athlete">Performance Atleta</option></select></label><label class="field" data-access-billing-field><span>Período</span><select name="billingCycle"><option value="monthly">Mensal — 30 dias</option><option value="quarterly">Trimestral — 90 dias, recomendado</option><option value="semiannual">Semestral — 180 dias</option><option value="annual">Anual — 365 dias</option></select></label><div class="field-grid"><label class="field"><span>Situação</span><select name="accessStatus"><option value="active">Liberar acesso</option><option value="pending">Aguardando</option><option value="paused">Pausar</option><option value="cancelled">Cancelar</option></select></label><label class="field"><span>Pagamento</span><select name="paymentStatus"><option value="paid">Confirmado</option><option value="waived">Liberado sem pagamento</option><option value="pending">Pendente</option><option value="refunded">Estornado</option></select></label></div><label class="field"><span>Forma de pagamento</span><select name="paymentMethod"><option value="whatsapp">WhatsApp / pessoalmente</option><option value="pix">PIX manual</option><option value="cash">Dinheiro</option><option value="webapp">WebApp</option><option value="courtesy">Cortesia / sem cobrança</option></select></label><label class="field"><span>Validade personalizada (opcional)</span><input name="expiresAt" type="date"></label><p class="password-requirements">A validade é calculada pelo período: 30, 90, 180 ou 365 dias. Treinos Prontos não expiram. Com "Liberar acesso", o aluno entra tanto com pagamento confirmado quanto com "Liberado sem pagamento".</p><p role="status"></p></div><footer><button class="button button--secondary" type="button" data-access-close>Cancelar</button><button class="button button--primary" type="submit">Salvar acesso</button></footer></form>`
   document.body.append(dialog)
   const accessForm = dialog.querySelector('form')
   const syncAccessPeriod = () => {
@@ -1875,7 +1876,10 @@ function renderOperations() {
   if (!content) return
   const data = getData()
   const pending = (data.students || []).filter(
-    (student) => student.accessStatus !== 'active' || student.paymentStatus !== 'paid',
+    (student) =>
+      student.accessStatus !== 'cancelled' &&
+      (student.accessStatus !== 'active' ||
+        !['paid', 'waived'].includes(student.paymentStatus)),
   )
   const checkins = data.checkins || []
   content.replaceChildren()
@@ -1885,8 +1889,18 @@ function renderOperations() {
   }
   pending.slice(0, 6).forEach((student) => {
     const item = document.createElement('p')
+    const freeRelease = document.createElement('button')
+    freeRelease.className = 'link-button'
+    freeRelease.type = 'button'
+    freeRelease.textContent = 'Liberar sem pagamento'
+    freeRelease.addEventListener('click', () => quickReleaseAccess(student, freeRelease))
     if (student.accountId) {
-      item.textContent = `${student.name} · pagamento online pendente · a liberação será automática após a confirmação do Mercado Pago.`
+      item.append(
+        document.createTextNode(
+          `${student.name} · pagamento online pendente · libera sozinho quando o Mercado Pago confirmar · `,
+        ),
+        freeRelease,
+      )
       content.append(item)
       return
     }
@@ -1933,6 +1947,8 @@ function renderOperations() {
         `${student.name} · ${student.planCode || 'basic'} · ${billingCycleLabels[student.billingCycle] || 'período não definido'} · pagamento pendente · `,
       ),
       release,
+      document.createTextNode(' · '),
+      freeRelease,
       document.createTextNode(' · '),
       button,
     )

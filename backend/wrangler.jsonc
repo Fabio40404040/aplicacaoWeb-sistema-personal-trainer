@@ -1,30 +1,32 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "farisa-coach-api",
-  "main": "src/index.js",
-  "compatibility_date": "2026-09-11",
-  "compatibility_flags": ["nodejs_compat"],
-  "keep_vars": true,
-  "vars": {
-    "ALLOWED_ORIGIN": "https://farisa-personal-trainer.pages.dev",
-    "PUBLIC_SITE_URL": "https://farisa-personal-trainer.pages.dev/",
-    "PUBLIC_API_URL": "https://farisa-coach-api.SEU-SUBDOMINIO.workers.dev",
-    "EMAIL_FROM": "fabiogisel7@gmail.com",
-    "BREVO_FROM_NAME": "FARISA Personal Trainer",
-    "SESSION_TTL_SECONDS": "43200",
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "farisa-coach",
-      "database_id": "989f69b1-a78f-422b-b53a-dfe1769a71d4",
-      "migrations_dir": "migrations-d1",
-    },
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "farisa-personal-media",
-    },
-  ],
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "farisa-coach-api",
+	"main": "src/index.js",
+	"compatibility_date": "2026-09-11",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"keep_vars": true,
+	"vars": {
+		"ALLOWED_ORIGIN": "https://farisa-personal-trainer.pages.dev",
+		"PUBLIC_SITE_URL": "https://farisa-personal-trainer.pages.dev/",
+		"PUBLIC_API_URL": "https://farisa-coach-api.SEU-SUBDOMINIO.workers.dev",
+		"EMAIL_FROM": "farisa@gmail.com",
+		"BREVO_FROM_NAME": "FARISA Personal Trainer",
+		"SESSION_TTL_SECONDS": "43200",
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "farisa-coach",
+			"database_id": "989f69b1-a78f-422b-b53a-dfe1769a71d4",
+			"migrations_dir": "migrations-d1",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "farisa-personal-media",
+		},
+	],
 }

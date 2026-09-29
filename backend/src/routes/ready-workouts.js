@@ -137,7 +137,7 @@ export async function studentReadyWorkoutFile(env, db, accountId, id) {
        JOIN students s ON s.id=a.student_id AND s.account_id=a.id
        JOIN ready_workout_pdfs r ON r.trainer_id=s.trainer_id
        WHERE a.id=$1 AND r.id=$2 AND r.published=1 AND s.plan_code='ready'
-         AND s.access_status='active' AND s.payment_status='paid' LIMIT 1`,
+         AND s.access_status='active' AND s.payment_status IN ('paid','waived') LIMIT 1`,
       [accountId, id],
     )
   ).rows[0]

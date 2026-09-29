@@ -2924,3 +2924,12 @@ video.gif-lightbox-image {
   gap: 10px;
   padding: 12px;
 }
+
+/* Botão "Liberar acesso" ao lado do status em Alunos recentes */
+.status-cell--release {
+  white-space: nowrap;
+}
+.status-cell--release .student-release-button {
+  margin-left: 8px;
+  vertical-align: middle;
+}

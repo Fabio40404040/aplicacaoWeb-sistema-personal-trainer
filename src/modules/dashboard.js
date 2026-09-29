@@ -6,6 +6,7 @@ import {
   persistRecord,
   removeRecord,
   syncRemoteData,
+  updateStudentAccess,
 } from './api-client.js'
 import { downloadWorkoutPdf } from './workout-pdf.js'
 import { paintAvatar } from './profile-kit.js'
@@ -116,12 +117,67 @@ const billingCycleLabels = {
 }
 const planSummary = (student) =>
   `${student.planCode || 'sem plano'} · ${billingCycleLabels[student.billingCycle] || 'período não definido'}`
+// Acesso liberado = situação ativa + pagamento confirmado OU liberado pelo
+// personal sem pagamento ('waived').
+export const hasAccess = (student) =>
+  student.accessStatus === 'active' && ['paid', 'waived'].includes(student.paymentStatus)
 function accessLabel(student) {
-  if (student.accessStatus === 'active' && student.paymentStatus === 'paid')
+  if (hasAccess(student) && student.paymentStatus === 'waived')
+    return 'Liberado sem pagamento'
+  if (hasAccess(student))
     return student.accessType === 'permanent' ? 'Permanente' : 'Liberado'
   if (student.accessStatus === 'paused') return 'Pausado'
   if (student.accessStatus === 'cancelled') return 'Cancelado'
   return student.paymentStatus === 'pending' ? 'Pagamento pendente' : 'Aguardando'
+}
+// Libera o acesso na hora, tenha o aluno pago ou não. Se o pagamento já
+// estava confirmado, continua "pago"; se não, fica "liberado sem pagamento".
+export async function quickReleaseAccess(student, button) {
+  const paid = student.paymentStatus === 'paid'
+  const ok = await askConfirm({
+    eyebrow: 'Liberar acesso',
+    title: `Liberar o acesso de ${student.name}?`,
+    message: paid
+      ? 'O pagamento já está confirmado. O conteúdo do plano será liberado agora.'
+      : 'O conteúdo do plano será liberado agora, mesmo sem pagamento confirmado.',
+    note: 'Você pode pausar ou cancelar depois em "Gerenciar acesso".',
+    confirmLabel: 'Liberar acesso',
+    danger: false,
+  })
+  if (!ok) return false
+  if (button) {
+    button.disabled = true
+    button.textContent = 'Liberando…'
+  }
+  try {
+    await updateStudentAccess(student.id, {
+      planCode: student.planCode || 'basic',
+      billingCycle: student.billingCycle || 'quarterly',
+      accessStatus: 'active',
+      paymentStatus: paid ? 'paid' : 'waived',
+      paymentMethod: paid ? student.paymentMethod || 'manual' : 'courtesy',
+    })
+    showToast(`Acesso de ${student.name} liberado.`)
+    window.dispatchEvent(new Event('farisa:remote-refresh'))
+    return true
+  } catch (error) {
+    showToast(error.message)
+    if (button) {
+      button.disabled = false
+      button.textContent = 'Liberar acesso'
+    }
+    return false
+  }
+}
+function releaseButton(student) {
+  const button = document.createElement('button')
+  button.className = 'button button--primary student-release-button'
+  button.type = 'button'
+  button.dataset.action = 'release'
+  button.title = 'Liberar acesso agora, com ou sem pagamento'
+  button.setAttribute('aria-label', `Liberar acesso de ${student.name}`)
+  button.textContent = 'Liberar acesso'
+  return button
 }
 const numberFrom = (value) => {
   if (value === null || value === undefined || String(value).trim() === '') return null
@@ -190,32 +246,18 @@ function renderStudents() {
       row.querySelector('[data-cell="date"]').textContent = formatDate(student.assessmentDate)
       const status = row.querySelector('.status')
       status.textContent = accessLabel(student)
-      status.classList.add(
-        student.accessStatus === 'active' && student.paymentStatus === 'paid'
-          ? 'status--active'
-          : 'status--paused',
-      )
-      // Mesmo botão, bem visível, pra qualquer aluno ainda não liberado —
-      // não importa se foi cadastrado presencialmente ou se ele mesmo se
-      // cadastrou pelo site. Antes só o presencial ganhava um botão grande;
-      // o do WebApp ficava só com um "✓" pequeno, fácil de não perceber.
-      const needsRelease =
-        student.accessStatus !== 'active' || student.paymentStatus !== 'paid'
+      status.classList.add(hasAccess(student) ? 'status--active' : 'status--paused')
+      // "Liberar acesso" libera na hora (pagou ou não). O botão ⚙ abre o
+      // formulário completo de plano, período e pagamento.
       const manage = document.createElement('button')
-      manage.className = needsRelease
-        ? 'button button--primary student-release-button'
-        : 'icon-button'
+      manage.className = 'icon-button'
       manage.type = 'button'
       manage.dataset.action = 'access'
-      manage.title = needsRelease
-        ? 'Confirmar pagamento e liberar acesso'
-        : 'Plano, pagamento e acesso'
-      manage.setAttribute(
-        'aria-label',
-        needsRelease ? `Liberar acesso de ${student.name}` : 'Gerenciar plano e acesso',
-      )
-      manage.textContent = needsRelease ? 'Liberar acesso' : '✓'
+      manage.title = 'Plano, pagamento e acesso'
+      manage.setAttribute('aria-label', `Gerenciar plano e acesso de ${student.name}`)
+      manage.textContent = '⚙'
       row.querySelector('.row-actions').prepend(manage)
+      if (!hasAccess(student)) row.querySelector('.row-actions').prepend(releaseButton(student))
       return row
     }),
   )
@@ -233,10 +275,16 @@ function renderRecentStudents() {
       row.querySelector('[data-cell="goal"]').textContent = s.goal
       row.querySelector('[data-cell="workout"]').textContent = s.workout || 'Aguardando ficha'
       row.querySelector('[data-cell="activity"]').textContent = s.activity || 'Novo cadastro'
+      const view = row.querySelector('button')
       const status = row.querySelector('.status')
       status.textContent = accessLabel(s)
-      status.classList.add(s.accessStatus === 'active' ? 'status--active' : 'status--paused')
-      const view = row.querySelector('button')
+      status.classList.add(hasAccess(s) ? 'status--active' : 'status--paused')
+      if (!hasAccess(s)) {
+        const release = releaseButton(s)
+        release.addEventListener('click', () => quickReleaseAccess(s, release))
+        status.after(release)
+        status.parentElement.classList.add('status-cell--release')
+      }
       view.setAttribute('aria-label', `Editar ${s.name}`)
       view.addEventListener('click', () =>
         window.dispatchEvent(new CustomEvent('farisa:edit-student', { detail: String(s.id) })),
@@ -899,6 +947,10 @@ export function initDashboard() {
       window.dispatchEvent(new CustomEvent('farisa:edit-student', { detail: id }))
     if (b.dataset.action === 'access')
       window.dispatchEvent(new CustomEvent('farisa:manage-access', { detail: id }))
+    if (b.dataset.action === 'release') {
+      const student = getData().students.find((item) => String(item.id) === String(id))
+      if (student) await quickReleaseAccess(student, b)
+    }
     if (b.dataset.action === 'delete') {
       const student = getData().students.find((item) => String(item.id) === String(id))
       if (!student || !(await confirmStudentDeletion(student))) return

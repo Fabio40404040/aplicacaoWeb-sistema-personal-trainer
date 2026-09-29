@@ -203,7 +203,7 @@ export async function studentExerciseGifFile(env, db, accountId, id, kind) {
        JOIN plans p ON p.code=s.plan_code
        JOIN exercise_gifs g ON g.trainer_id=s.trainer_id
        WHERE a.id=$1 AND g.id=$2
-         AND s.access_status='active' AND s.payment_status='paid'
+         AND s.access_status='active' AND s.payment_status IN ('paid','waived')
          AND instr(p.features_json, '"exercises"') > 0
          AND (s.access_type='permanent' OR datetime(s.access_expires_at) > datetime('now'))
        LIMIT 1`,

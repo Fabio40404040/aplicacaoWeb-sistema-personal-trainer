@@ -71,7 +71,7 @@ export async function studentAuth(request, env, db, action) {
       ).rows[0]
       if (!existing || !(await verifyPassword(password, existing.password_hash)))
         return { error: 'Este e-mail já está em uso. Confira a senha informada.', status: 409 }
-      if (existing.paymentStatus === 'paid')
+      if (['paid', 'waived'].includes(existing.paymentStatus))
         return { error: 'Este e-mail já possui cadastro. Entre na sua conta.', status: 409 }
       if (existing.planCode !== planCode || existing.billingCycle !== billingCycle)
         return {
@@ -140,7 +140,7 @@ export async function studentAuth(request, env, db, action) {
         'student',
       ),
       user: { id: account.id, name: account.name, email: account.email },
-      registrationStatus: account.paymentStatus === 'paid' ? 'complete' : 'awaiting_payment',
+      registrationStatus: ['paid', 'waived'].includes(account.paymentStatus) ? 'complete' : 'awaiting_payment',
     },
     status: action === 'register' ? 201 : 200,
   }

@@ -218,7 +218,7 @@ function renderLocked(container, data, onRefresh) {
   addLine(plan, messages[data.access.status] || "Aguardando liberação.");
   container.replaceChildren(plan);
 
-  if (data.access.paymentStatus !== "paid") {
+  if (!["paid", "waived"].includes(data.access.paymentStatus)) {
     const payment = article("Concluir pagamento");
     addLine(
       payment,
