@@ -81,7 +81,7 @@ export function groupFromFolder(folderName, { custom = true } = {}) {
 }
 
 // Grupos para escolher na mão: os do filtro da biblioteca + as suas pastas.
-function allGroupNames() {
+export function allGroupNames() {
   const names = [
     ...(document.querySelector('[data-exercise-filter]')?.options || []),
   ]
@@ -154,7 +154,7 @@ export function findGif(id) {
 
 // Primeiro quadro do GIF em JPEG pequeno: e o que entra no PDF, porque PDF
 // nao aceita imagem animada.
-async function firstFrameBlob(file) {
+export async function firstFrameBlob(file) {
   const source = URL.createObjectURL(file)
   try {
     const image = new Image()

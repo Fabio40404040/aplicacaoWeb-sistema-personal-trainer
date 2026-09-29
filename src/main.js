@@ -19,6 +19,7 @@ import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
 import { initWhatsappFloat } from './modules/whatsapp.js'
 import { initAdminPanel } from './modules/admin-panel.js'
+import { initExerciseHub } from './modules/exercise-hub.js'
 import { initPlanPreview } from './modules/plan-preview.js'
 
 function initialize(name, initializer) {
@@ -43,6 +44,7 @@ initialize('navegação', initNavigation)
 initialize('portal integrado', initIntegratedPortal)
 initialize('biblioteca de GIFs', initExerciseGifs)
 initialize('painel', initDashboard)
+initialize('biblioteca unificada', initExerciseHub)
 initialize('perfil e notificações', initPersonalExtras)
 initialize('check-ins', initCheckins)
 initialize('agenda', initAgenda)

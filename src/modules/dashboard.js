@@ -371,14 +371,54 @@ function renderWorkouts() {
     : 'Crie a primeira ficha de treino para começar.'
 }
 const openExerciseFolders = new Set()
+// Exercícios usados em alguma ficha (personalizada ou Treino Pronto).
+function exercisesInUse() {
+  const used = new Set()
+  const parse = (value) => {
+    try {
+      return JSON.parse(value || '[]')
+    } catch {
+      return []
+    }
+  }
+  const add = (id) => {
+    if (id) used.add(String(id))
+  }
+  ;(getData().workouts || []).forEach((workout) => {
+    ;(workout.exerciseIds || parse(workout.exerciseIdsJson)).forEach(add)
+    ;(workout.exercisePrescriptions || []).forEach((item) => add(item.exerciseId))
+  })
+  ;(getData().readyPrograms || []).forEach((program) =>
+    (program.exercisePrescriptions || parse(program.exercisePrescriptionsJson)).forEach((item) =>
+      add(item.exerciseId),
+    ),
+  )
+  return used
+}
+const exerciseHasGif = (exercise) => exerciseGifStatus(exercise) === 'com GIF'
+const exerciseHasVideo = (exercise) => Boolean(exercise.videoId && findVideo(exercise.videoId))
+function renderExerciseSummary(exercises, used) {
+  const summary = document.querySelector('[data-exercise-summary]')
+  if (!summary) return
+  const noGif = exercises.filter((item) => !exerciseHasGif(item)).length
+  const noVideo = exercises.filter((item) => !exerciseHasVideo(item)).length
+  const unused = exercises.filter((item) => !used.has(String(item.id))).length
+  summary.textContent = `${exercises.length} exercício(s) · ${noGif} sem GIF · ${noVideo} sem vídeo · ${unused} fora das fichas`
+}
 function renderExercises() {
   const query = document
       .querySelector('[data-table-search="exercises"]')
       .value.trim()
       .toLocaleLowerCase('pt-BR'),
     group = document.querySelector('[data-exercise-filter]').value
+  const mediaFilter = document.querySelector('[data-exercise-media-filter]')?.value || 'all'
+  const used = exercisesInUse()
+  renderExerciseSummary(getData().exercises, used)
   const filtered = getData().exercises.filter((e) => {
     if (!e.name.toLocaleLowerCase('pt-BR').includes(query)) return false
+    if (mediaFilter === 'no-gif' && exerciseHasGif(e)) return false
+    if (mediaFilter === 'no-video' && exerciseHasVideo(e)) return false
+    if (mediaFilter === 'unused' && used.has(String(e.id))) return false
     if (group === 'all') return true
     const groups = exerciseGroups(e)
     return (
@@ -407,7 +447,7 @@ function renderExercises() {
   const folders = new Map()
   // Pastas criadas por você aparecem mesmo sem exercício dentro.
   const custom = getData().customGroups || []
-  if (!query && group === 'all')
+  if (!query && group === 'all' && mediaFilter === 'all')
     custom.forEach((item) => folders.set(item.name, []))
   filtered.forEach((exercise) => {
     folderNamesFor(exercise).forEach((name) => {
@@ -419,7 +459,7 @@ function renderExercises() {
     const index = filterOptions.indexOf(name)
     return index === -1 ? filterOptions.length : index
   }
-  const expandAll = Boolean(query) || group !== 'all'
+  const expandAll = Boolean(query) || group !== 'all' || mediaFilter !== 'all'
   list.replaceChildren(
     ...[...folders.entries()]
       .sort(([a], [b]) => position(a) - position(b) || a.localeCompare(b, 'pt-BR'))
@@ -932,6 +972,12 @@ export function initDashboard() {
     .querySelector('[data-table-search="exercises"]')
     .addEventListener('input', renderExercises)
   document.querySelector('[data-exercise-filter]').addEventListener('change', renderExercises)
+  // O filtro "Sem GIF / Sem vídeo / Fora das fichas" é criado pelo
+  // exercise-hub.js; escuta por delegação para funcionar em qualquer ordem.
+  document.addEventListener('change', (event) => {
+    if (event.target.matches?.('[data-exercise-media-filter]')) renderExercises()
+  })
+  window.addEventListener('farisa:render-exercises', renderExercises)
   const filterBox = document.querySelector('[data-exercise-filter]')?.parentElement
   if (filterBox && !filterBox.querySelector('.folder-create-button'))
     filterBox.append(folderCreateButton())

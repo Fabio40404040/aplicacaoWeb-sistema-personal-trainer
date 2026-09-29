@@ -1704,6 +1704,16 @@ function renderExerciseVideoLibrary() {
         title.textContent = exercise.name
         const meta = document.createElement('p')
         meta.textContent = `${exercise.equipment || 'Sem equipamento'} · ${exercise.difficulty}${exercise.published ? ' · publicado' : ' · rascunho'}`
+        // Mostra se o vídeo está ligado a algum exercício (só assim chega ao aluno).
+        const linked = (getData().exercises || []).filter(
+          (item) => String(item.videoId || '') === String(exercise.id),
+        ).length
+        const usage = document.createElement('span')
+        usage.className = `gif-status ${linked ? 'gif-status--on' : 'gif-status--off'}`
+        usage.textContent = linked
+          ? `ligado a ${linked} exercício(s)`
+          : 'não ligado a exercício'
+        meta.append(' ', usage)
         const instructions = document.createElement('p')
         instructions.textContent = exercise.instructions || 'Sem instruções adicionais.'
         const size = document.createElement('small')
