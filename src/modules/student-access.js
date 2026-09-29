@@ -610,27 +610,64 @@ function renderPortal(container, data) {
       }
     });
     checkin.append(form);
-    if (data.checkins.length)
-      addLine(
-        checkin,
-        `Último envio: ${new Intl.DateTimeFormat("pt-BR").format(new Date(data.checkins[0].createdAt))}.`,
+    // Check-ins: o mais recente fica à vista (com a resposta do personal ou o
+    // aviso de que ainda não foi respondido); os anteriores ficam guardados
+    // numa lista que abre ao clicar.
+    const dateOf = (item) =>
+      new Intl.DateTimeFormat("pt-BR").format(new Date(item.createdAt));
+    const checkinCard = (item, highlight = false) => {
+      const card = element(
+        "div",
+        `student-checkin-reply${highlight ? " student-checkin-reply--latest" : ""}${item.trainerFeedback ? "" : " is-waiting"}`,
       );
-    // Respostas do personal aos últimos check-ins.
-    data.checkins
-      .filter((item) => item.trainerFeedback)
-      .slice(0, 3)
-      .forEach((item) => {
-        const reply = element("div", "student-checkin-reply");
-        reply.append(
-          element(
-            "strong",
-            "",
-            `💬 Resposta do personal · check-in de ${new Intl.DateTimeFormat("pt-BR").format(new Date(item.createdAt))}`,
-          ),
+      card.append(
+        element(
+          "strong",
+          "",
+          `${highlight && item.trainerFeedback ? "Última resposta do personal" : "Check-in"} · ${dateOf(item)}`,
+        ),
+      );
+      const summary = [`Energia ${item.energy}/5`, `Sono ${item.sleep}/5`];
+      if (item.pain) summary.push(`Dor: ${item.pain}`);
+      card.append(element("small", "student-checkin-summary", summary.join(" · ")));
+      if (item.notes) card.append(element("p", "student-checkin-notes", item.notes));
+      if (item.trainerFeedback) {
+        card.append(
+          element("span", "student-checkin-label", "💬 Resposta do personal"),
           element("p", "", item.trainerFeedback),
         );
-        checkin.append(reply);
-      });
+      } else {
+        card.append(
+          element("span", "student-checkin-label", "⏳ Aguardando resposta do personal"),
+        );
+      }
+      return card;
+    };
+    // À vista: a resposta mais recente do personal. Se o check-in mais novo
+    // ainda não foi respondido, ele também aparece, com o aviso de espera.
+    const newest = data.checkins[0];
+    const latestAnswered = data.checkins.find((item) => item.trainerFeedback);
+    const visible = [];
+    if (newest && !newest.trainerFeedback) visible.push(newest);
+    if (latestAnswered) visible.push(latestAnswered);
+    visible.forEach((item) =>
+      checkin.append(checkinCard(item, item === latestAnswered || !latestAnswered)),
+    );
+    const older = data.checkins.filter((item) => !visible.includes(item));
+    if (older.length) {
+      const history = element("details", "student-checkin-history");
+      history.append(
+        element(
+          "summary",
+          "",
+          `Check-ins anteriores (${older.length})`,
+        ),
+      );
+      const list = element("div", "student-checkin-history-list");
+      older.forEach((item) => list.append(checkinCard(item)));
+      history.append(list);
+      checkin.append(history);
+    }
     container.append(checkin);
   }
   const unavailable = [

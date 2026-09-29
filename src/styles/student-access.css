@@ -681,3 +681,50 @@
   color: #c7d5e6;
   white-space: pre-wrap;
 }
+
+/* Check-in semanal: o mais recente à vista, os anteriores guardados */
+.student-checkin-reply--latest {
+  border-left-color: #34d399;
+  background: #173228;
+}
+.student-checkin-reply.is-waiting {
+  border-left-color: #fbbf24;
+}
+.student-checkin-summary {
+  display: block;
+  margin-bottom: 6px;
+  color: #9fb3cb;
+  font-size: 0.8rem;
+}
+.student-checkin-notes {
+  margin: 0 0 8px !important;
+  color: #9fb3cb !important;
+  font-style: italic;
+}
+.student-checkin-label {
+  display: block;
+  margin: 6px 0 2px;
+  color: #dce9f8;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.student-checkin-history {
+  margin-top: 12px;
+  border: 1px solid #40546e;
+  border-radius: 10px;
+  background: #18283b;
+}
+.student-checkin-history > summary {
+  padding: 10px 12px;
+  color: #dce9f8;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-checkin-history-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.student-checkin-history-list .student-checkin-reply {
+  margin-top: 0;
+}

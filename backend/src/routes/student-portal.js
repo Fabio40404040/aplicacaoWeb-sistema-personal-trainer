@@ -194,7 +194,7 @@ export async function studentPortal(db, accountId, version) {
     response.checkins = (
       await db.query(
         `SELECT id, energy, sleep, pain, notes, trainer_feedback AS "trainerFeedback", created_at AS "createdAt"
-         FROM checkins WHERE student_id=$1 ORDER BY created_at DESC LIMIT 8`,
+         FROM checkins WHERE student_id=$1 ORDER BY created_at DESC LIMIT 52`,
         [account.studentId],
       )
     ).rows;
