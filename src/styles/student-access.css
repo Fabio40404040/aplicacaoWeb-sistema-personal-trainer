@@ -728,3 +728,30 @@
 .student-checkin-history-list .student-checkin-reply {
   margin-top: 0;
 }
+
+/* Seletor "Mostrar em: GIF | Vídeo" das pastas de treino do aluno */
+.student-media-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 4px;
+  color: #8ea3bd;
+  font-size: 0.85rem;
+}
+.student-media-toggle button {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid #3b4d66;
+  border-radius: 999px;
+  background: transparent;
+  color: #dce9f8;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-media-toggle button.is-active {
+  border-color: #3d8bfd;
+  background: #3d8bfd;
+  color: #fff;
+}
