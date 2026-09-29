@@ -18,4 +18,12 @@
       "migrations_dir": "../backend/migrations-d1",
     },
   ],
+  // Arquivos enviados na demo (GIFs, vídeos, PDFs) ficam no R2 e são
+  // apagados na restauração.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "farisa-personal-media",
+    },
+  ],
 }

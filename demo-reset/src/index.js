@@ -16,7 +16,26 @@ export function splitStatements(sql) {
     .filter(Boolean)
 }
 
+// Apaga do R2 os arquivos enviados pela conta demo. Todos ficam em
+// "trainers/demo-trainer/..."; os arquivos das outras contas não são tocados.
+export async function clearDemoFiles(env) {
+  if (!env.MEDIA) return 0
+  let removed = 0
+  let cursor
+  do {
+    const page = await env.MEDIA.list({ prefix: 'trainers/demo-trainer/', cursor })
+    const keys = page.objects.map((object) => object.key)
+    if (keys.length) {
+      await env.MEDIA.delete(keys)
+      removed += keys.length
+    }
+    cursor = page.truncated ? page.cursor : undefined
+  } while (cursor)
+  return removed
+}
+
 export async function resetDemo(env) {
+  await clearDemoFiles(env)
   const statements = splitStatements(seedSql).map((sql) => env.DB.prepare(sql))
   // batch roda tudo numa transação: ou restaura por completo, ou não muda nada.
   await env.DB.batch(statements)
