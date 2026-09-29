@@ -2838,3 +2838,9 @@ video.gif-lightbox-image {
   margin: 0;
   font-size: 0.8rem;
 }
+
+/* Etiqueta "Prévia do site" nos Treinos Prontos */
+.tag--preview {
+  color: #15803d;
+  background: #dcfce7;
+}

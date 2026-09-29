@@ -19,6 +19,7 @@ import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
 import { initWhatsappFloat } from './modules/whatsapp.js'
 import { initDemoAccess } from './modules/demo-access.js'
+import { initPlanPreview } from './modules/plan-preview.js'
 
 function initialize(name, initializer) {
   try {
@@ -53,3 +54,4 @@ initialize('acesso do personal', initPersonalAccess)
 initialize('aplicativo instalável', initPwa)
 initialize('WhatsApp flutuante', initWhatsappFloat)
 initialize('acesso de demonstração', initDemoAccess)
+initialize('prévia dos treinos prontos', initPlanPreview)

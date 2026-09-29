@@ -46,6 +46,12 @@ export async function dashboard(db, trainerId) {
   const withCustomGroups = await customGroupsReady(db);
   const withVideoLink = await videoLinkReady(db);
   const withStudentAvatar = await studentAvatarReady(db);
+  let withSitePreview = true;
+  try {
+    await db.query("SELECT is_site_preview FROM ready_workout_programs LIMIT 1");
+  } catch {
+    withSitePreview = false;
+  }
   const gifColumn =
     (withGifs ? ',gif_id AS "gifId"' : "") +
     (withVideoLink ? ',video_id AS "videoId"' : "");
@@ -138,6 +144,7 @@ export async function dashboard(db, trainerId) {
     db.query(
       `SELECT p.id,p.name,p.goal,p.level,p.duration,p.description,p.color_theme AS "colorTheme",
          p.published,p.created_at AS "createdAt",
+         ${withSitePreview ? 'p.is_site_preview AS "sitePreview",' : ""}
          COALESCE((SELECT json_group_array(json_object(
            'exerciseId',e.id,'name',e.name,'group',e.muscle_group,'equipment',e.equipment,
            'instructions',e.instructions,'difficulty',e.difficulty,'mediaType',e.media_type,

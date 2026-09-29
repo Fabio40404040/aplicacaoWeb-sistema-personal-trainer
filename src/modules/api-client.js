@@ -99,6 +99,15 @@ export function persistReadyProgram(record, id = null) {
     body: JSON.stringify(record),
   });
 }
+export function setReadyProgramSitePreview(id, enabled) {
+  return request(`/ready-programs/${id}/site-preview`, {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
+}
+export function fetchReadyPreview() {
+  return request("/public/ready-preview");
+}
 export function removeReadyProgram(id) {
   return request(`/ready-programs/${id}`, { method: "DELETE" });
 }

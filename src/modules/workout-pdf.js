@@ -316,7 +316,11 @@ function drawCover(workout, studentName) {
   });
   text(
     commands,
-    workout.readyProgram ? "TREINO PRONTO" : "FICHA PERSONALIZADA",
+    workout.sitePreview
+      ? "PREVIA - TREINO PRONTO"
+      : workout.readyProgram
+        ? "TREINO PRONTO"
+        : "FICHA PERSONALIZADA",
     42,
     102,
     15,
@@ -549,7 +553,7 @@ function buildPages(workout, studentName) {
     text(page, `Pagina ${index + 1} de ${pages.length}`, 515, 824, 7, {
       color: COLORS.muted,
     });
-    drawWatermark(page);
+    drawWatermark(page, workout.sitePreview ? "PREVIA - FARISA" : "FARISA-PERSONAL");
   });
   return pages;
 }
@@ -561,8 +565,8 @@ function buildPages(workout, studentName) {
 // visualmente aquele ponto específico — o efeito fica uniforme na página
 // inteira. Evita a faixa do cabeçalho (título, nome, programa) e do
 // rodapé, pra nunca cruzar com esse texto fino.
-function drawWatermark(commands) {
-  const label = escapePdf("FARISA-PERSONAL");
+function drawWatermark(commands, text = "FARISA-PERSONAL") {
+  const label = escapePdf(text);
   const angle = (30 * Math.PI) / 180;
   const cos = Math.cos(angle).toFixed(4);
   const sin = Math.sin(angle).toFixed(4);
@@ -784,4 +788,16 @@ export function previewWorkoutPdf(workout, studentName) {
     if (event.target === dialog) dialog.close();
   });
   dialog.showModal();
+}
+
+// Abre o PDF numa aba nova. A aba é aberta já no clique (antes de montar o
+// arquivo) para o navegador não bloquear como pop-up.
+export function openWorkoutPdfInTab(workout, studentName, openedTab = null) {
+  const blob = new Blob([buildWorkoutPdfBytes(workout, studentName)], {
+    type: "application/pdf",
+  });
+  const url = URL.createObjectURL(blob);
+  if (openedTab && !openedTab.closed) openedTab.location.href = url;
+  else window.open(url, "_blank", "noopener");
+  window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }

@@ -4,6 +4,7 @@ import {
   loadExerciseGifFrame,
   loadExerciseVideo,
   persistReadyProgram,
+  setReadyProgramSitePreview,
   persistRecord,
   removeReadyProgram,
   syncRemoteData,
@@ -1128,7 +1129,7 @@ function renderReadyWorkoutLibrary() {
     ].sort()
     const card = document.createElement('section')
     card.className = 'media-library-card'
-    card.innerHTML = `<div><span class="tag">${program.published ? 'Publicado' : 'Rascunho'}</span><h3></h3><p></p><small></small></div><div class="media-library-actions"></div>`
+    card.innerHTML = `<div><span class="tag">${program.published ? 'Publicado' : 'Rascunho'}</span>${program.sitePreview ? ' <span class="tag tag--preview">Prévia do site</span>' : ''}<h3></h3><p></p><small></small></div><div class="media-library-actions"></div>`
     card.querySelector('h3').textContent = program.name
     card.querySelector('p').textContent =
       program.description || `${program.goal} · ${program.level}`
@@ -1203,7 +1204,31 @@ function renderReadyWorkoutLibrary() {
         toggle.disabled = false
       }
     })
-    actions.append(toggle, pdf, edit, remove)
+    // Prévia do site: o botão "Ver prévia" do card Treinos Prontos mostra
+    // este treino. Só um fica marcado; marcar outro desmarca o anterior.
+    const sitePreview = document.createElement('button')
+    sitePreview.className = 'button button--secondary'
+    sitePreview.type = 'button'
+    sitePreview.textContent = program.sitePreview
+      ? 'Remover da prévia do site'
+      : 'Usar como prévia do site'
+    sitePreview.addEventListener('click', async () => {
+      sitePreview.disabled = true
+      try {
+        await setReadyProgramSitePreview(program.id, !program.sitePreview)
+        showToast(
+          program.sitePreview
+            ? 'O site voltou a mostrar a prévia padrão.'
+            : 'Pronto! O “Ver prévia” do site agora mostra este treino.',
+        )
+        window.dispatchEvent(new Event('farisa:remote-refresh'))
+      } catch (error) {
+        showToast(error.message)
+      } finally {
+        sitePreview.disabled = false
+      }
+    })
+    actions.append(toggle, pdf, sitePreview, edit, remove)
     grid.append(card)
   })
   if (!programs.length) {

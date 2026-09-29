@@ -118,3 +118,73 @@ export async function deleteReadyProgram(db, trainerId, id) {
   );
   return result.rows[0] || null;
 }
+
+// ---------------------------------------------------------------------------
+// Prévia do site: o card "Treinos Prontos" mostra um treino marcado pelo
+// personal. Depende da migração 019; sem ela, o site usa o PDF fixo.
+async function sitePreviewReady(db) {
+  try {
+    await db.query("SELECT is_site_preview FROM ready_workout_programs LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function setReadyProgramSitePreview(db, trainerId, id, body) {
+  if (!(await sitePreviewReady(db)))
+    return {
+      error: "Rode a migração 019 (npm run db:migrate:local / db:migrate:remote).",
+      status: 503,
+    };
+  const enabled = Boolean(body?.enabled);
+  const exists = (
+    await db.query(
+      "SELECT id FROM ready_workout_programs WHERE id=$1 AND trainer_id=$2 LIMIT 1",
+      [id, trainerId],
+    )
+  ).rows[0];
+  if (!exists) return { error: "Treino pronto não encontrado.", status: 404 };
+  const queries = [
+    {
+      sql: "UPDATE ready_workout_programs SET is_site_preview=0 WHERE trainer_id=$1",
+      values: [trainerId],
+    },
+  ];
+  if (enabled)
+    queries.push({
+      sql: "UPDATE ready_workout_programs SET is_site_preview=1 WHERE id=$1 AND trainer_id=$2",
+      values: [id, trainerId],
+    });
+  await db.batch(queries);
+  return { data: { id, sitePreview: enabled } };
+}
+
+// Rota pública (sem login): devolve só o treino marcado como prévia pelo
+// personal dono do site (o primeiro cadastrado, o mesmo que recebe os
+// cadastros de alunos). Nada de GIFs, e-mails ou outros treinos.
+export async function publicReadyPreview(db) {
+  if (!(await sitePreviewReady(db))) return { data: null };
+  const program = (
+    await db.query(
+      `SELECT p.id,p.name,p.goal,p.level,p.duration,p.description,p.color_theme AS "colorTheme"
+       FROM ready_workout_programs p
+       WHERE p.is_site_preview=1
+         AND p.trainer_id=(SELECT id FROM trainers ORDER BY created_at LIMIT 1)
+       LIMIT 1`,
+    )
+  ).rows[0];
+  if (!program) return { data: null };
+  program.exercises = (
+    await db.query(
+      `SELECT e.name,e.muscle_group AS "group",e.equipment,e.instructions,e.difficulty,
+         r.position,r.sets,r.repetitions,r.rest_seconds AS "restSeconds",r.notes,
+         r.session_label AS "sessionLabel"
+       FROM ready_program_exercises r JOIN exercises e ON e.id=r.exercise_id
+       WHERE r.program_id=$1 ORDER BY r.position`,
+      [program.id],
+    )
+  ).rows;
+  delete program.id;
+  return { data: program };
+}

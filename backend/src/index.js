@@ -63,6 +63,8 @@ import {
 import {
   createReadyProgram,
   deleteReadyProgram,
+  publicReadyPreview,
+  setReadyProgramSitePreview,
   updateReadyProgram,
 } from "./routes/ready-programs.js";
 
@@ -86,6 +88,9 @@ async function handle(request, env) {
         ? publicExerciseGifPage(db, segments[2])
         : publicExerciseGifFile(env, db, segments[2]),
     );
+  // Prévia do card "Treinos Prontos" no site (pública, só leitura).
+  if (request.method === "GET" && route === "public/ready-preview")
+    return withDb(env, (db) => publicReadyPreview(db));
   if (request.method === "POST" && route === "payments/mercadopago/webhook")
     return withDb(env, (db) => mercadoPagoWebhook(request, env, db));
   if (request.method === "POST" && route === "payments/webhook")
@@ -227,6 +232,21 @@ async function handle(request, env) {
       );
       return result?.error ? result : { data: result, status: 201 };
     }
+    if (
+      request.method === "PUT" &&
+      segments[0] === "ready-programs" &&
+      segments[1] &&
+      segments[2] === "site-preview"
+    )
+      // A conta demo não controla a prévia do site (ela é do dono do site).
+      return isDemoEmail(session.email)
+        ? demoBlocked
+        : setReadyProgramSitePreview(
+        db,
+        session.sub,
+        segments[1],
+        await readJson(request),
+      );
     if (
       request.method === "PUT" &&
       segments[0] === "ready-programs" &&
