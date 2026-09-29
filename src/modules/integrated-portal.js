@@ -1647,12 +1647,23 @@ function renderExerciseVideoLibrary() {
   if (!groups) return
   const videos = getData().exerciseVideos || []
   groups.replaceChildren()
-  workoutCatalogGroups(videos)
+  // Só aparecem as pastas que já têm vídeo ou que você criou. As pastas fixas
+  // do catálogo (Peitoral, Costas…) surgem quando o primeiro MP4 é enviado.
+  const customNames = new Set((getData().customGroups || []).map((item) => item.name))
+  const visibleGroups = workoutCatalogGroups(videos)
     .map((group) => ({
       ...group,
       exercises: videos.filter((video) => group.memberNames.includes(video.group)),
     }))
-    .forEach((group) => {
+    .filter((group) => group.exercises.length || customNames.has(group.name))
+  if (!visibleGroups.length) {
+    const empty = document.createElement('p')
+    empty.className = 'video-library-empty'
+    empty.textContent =
+      'Nenhum vídeo ainda. Envie o primeiro MP4 acima: a pasta do grupo muscular aparece aqui automaticamente.'
+    groups.append(empty)
+  }
+  visibleGroups.forEach((group) => {
       // Mesmo formato das pastas da Biblioteca de GIFs.
       const section = document.createElement('details')
       section.className = 'exercise-folder video-muscle-group'
