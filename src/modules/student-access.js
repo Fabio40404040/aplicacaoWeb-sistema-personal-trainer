@@ -409,9 +409,8 @@ function appendExerciseGroups(parent, exercises, uploadedVideos = []) {
   });
   [...sessions.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .forEach(([session, items], index) => {
+    .forEach(([session, items]) => {
       const section = element("details", "student-muscle-group");
-      section.open = index === 0;
       const groups = [
         ...new Set(items.map((exercise) => exercise.group).filter(Boolean)),
       ];
