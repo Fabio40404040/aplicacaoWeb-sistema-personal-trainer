@@ -1,5 +1,9 @@
 import { readJson } from '../lib/http.js'
-import { hasRecoveryEmailProvider, sendRecoveryEmail } from '../lib/recovery-email.js'
+import {
+  hasRecoveryEmailProvider,
+  missingEmailConfig,
+  sendRecoveryEmail,
+} from '../lib/recovery-email.js'
 import { hashPassword, isStrongPassword } from '../lib/session.js'
 
 const generic = {
@@ -57,12 +61,14 @@ export async function studentRecovery(request, env, db, action) {
   const isLocal = ['localhost', '127.0.0.1'].includes(requestUrl.hostname)
   const siteUrl = env.PUBLIC_SITE_URL || request.headers.get('Origin') || env.ALLOWED_ORIGIN
   const hasEmailProvider = hasRecoveryEmailProvider(env)
-  if ((!hasEmailProvider || !siteUrl) && !isLocal)
+  if ((!hasEmailProvider || !siteUrl) && !isLocal) {
+    const missing = missingEmailConfig(env, siteUrl)
+    console.error(`[recuperação de senha] configuração ausente: ${missing.join(', ')}`)
     return {
-      error:
-        'A recuperação por e-mail ainda não está disponível. Entre em contato com o treinador.',
+      error: `A recuperação por e-mail ainda não está disponível. Entre em contato com o treinador. (Configuração ausente: ${missing.join(', ') || 'desconhecida'})`,
       status: 503,
     }
+  }
   const result = await db.query(
     'SELECT id, email FROM student_accounts WHERE lower(email) = lower($1) LIMIT 1',
     [email.trim()],

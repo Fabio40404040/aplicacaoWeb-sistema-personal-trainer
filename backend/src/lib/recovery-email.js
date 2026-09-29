@@ -36,3 +36,12 @@ export async function sendRecoveryEmail(env, message, idempotencyKey) {
     })
   return null
 }
+
+// Nomes (nunca valores) das configurações que faltam para enviar e-mails.
+export function missingEmailConfig(env, siteUrl) {
+  const missing = []
+  if (!env.BREVO_API_KEY && !env.PASSWORD_MAILER) missing.push('BREVO_API_KEY')
+  if (env.BREVO_API_KEY && !env.EMAIL_FROM && !env.BREVO_FROM_EMAIL) missing.push('EMAIL_FROM')
+  if (!siteUrl) missing.push('PUBLIC_SITE_URL')
+  return missing
+}
