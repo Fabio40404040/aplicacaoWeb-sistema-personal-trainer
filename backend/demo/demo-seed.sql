@@ -3,7 +3,8 @@
 -- Apaga e recria a conta demo com dados fictícios. Pode rodar quantas vezes
 -- quiser: nada fora da conta demo é tocado.
 --   Personal: demo@farisa.example      / Demo@2026
---   Aluno:    aluno.demo@farisa.example / Demo@2026
+--   Aluno:    aluno.demo@farisa.example / Demo@2026   (consultoria Premium)
+--   Aluno:    aluno.pronto@farisa.example / Demo@2026 (Treinos Prontos)
 -- Uso (na pasta backend):
 --   npm run demo:reset:local   -> banco do computador
 --   npm run demo:reset:remote  -> banco do site publicado
@@ -25,8 +26,8 @@ DELETE FROM ready_workout_pdfs WHERE trainer_id='demo-trainer';
 DELETE FROM exercise_videos WHERE trainer_id='demo-trainer';
 DELETE FROM exercise_gifs WHERE trainer_id='demo-trainer';
 DELETE FROM trainer_muscle_groups WHERE trainer_id='demo-trainer';
-DELETE FROM student_password_resets WHERE account_id IN (SELECT id FROM student_accounts WHERE trainer_id='demo-trainer' OR lower(email)='aluno.demo@farisa.example');
-DELETE FROM student_accounts WHERE trainer_id='demo-trainer' OR lower(email)='aluno.demo@farisa.example';
+DELETE FROM student_password_resets WHERE account_id IN (SELECT id FROM student_accounts WHERE trainer_id='demo-trainer' OR lower(email) IN ('aluno.demo@farisa.example','aluno.pronto@farisa.example'));
+DELETE FROM student_accounts WHERE trainer_id='demo-trainer' OR lower(email) IN ('aluno.demo@farisa.example','aluno.pronto@farisa.example');
 DELETE FROM students WHERE trainer_id='demo-trainer';
 DELETE FROM exercises WHERE trainer_id='demo-trainer';
 DELETE FROM trainer_password_resets WHERE trainer_id='demo-trainer';
@@ -148,12 +149,16 @@ INSERT INTO students (id,trainer_id,name,email,goal,status,assessment_date,accou
  ('demo-st-2','demo-trainer','Mariana Costa','mariana.costa@example.com','Emagrecimento','Ativo',date('now','+12 days'),NULL,'active','basic','subscription','monthly',datetime('now','+18 days'),'paid','credit_card',datetime('now','-12 days'),CURRENT_TIMESTAMP,datetime('now','-60 days')),
  ('demo-st-3','demo-trainer','Rafael Souza','rafael.souza@example.com','Condicionamento','Ativo',date('now','+40 days'),NULL,'active','athlete','subscription','annual',datetime('now','+300 days'),'paid','pix',datetime('now','-65 days'),CURRENT_TIMESTAMP,datetime('now','-70 days')),
  ('demo-st-4','demo-trainer','Juliana Alves','juliana.alves@example.com','Hipertrofia','Pausado',NULL,NULL,'pending','premium','subscription','quarterly',NULL,'pending','pix',NULL,CURRENT_TIMESTAMP,datetime('now','-2 days')),
- ('demo-st-5','demo-trainer','Pedro Martins','pedro.martins@example.com','Saúde e bem-estar','Ativo',NULL,NULL,'active','ready','permanent','permanent',NULL,'paid','pix',datetime('now','-30 days'),CURRENT_TIMESTAMP,datetime('now','-30 days')),
+ ('demo-st-5','demo-trainer','Aluno Treinos Prontos','aluno.pronto@farisa.example','Saúde e bem-estar','Ativo',NULL,'demo-student-ready','active','ready','permanent','permanent',NULL,'paid','pix',datetime('now','-30 days'),CURRENT_TIMESTAMP,datetime('now','-30 days')),
  ('demo-st-6','demo-trainer','Camila Rocha','camila.rocha@example.com','Emagrecimento','Ativo',date('now','+3 days'),NULL,'active','premium','subscription','quarterly',datetime('now','+5 days'),'paid','credit_card',datetime('now','-85 days'),CURRENT_TIMESTAMP,datetime('now','-88 days'));
 
 -- 5) Conta de aluno de demonstração (ligada ao aluno demo-st-1).
 INSERT INTO student_accounts (id,name,email,password_hash,trainer_id,student_id,requested_plan_code,requested_payment_channel,requested_billing_cycle,phone,birth_date,checkin_weekday)
 VALUES ('demo-student-account','Aluno Demonstração','aluno.demo@farisa.example','pbkdf2$100000$ZmFyaXNhLWRlbW8tc3QwMQ$RVnAYpzW1mQGO8PrbW0j4cHzEI8kFSifI9WeIOCEmgg','demo-trainer','demo-st-1','premium','pix','quarterly','(00) 90000-0001','1995-04-12',1);
+
+-- 5b) Conta de aluno de Treinos Prontos (ligada ao aluno demo-st-5).
+INSERT INTO student_accounts (id,name,email,password_hash,trainer_id,student_id,requested_plan_code,requested_payment_channel,requested_billing_cycle,checkin_weekday)
+VALUES ('demo-student-ready','Aluno Treinos Prontos','aluno.pronto@farisa.example','pbkdf2$100000$ZmFyaXNhLWRlbW8tc3QwMQ$RVnAYpzW1mQGO8PrbW0j4cHzEI8kFSifI9WeIOCEmgg','demo-trainer','demo-st-5','ready','pix','permanent',1);
 
 -- 6) Fichas de treino.
 INSERT INTO workouts (id,trainer_id,student_id,name,goal,duration,progress,published_at,permanent_access,updated_at,created_at) VALUES

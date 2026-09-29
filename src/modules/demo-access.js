@@ -1,15 +1,19 @@
 // Acesso de demonstração para o portfólio.
-// Mostra o e-mail e a senha das contas demo nas telas de login e um botão
+// Mostra o e-mail e a senha das contas demo nas telas de login e botões
 // "Entrar como visitante". Também esconde o "Esqueci a senha" (o servidor
 // já recusa recuperar a senha das contas demo).
 //
 // Para desligar (por exemplo, no site entregue a um cliente), coloque
 // VITE_DEMO_MODE=false no .env.production e publique de novo.
 const DEMO_ENABLED = String(import.meta.env.VITE_DEMO_MODE ?? 'true').trim() !== 'false'
+const DEMO_PASSWORD = 'Demo@2026'
 
 const DEMO_ACCOUNTS = {
-  personal: { email: 'demo@farisa.example', password: 'Demo@2026' },
-  student: { email: 'aluno.demo@farisa.example', password: 'Demo@2026' },
+  personal: [{ label: 'Entrar como visitante', email: 'demo@farisa.example' }],
+  student: [
+    { label: 'Entrar como aluno de consultoria', email: 'aluno.demo@farisa.example' },
+    { label: 'Entrar como aluno de Treinos Prontos', email: 'aluno.pronto@farisa.example' },
+  ],
 }
 
 function setValue(input, value) {
@@ -18,47 +22,49 @@ function setValue(input, value) {
   input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-function createBox(account, form) {
+function line(label, value) {
+  const span = document.createElement('span')
+  span.append(`${label}: `)
+  const code = document.createElement('code')
+  code.textContent = value
+  span.append(code)
+  return span
+}
+
+function createBox(accounts, form) {
   const box = document.createElement('div')
   box.className = 'demo-access'
   box.setAttribute('role', 'note')
 
   const title = document.createElement('strong')
   title.textContent = 'Acesso de demonstração'
-
-  const email = document.createElement('span')
-  email.append('E-mail: ')
-  const emailCode = document.createElement('code')
-  emailCode.textContent = account.email
-  email.append(emailCode)
-
-  const password = document.createElement('span')
-  password.append('Senha: ')
-  const passwordCode = document.createElement('code')
-  passwordCode.textContent = account.password
-  password.append(passwordCode)
+  box.append(title)
+  accounts.forEach((account) => box.append(line('E-mail', account.email)))
+  box.append(line('Senha', DEMO_PASSWORD))
 
   const note = document.createElement('small')
   note.textContent = 'Dados fictícios. Tudo volta ao original todos os dias.'
+  box.append(note)
 
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = 'button button--secondary demo-access__button'
-  button.textContent = 'Entrar como visitante'
-  button.addEventListener('click', () => {
-    setValue(form.querySelector('[name="email"]'), account.email)
-    setValue(form.querySelector('[name="password"]'), account.password)
-    form.requestSubmit()
+  accounts.forEach((account, index) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = `button button--secondary demo-access__button${index ? ' demo-access__button--next' : ''}`
+    button.textContent = account.label
+    button.addEventListener('click', () => {
+      setValue(form.querySelector('[name="email"]'), account.email)
+      setValue(form.querySelector('[name="password"]'), DEMO_PASSWORD)
+      form.requestSubmit()
+    })
+    box.append(button)
   })
-
-  box.append(title, email, password, note, button)
   return box
 }
 
-function addBox(form, account) {
+function addBox(form, accounts) {
   if (!form || form.querySelector('.demo-access')) return
   const submit = form.querySelector('button[type="submit"]')
-  const box = createBox(account, form)
+  const box = createBox(accounts, form)
   if (submit) submit.before(box)
   else form.append(box)
 }

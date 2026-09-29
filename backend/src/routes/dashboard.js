@@ -145,14 +145,15 @@ export async function dashboard(db, trainerId) {
       `SELECT p.id,p.name,p.goal,p.level,p.duration,p.description,p.color_theme AS "colorTheme",
          p.published,p.created_at AS "createdAt",
          ${withSitePreview ? 'p.is_site_preview AS "sitePreview",' : ""}
-         COALESCE((SELECT json_group_array(json_object(
-           'exerciseId',e.id,'name',e.name,'group',e.muscle_group,'equipment',e.equipment,
-           'instructions',e.instructions,'difficulty',e.difficulty,'mediaType',e.media_type,
-           'mediaUrl',e.media_url,'thumbnailUrl',e.thumbnail_url,${gifJson}'position',r.position,
-           'sets',r.sets,'repetitions',r.repetitions,'restSeconds',r.rest_seconds,
-           'notes',r.notes,'sessionLabel',r.session_label
-         )) FROM ready_program_exercises r JOIN exercises e ON e.id=r.exercise_id
-         WHERE r.program_id=p.id ORDER BY r.position),'[]') AS "exercisePrescriptionsJson"
+         COALESCE((SELECT json_group_array(json(item)) FROM (
+           SELECT json_object(
+             'exerciseId',e.id,'name',e.name,'group',e.muscle_group,'equipment',e.equipment,
+             'instructions',e.instructions,'difficulty',e.difficulty,'mediaType',e.media_type,
+             'mediaUrl',e.media_url,'thumbnailUrl',e.thumbnail_url,${gifJson}'position',r.position,
+             'sets',r.sets,'repetitions',r.repetitions,'restSeconds',r.rest_seconds,
+             'notes',r.notes,'sessionLabel',r.session_label
+           ) AS item FROM ready_program_exercises r JOIN exercises e ON e.id=r.exercise_id
+           WHERE r.program_id=p.id ORDER BY r.session_label, r.position)),'[]') AS "exercisePrescriptionsJson"
          FROM ready_workout_programs p WHERE p.trainer_id=$1 ORDER BY p.created_at DESC`,
       [trainerId],
     ),

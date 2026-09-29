@@ -59,7 +59,8 @@ O arquivo `demo/demo-seed.sql` cria duas contas com dados fictícios:
 | Área | E-mail | Senha |
 |---|---|---|
 | Personal | `demo@farisa.example` | `Demo@2026` |
-| Aluno | `aluno.demo@farisa.example` | `Demo@2026` |
+| Aluno (consultoria Premium) | `aluno.demo@farisa.example` | `Demo@2026` |
+| Aluno (Treinos Prontos) | `aluno.pronto@farisa.example` | `Demo@2026` |
 
 - `npm run demo:reset:local` cria ou restaura a demo no banco do computador.
 - `npm run demo:reset:remote` faz o mesmo no banco do site publicado.

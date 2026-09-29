@@ -48,3 +48,6 @@
   margin-top: 6px;
   width: 100%;
 }
+.demo-access__button--next {
+  margin-top: 0;
+}

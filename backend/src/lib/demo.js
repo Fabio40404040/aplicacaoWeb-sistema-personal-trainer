@@ -4,8 +4,9 @@
 // livre; o que a demo enviar é apagado na restauração diária (demo-reset).
 export const DEMO_TRAINER_EMAIL = 'demo@farisa.example'
 export const DEMO_STUDENT_EMAIL = 'aluno.demo@farisa.example'
+export const DEMO_READY_STUDENT_EMAIL = 'aluno.pronto@farisa.example'
 
-const DEMO_EMAILS = new Set([DEMO_TRAINER_EMAIL, DEMO_STUDENT_EMAIL])
+const DEMO_EMAILS = new Set([DEMO_TRAINER_EMAIL, DEMO_STUDENT_EMAIL, DEMO_READY_STUDENT_EMAIL])
 
 export function isDemoEmail(email) {
   return DEMO_EMAILS.has(String(email || '').trim().toLowerCase())
