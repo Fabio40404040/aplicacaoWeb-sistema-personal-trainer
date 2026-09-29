@@ -986,11 +986,24 @@ function renderReadyWizard(form) {
       (item) => item.textContent,
     ),
   )
+  // A lista de exercícios de cada grupo tem rolagem própria: guarda também.
+  const innerScroll = new Map(
+    [...form.querySelectorAll('.ready-exercise-group')].map((group) => [
+      group.querySelector('summary strong')?.textContent,
+      group.querySelector('.ready-exercise-options')?.scrollTop || 0,
+    ]),
+  )
+  const catalogBox = form.querySelector('[data-ready-exercise-catalog]')
+  const catalogScroll = [catalogBox?.scrollTop || 0, catalogBox?.scrollLeft || 0]
   renderReadySessionTabs(form)
   renderReadyExerciseCatalog(form)
   form.querySelectorAll('.ready-exercise-group').forEach((group) => {
-    if (openGroups.has(group.querySelector('summary strong')?.textContent)) group.open = true
+    const name = group.querySelector('summary strong')?.textContent
+    if (openGroups.has(name)) group.open = true
+    const options = group.querySelector('.ready-exercise-options')
+    if (options && innerScroll.get(name)) options.scrollTop = innerScroll.get(name)
   })
+  if (catalogBox) [catalogBox.scrollTop, catalogBox.scrollLeft] = catalogScroll
   renderReadyPrescriptionBuilder(form)
   ;[dialog, form, body].forEach((element, index) => {
     if (element) element.scrollTop = scrollPositions[index]

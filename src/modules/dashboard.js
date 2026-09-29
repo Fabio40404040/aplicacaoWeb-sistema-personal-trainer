@@ -245,26 +245,82 @@ function renderRecentStudents() {
     })
   document.querySelector('[data-recent-students]').replaceChildren(...rows)
 }
+// Fichas personalizadas agrupadas por aluno (uma pasta por aluno) e busca
+// pelo nome do aluno: ao buscar, aparecem só as fichas de quem bate.
+const openWorkoutGroups = new Set()
+function workoutCard(w) {
+  const card = cloneTemplate('workout-card-template')
+  card.dataset.id = w.id
+  card.querySelector('h2').textContent = w.name
+  card.querySelector('[data-card="student"]').textContent = w.student
+  card.querySelector('[data-card="goal"]').textContent =
+    `${w.goal} · ${w.publishedAt ? 'Publicado' : 'Rascunho'} · ${w.exerciseCount || 0} exercícios`
+  card.querySelector('[data-card="duration"]').textContent = w.duration
+  card.querySelector('.workout-progress strong').textContent = `${w.progress}%`
+  card.querySelector('progress').value = w.progress
+  const pdf = card.querySelector('.button--full')
+  pdf.dataset.action = 'pdf'
+  pdf.firstChild.textContent = 'Baixar PDF visual '
+  return card
+}
 function renderWorkouts() {
   const workouts = getData().workouts
-  document.querySelector('[data-workouts-grid]').replaceChildren(
-    ...workouts.map((w) => {
-      const card = cloneTemplate('workout-card-template')
-      card.dataset.id = w.id
-      card.querySelector('h2').textContent = w.name
-      card.querySelector('[data-card="student"]').textContent = w.student
-      card.querySelector('[data-card="goal"]').textContent =
-        `${w.goal} · ${w.publishedAt ? 'Publicado' : 'Rascunho'} · ${w.exerciseCount || 0} exercícios`
-      card.querySelector('[data-card="duration"]').textContent = w.duration
-      card.querySelector('.workout-progress strong').textContent = `${w.progress}%`
-      card.querySelector('progress').value = w.progress
-      const pdf = card.querySelector('.button--full')
-      pdf.dataset.action = 'pdf'
-      pdf.firstChild.textContent = 'Baixar PDF visual '
-      return card
+  const search = document.querySelector('[data-workout-search]')
+  const query = (search?.value || '').trim().toLocaleLowerCase('pt-BR')
+  const groups = new Map()
+  workouts.forEach((w) => {
+    const key = w.studentId || w.student
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(w)
+  })
+  const entries = [...groups.entries()]
+    .filter(([, items]) =>
+      !query ||
+      items.some((w) =>
+        `${w.student} ${w.name}`.toLocaleLowerCase('pt-BR').includes(query),
+      ),
+    )
+    .sort((a, b) => a[1][0].student.localeCompare(b[1][0].student, 'pt-BR'))
+  const container = document.querySelector('[data-workouts-grid]')
+  container.replaceChildren(
+    ...entries.map(([key, items]) => {
+      const group = document.createElement('details')
+      group.className = 'assessment-group workout-group'
+      // Ao buscar, a pasta de quem bate já vem aberta.
+      group.open = Boolean(query) || openWorkoutGroups.has(key)
+      group.addEventListener('toggle', () => {
+        if (query) return
+        if (group.open) openWorkoutGroups.add(key)
+        else openWorkoutGroups.delete(key)
+      })
+      const summary = document.createElement('summary')
+      const avatar = document.createElement('span')
+      avatar.className = 'avatar'
+      paintStudent(avatar, items[0].student, items[0].studentId)
+      const info = document.createElement('div')
+      info.className = 'assessment-group-info'
+      const name = document.createElement('strong')
+      name.textContent = items[0].student
+      const meta = document.createElement('small')
+      const published = items.filter((w) => w.publishedAt).length
+      meta.textContent = `${items.length} ${items.length === 1 ? 'ficha' : 'fichas'} · ${published} ${published === 1 ? 'publicada' : 'publicadas'}`
+      info.append(name, meta)
+      summary.append(avatar, info)
+      const body = document.createElement('div')
+      body.className = 'cards-grid assessment-group-body'
+      body.append(...items.map(workoutCard))
+      group.append(summary, body)
+      return group
     }),
   )
-  document.querySelector('[data-workouts-empty]').hidden = workouts.length > 0
+  const empty = document.querySelector('[data-workouts-empty]')
+  empty.hidden = entries.length > 0
+  empty.querySelector('h3').textContent = workouts.length
+    ? 'Nenhuma ficha encontrada'
+    : 'Nenhuma ficha cadastrada'
+  empty.querySelector('p').textContent = workouts.length
+    ? 'Confira o nome do aluno digitado na busca.'
+    : 'Crie a primeira ficha de treino para começar.'
 }
 const openExerciseFolders = new Set()
 function renderExercises() {
@@ -859,6 +915,7 @@ export function initDashboard() {
       }
     }
   })
+  document.querySelector('[data-workout-search]')?.addEventListener('input', renderWorkouts)
   document.querySelector('[data-workouts-grid]').addEventListener('click', async (event) => {
     const b = event.target.closest('[data-action]')
     if (!b) return

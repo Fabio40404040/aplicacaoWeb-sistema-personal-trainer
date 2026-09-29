@@ -2875,3 +2875,18 @@ video.gif-lightbox-image {
   font-size: 0.82rem;
   font-weight: 600;
 }
+
+/* Fichas personalizadas agrupadas por aluno */
+.workout-toolbar {
+  margin-bottom: 14px;
+}
+.workout-toolbar .search-box {
+  flex: 1;
+  max-width: 460px;
+}
+.workout-group .assessment-group-body {
+  padding-top: 8px;
+}
+.workout-group > summary::after {
+  margin-left: auto;
+}
