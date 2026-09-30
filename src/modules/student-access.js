@@ -453,13 +453,27 @@ function appendExerciseGroups(parent, exercises, uploadedVideos = []) {
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([session, items]) => {
       const section = element("details", "student-muscle-group");
+      // "Glúteos, Quadríceps" vira dois nomes; repetidos aparecem uma vez só.
       const groups = [
-        ...new Set(items.map((exercise) => exercise.group).filter(Boolean)),
+        ...new Set(
+          items
+            .flatMap((exercise) => String(exercise.group || "").split(","))
+            .map((name) => name.trim())
+            .filter(Boolean),
+        ),
       ];
-      const summary = element(
-        "summary",
-        "",
-        `Treino ${session} — ${groups.join(" / ")}`,
+      const summary = element("summary", "");
+      summary.append(
+        element(
+          "span",
+          "student-folder-title",
+          `Treino ${session} — ${groups.join(" / ") || "Exercícios"}`,
+        ),
+        element(
+          "small",
+          "student-folder-count",
+          `${items.length} ${items.length === 1 ? "exercício" : "exercícios"}`,
+        ),
       );
       section.append(summary);
       const hasBoth = items.some(
@@ -505,6 +519,7 @@ function appendExerciseGroups(parent, exercises, uploadedVideos = []) {
 function renderReadyWorkoutLibrary(container, data) {
   if (data.access.planCode !== "ready") return;
   const card = article("Meus Treinos Prontos");
+  card.classList.add("student-card--wide");
   const workouts = data.readyWorkouts || [];
   if (!workouts.length) {
     addLine(
@@ -544,20 +559,28 @@ function renderReadyWorkoutLibrary(container, data) {
 
 function renderPortal(container, data) {
   mediaPainters.clear();
-  const plan = article("Meu plano");
-  addLine(plan, data.access.planName, true);
+  // Faixa "Meu plano" em uma linha, ocupando a largura toda.
+  const plan = element("article", "student-plan-strip student-card--wide");
+  plan.append(
+    element("span", "student-plan-label", "Meu plano"),
+    element("strong", "student-plan-name", data.access.planName),
+  );
   if (billingCycleLabel(data.access))
-    addLine(plan, billingCycleLabel(data.access));
-  addLine(
-    plan,
-    data.access.accessType === "permanent"
-      ? "Acesso permanente."
-      : `Acesso até ${new Intl.DateTimeFormat("pt-BR").format(new Date(data.access.expiresAt))}.`,
+    plan.append(element("span", "", billingCycleLabel(data.access)));
+  plan.append(
+    element(
+      "span",
+      "",
+      data.access.accessType === "permanent"
+        ? "Acesso permanente"
+        : `Acesso até ${new Intl.DateTimeFormat("pt-BR").format(new Date(data.access.expiresAt))}`,
+    ),
   );
   container.replaceChildren(plan);
   renderReadyWorkoutLibrary(container, data);
   if (data.access.planCode !== "ready") {
     const workouts = article("Minha ficha personalizada");
+    workouts.classList.add("student-card--wide");
     if (!data.workouts.length)
       addLine(workouts, "O personal ainda não publicou uma ficha para você.");
     data.workouts.forEach((workout) => {

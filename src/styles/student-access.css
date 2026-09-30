@@ -755,3 +755,55 @@
   background: #3d8bfd;
   color: #fff;
 }
+
+/* Área do aluno organizada: faixa do plano, ficha na largura toda e cartões
+   que não esticam para acompanhar o vizinho (ex.: ao abrir uma pasta ou as
+   respostas anteriores do check-in, só aquele cartão cresce). */
+.student-access-features {
+  align-items: start;
+}
+.student-access-features .student-card--wide {
+  grid-column: 1 / -1;
+}
+.student-access-features .student-plan-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 14px 20px;
+  color: #b8c7d9;
+  font-size: 0.9rem;
+}
+.student-plan-label {
+  color: #8ea3bd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.student-plan-name {
+  color: #f5f7fb;
+  font-size: 1rem;
+}
+.student-plan-strip > span:not(.student-plan-label) + span::before {
+  content: "·";
+  margin-right: 18px;
+  color: #5d7390;
+}
+.student-folder-title {
+  min-width: 0;
+}
+.student-folder-count {
+  flex: none;
+  color: #8ea3bd;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .student-plan-strip > span:not(.student-plan-label) + span::before {
+    display: none;
+  }
+  .student-access-features .student-plan-strip {
+    gap: 4px 12px;
+  }
+}
