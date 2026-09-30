@@ -47,7 +47,9 @@ const isMp4 = (file) => file.type === 'video/mp4' || /\.mp4$/iu.test(file.name)
 
 function readView() {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'arquivos' ? 'arquivos' : 'exercicios'
+    const saved = localStorage.getItem(VIEW_KEY)
+    if (saved === 'arquivos') return 'gifs'
+    return ['gifs', 'videos'].includes(saved) ? saved : 'exercicios'
   } catch {
     return 'exercicios'
   }
@@ -76,22 +78,34 @@ function setView(page, view) {
 function createTabs(page) {
   if (page.querySelector('.library-tabs')) return
   const heading = page.querySelector('.page-heading')
-  const intro = heading?.querySelector('p')
-  if (intro)
-    intro.textContent =
-      'Cada exercício reúne o GIF e o vídeo MP4. É ele que entra nas fichas e aparece para o aluno.'
   const tabs = document.createElement('div')
   tabs.className = 'library-tabs'
   tabs.setAttribute('role', 'tablist')
   tabs.innerHTML = `
-    <button type="button" role="tab" data-library-tab="exercicios">Exercícios</button>
-    <button type="button" role="tab" data-library-tab="arquivos">Arquivos (GIFs e MP4)</button>`
+    <button type="button" role="tab" data-library-tab="exercicios">Exercícios <small data-library-count="exercicios"></small></button>
+    <button type="button" role="tab" data-library-tab="gifs">GIFs <small data-library-count="gifs"></small></button>
+    <button type="button" role="tab" data-library-tab="videos">Vídeos <small data-library-count="videos"></small></button>`
   tabs.addEventListener('click', (event) => {
     const tab = event.target.closest('[data-library-tab]')
     if (tab) setView(page, tab.dataset.libraryTab)
   })
   heading?.after(tabs)
   setView(page, readView())
+  paintCounts()
+  window.addEventListener('farisa:data-changed', paintCounts)
+}
+
+function paintCounts() {
+  const data = getData()
+  const counts = {
+    exercicios: (data.exercises || []).length,
+    gifs: (data.exerciseGifs || []).length,
+    videos: (data.exerciseVideos || []).length,
+  }
+  Object.entries(counts).forEach(([key, value]) => {
+    const node = document.querySelector(`[data-library-count="${key}"]`)
+    if (node) node.textContent = String(value)
+  })
 }
 
 /* ------------------------------------------------------------------ */
@@ -100,19 +114,46 @@ function createTabs(page) {
 function createMediaFilter(page) {
   const toolbar = page.querySelector('.content-panel .toolbar')
   if (!toolbar || toolbar.querySelector('[data-exercise-media-filter]')) return
-  const select = document.createElement('select')
-  select.dataset.exerciseMediaFilter = ''
-  select.setAttribute('aria-label', 'Filtrar por mídia')
-  select.innerHTML = `
-    <option value="all">Todos os exercícios</option>
-    <option value="no-gif">Sem GIF</option>
-    <option value="no-video">Sem vídeo</option>
-    <option value="unused">Fora das fichas</option>`
-  toolbar.append(select)
+  const select = (attr, label, html) => {
+    const node = document.createElement('select')
+    node.setAttribute(attr, '')
+    node.setAttribute('aria-label', label)
+    node.innerHTML = html
+    return node
+  }
+  const media = select(
+    'data-exercise-media-filter',
+    'Filtrar por mídia',
+    `<option value="all">Todas as mídias</option>
+     <option value="gif">Com GIF</option>
+     <option value="no-gif">Sem GIF</option>
+     <option value="video">Com vídeo</option>
+     <option value="no-video">Sem vídeo</option>
+     <option value="unused">Fora das fichas</option>`,
+  )
+  const equipment = select(
+    'data-exercise-equipment',
+    'Filtrar por equipamento',
+    '<option value="all">Todos os equipamentos</option>',
+  )
+  const sort = select(
+    'data-exercise-sort',
+    'Ordenar exercícios',
+    `<option value="az">Nome A–Z</option>
+     <option value="za">Nome Z–A</option>
+     <option value="recent">Mais recentes</option>`,
+  )
+  const createFolder = toolbar.querySelector('.folder-create-button')
+  ;[media, equipment, sort].forEach((node) =>
+    createFolder ? createFolder.before(node) : toolbar.append(node),
+  )
+  const chips = document.createElement('div')
+  chips.className = 'library-chips'
+  chips.dataset.exerciseChips = ''
   const summary = document.createElement('p')
   summary.className = 'exercise-summary'
   summary.dataset.exerciseSummary = ''
-  toolbar.after(summary)
+  toolbar.after(chips, summary)
   window.dispatchEvent(new Event('farisa:render-exercises'))
 }
 
@@ -337,55 +378,68 @@ async function reviewAndSave(files, fallbackGroup) {
   dialog.showModal()
 }
 
+// "Enviar GIFs e MP4": botão no topo da página e arrastar os arquivos
+// (ou a pasta) em cima da lista de exercícios.
 function createUploadPanel(page) {
-  if (page.querySelector('[data-exercise-hub-upload]')) return
-  const listPanel = page.querySelector('.content-panel')
-  if (!listPanel) return
-  const panel = document.createElement('article')
-  panel.className = 'panel exercise-hub-upload'
-  panel.dataset.exerciseHubUpload = ''
-  panel.innerHTML = `
-    <div class="gif-dropzone exercise-hub-drop" data-hub-drop>
-      <strong>Arraste GIFs e vídeos MP4 (ou a pasta inteira)</strong>
-      <span>Arquivos com o mesmo nome viram um exercício só, já com GIF e vídeo. Você confere tudo antes de salvar.</span>
-      <input type="file" accept=".gif,image/gif,.mp4,video/mp4" multiple hidden data-hub-files>
-    </div>
-    <div class="exercise-hub-options">
-      <label class="field"><span>Grupo para arquivos soltos</span><select data-hub-fallback></select></label>
-      <button class="button button--secondary" type="button" data-hub-pick>Escolher arquivos</button>
-    </div>`
-  listPanel.before(panel)
-  const fallback = panel.querySelector('[data-hub-fallback]')
-  const paintFallback = () => {
-    const current = fallback.value
-    fallback.innerHTML = groupOptions(current)
+  if (page.querySelector('[data-hub-pick]')) return
+  const heading = page.querySelector('.page-heading')
+  const newButton = heading?.querySelector('[data-open-modal="exercise"]')
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.gif,image/gif,.mp4,video/mp4'
+  input.multiple = true
+  input.hidden = true
+  const pick = document.createElement('button')
+  pick.type = 'button'
+  pick.className = 'button button--secondary'
+  pick.dataset.hubPick = ''
+  pick.title = 'GIF e MP4 com o mesmo nome viram um exercício só. Você confere antes de salvar.'
+  pick.textContent = 'Enviar GIFs e MP4'
+  const actions = document.createElement('div')
+  actions.className = 'library-heading-actions'
+  if (newButton) {
+    newButton.replaceWith(actions)
+    actions.append(pick, newButton, input)
+  } else heading?.append(pick, input)
+  // Arquivos soltos vão para o grupo escolhido nas pastinhas (ou o primeiro).
+  const fallbackGroup = () => {
+    const chosen = document.querySelector('[data-exercise-filter]')?.value
+    return chosen && chosen !== 'all' ? chosen : allGroupNames()[0] || 'Peitoral'
   }
-  paintFallback()
-  window.addEventListener('farisa:data-changed', paintFallback)
-  const input = panel.querySelector('[data-hub-files]')
-  const drop = panel.querySelector('[data-hub-drop]')
-  panel.querySelector('[data-hub-pick]').addEventListener('click', () => input.click())
-  drop.addEventListener('click', () => input.click())
+  pick.addEventListener('click', () => input.click())
   input.addEventListener('change', () => {
     const files = [...(input.files || [])]
     input.value = ''
-    if (files.length) void reviewAndSave(files, fallback.value)
+    if (files.length) void reviewAndSave(files, fallbackGroup())
   })
-  ;['dragenter', 'dragover'].forEach((type) =>
-    drop.addEventListener(type, (event) => {
-      event.preventDefault()
-      drop.classList.add('is-over')
-    }),
-  )
-  ;['dragleave', 'dragend'].forEach((type) =>
-    drop.addEventListener(type, () => drop.classList.remove('is-over')),
-  )
-  drop.addEventListener('drop', async (event) => {
+  const listPanel = page.querySelector('.content-panel')
+  if (!listPanel) return
+  const hint = document.createElement('div')
+  hint.className = 'library-drop-hint'
+  hint.textContent = 'Solte aqui os GIFs e vídeos MP4 para criar os exercícios'
+  listPanel.append(hint)
+  let depth = 0
+  listPanel.addEventListener('dragenter', (event) => {
+    if (![...(event.dataTransfer?.types || [])].includes('Files')) return
     event.preventDefault()
-    drop.classList.remove('is-over')
+    depth += 1
+    listPanel.classList.add('is-dropping')
+  })
+  listPanel.addEventListener('dragover', (event) => {
+    if ([...(event.dataTransfer?.types || [])].includes('Files')) event.preventDefault()
+  })
+  listPanel.addEventListener('dragleave', () => {
+    depth = Math.max(0, depth - 1)
+    if (!depth) listPanel.classList.remove('is-dropping')
+  })
+  listPanel.addEventListener('drop', async (event) => {
+    if (![...(event.dataTransfer?.types || [])].includes('Files')) return
+    event.preventDefault()
+    depth = 0
+    listPanel.classList.remove('is-dropping')
     try {
       const files = await filesFromDrop(event.dataTransfer)
-      void reviewAndSave(files, fallback.value)
+      void reviewAndSave(files, fallbackGroup())
     } catch (error) {
       showToast(error.message)
     }

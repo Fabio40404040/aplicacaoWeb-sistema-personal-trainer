@@ -426,13 +426,74 @@ function exercisesInUse() {
 }
 const exerciseHasGif = (exercise) => exerciseGifStatus(exercise) === 'com GIF'
 const exerciseHasVideo = (exercise) => Boolean(exercise.videoId && findVideo(exercise.videoId))
-function renderExerciseSummary(exercises, used) {
+function renderExerciseSummary(exercises) {
   const summary = document.querySelector('[data-exercise-summary]')
   if (!summary) return
-  const noGif = exercises.filter((item) => !exerciseHasGif(item)).length
-  const noVideo = exercises.filter((item) => !exerciseHasVideo(item)).length
-  const unused = exercises.filter((item) => !used.has(String(item.id))).length
-  summary.textContent = `${exercises.length} exercício(s) · ${noGif} sem GIF · ${noVideo} sem vídeo · ${unused} fora das fichas`
+  const withGif = exercises.filter((item) => exerciseHasGif(item)).length
+  const withVideo = exercises.filter((item) => exerciseHasVideo(item)).length
+  summary.textContent = `${exercises.length} exercício(s) · ${withGif} com GIF · ${withVideo} com vídeo`
+}
+// Ordem fixa das pastas do catálogo; as suas pastas vêm depois, em ordem alfabética.
+const FOLDER_ORDER = [
+  'Peitoral',
+  'Costas',
+  'Ombros',
+  'Bíceps',
+  'Tríceps',
+  'Antebraços',
+  'Abdômen',
+  'Pernas',
+  'Cardio e condicionamento',
+]
+const exerciseFolderNames = (exercise) => {
+  const groups = exerciseGroups(exercise)
+  if (!groups.length) return ['Sem grupo']
+  return [...new Set(groups.map((name) => (legGroups.includes(name) ? 'Pernas' : name)))]
+}
+const folderPosition = (name) => {
+  const index = FOLDER_ORDER.indexOf(name)
+  return index === -1 ? FOLDER_ORDER.length : index
+}
+const sortFolders = (a, b) => folderPosition(a) - folderPosition(b) || a.localeCompare(b, 'pt-BR')
+// Pastinhas de grupo ("Todos 123", "Peitoral 18"…) acima da lista.
+function renderExerciseChips(counts, total, active) {
+  const holder = document.querySelector('[data-exercise-chips]')
+  if (!holder) return
+  const chip = (value, label, count) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = `library-chip${value === active ? ' is-active' : ''}`
+    button.dataset.exerciseChip = value
+    button.setAttribute('aria-pressed', String(value === active))
+    button.append(label, ' ')
+    const small = document.createElement('small')
+    small.textContent = String(count)
+    button.append(small)
+    return button
+  }
+  holder.replaceChildren(
+    chip('all', 'Todos', total),
+    ...[...counts.entries()]
+      .sort(([a], [b]) => sortFolders(a, b))
+      .map(([name, count]) => chip(name, name, count)),
+  )
+}
+function syncEquipmentOptions() {
+  const select = document.querySelector('[data-exercise-equipment]')
+  if (!select) return
+  const current = select.value
+  const names = [
+    ...new Set(
+      (getData().exercises || [])
+        .map((item) => String(item.equipment || '').trim())
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  select.replaceChildren(
+    new Option('Todos os equipamentos', 'all'),
+    ...names.map((name) => new Option(name, name)),
+  )
+  select.value = names.includes(current) ? current : 'all'
 }
 function renderExercises() {
   const query = document
@@ -441,42 +502,50 @@ function renderExercises() {
       .toLocaleLowerCase('pt-BR'),
     group = document.querySelector('[data-exercise-filter]').value
   const mediaFilter = document.querySelector('[data-exercise-media-filter]')?.value || 'all'
+  syncEquipmentOptions()
+  const equipment = document.querySelector('[data-exercise-equipment]')?.value || 'all'
+  const sortMode = document.querySelector('[data-exercise-sort]')?.value || 'az'
   const used = exercisesInUse()
-  renderExerciseSummary(getData().exercises, used)
-  const filtered = getData().exercises.filter((e) => {
+  // Busca, mídia e equipamento valem para as pastinhas e para a lista; o
+  // grupo escolhido só filtra a lista.
+  const matching = getData().exercises.filter((e) => {
     if (!e.name.toLocaleLowerCase('pt-BR').includes(query)) return false
+    if (mediaFilter === 'gif' && !exerciseHasGif(e)) return false
     if (mediaFilter === 'no-gif' && exerciseHasGif(e)) return false
+    if (mediaFilter === 'video' && !exerciseHasVideo(e)) return false
     if (mediaFilter === 'no-video' && exerciseHasVideo(e)) return false
     if (mediaFilter === 'unused' && used.has(String(e.id))) return false
-    if (group === 'all') return true
-    const groups = exerciseGroups(e)
-    return (
-      groups.includes(group) || (group === 'Pernas' && groups.some((name) => legGroups.includes(name)))
-    )
+    if (equipment !== 'all' && String(e.equipment || '').trim() !== equipment) return false
+    return true
   })
+  const chipCounts = new Map()
+  matching.forEach((e) =>
+    exerciseFolderNames(e).forEach((name) => chipCounts.set(name, (chipCounts.get(name) || 0) + 1)),
+  )
+  // O seletor de grupo (escondido) acompanha as pastinhas.
+  const groupSelect = document.querySelector('[data-exercise-filter]')
+  if (group !== 'all' && ![...groupSelect.options].some((option) => option.value === group))
+    groupSelect.append(new Option(group, group))
+  renderExerciseChips(chipCounts, matching.length, group)
+  const filtered = matching.filter(
+    (e) => group === 'all' || exerciseFolderNames(e).includes(group),
+  )
+  renderExerciseSummary(filtered)
+  const byName = (a, b) => a.name.localeCompare(b.name, 'pt-BR')
+  if (sortMode === 'az') filtered.sort(byName)
+  if (sortMode === 'za') filtered.sort((a, b) => byName(b, a))
   const list = document.querySelector('[data-exercises-list]')
   list.querySelectorAll('.exercise-folder').forEach((folder) => {
     if (folder.open) openExerciseFolders.add(folder.dataset.group)
     else openExerciseFolders.delete(folder.dataset.group)
   })
-  const filterOptions = [...document.querySelector('[data-exercise-filter]').options]
-    .map((option) => option.value)
-    .filter((value) => value !== 'all')
   // Um exercício pode aparecer em mais de uma pasta quando trabalha mais de
   // um grupo muscular (ex.: afundo no smith = quadríceps e glúteos).
-  const folderNamesFor = (exercise) => {
-    const groups = exerciseGroups(exercise)
-    if (!groups.length) return ['Sem grupo']
-    const names = new Set()
-    groups.forEach((name) =>
-      names.add(legGroups.includes(name) && filterOptions.includes('Pernas') ? 'Pernas' : name),
-    )
-    return [...names]
-  }
+  const folderNamesFor = exerciseFolderNames
   const folders = new Map()
   // Pastas criadas por você aparecem mesmo sem exercício dentro.
   const custom = getData().customGroups || []
-  if (!query && group === 'all' && mediaFilter === 'all')
+  if (!query && group === 'all' && mediaFilter === 'all' && equipment === 'all')
     custom.forEach((item) => folders.set(item.name, []))
   filtered.forEach((exercise) => {
     folderNamesFor(exercise).forEach((name) => {
@@ -484,14 +553,11 @@ function renderExercises() {
       folders.get(name).push(exercise)
     })
   })
-  const position = (name) => {
-    const index = filterOptions.indexOf(name)
-    return index === -1 ? filterOptions.length : index
-  }
-  const expandAll = Boolean(query) || group !== 'all' || mediaFilter !== 'all'
+  const expandAll =
+    Boolean(query) || group !== 'all' || mediaFilter !== 'all' || equipment !== 'all'
   list.replaceChildren(
     ...[...folders.entries()]
-      .sort(([a], [b]) => position(a) - position(b) || a.localeCompare(b, 'pt-BR'))
+      .sort(([a], [b]) => sortFolders(a, b))
       .map(([name, exercises]) => {
         const folder = document.createElement('details')
         folder.className = 'exercise-folder'
@@ -1004,7 +1070,22 @@ export function initDashboard() {
   // O filtro "Sem GIF / Sem vídeo / Fora das fichas" é criado pelo
   // exercise-hub.js; escuta por delegação para funcionar em qualquer ordem.
   document.addEventListener('change', (event) => {
-    if (event.target.matches?.('[data-exercise-media-filter]')) renderExercises()
+    if (
+      event.target.matches?.(
+        '[data-exercise-media-filter], [data-exercise-equipment], [data-exercise-sort]',
+      )
+    )
+      renderExercises()
+  })
+  document.addEventListener('click', (event) => {
+    const chip = event.target.closest?.('[data-exercise-chip]')
+    if (!chip) return
+    const select = document.querySelector('[data-exercise-filter]')
+    const value = chip.dataset.exerciseChip
+    if (![...select.options].some((option) => option.value === value))
+      select.append(new Option(value, value))
+    select.value = value
+    renderExercises()
   })
   window.addEventListener('farisa:render-exercises', renderExercises)
   const filterBox = document.querySelector('[data-exercise-filter]')?.parentElement
