@@ -807,3 +807,135 @@
     gap: 4px 12px;
   }
 }
+
+/* Exercícios dentro da pasta do treino: grade de cartões compactos */
+.student-exercise-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin: 12px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.student-exercise-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #34465f;
+  border-radius: 12px;
+  background: #1f2c3d;
+}
+.student-exercise-thumb {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  padding: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: #1764ff;
+  font-size: 1.6rem;
+  cursor: zoom-in;
+}
+.student-exercise-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.student-exercise-thumb.is-video {
+  cursor: pointer;
+}
+.student-exercise-thumb.is-empty {
+  background: #2a3a50;
+  cursor: default;
+}
+.student-exercise-thumb.is-empty img {
+  display: none;
+}
+.student-exercise-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.student-exercise-name {
+  color: #f5f7fb;
+  font-size: 0.98rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.student-exercise-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.student-exercise-chips span {
+  padding: 3px 10px;
+  border: 1px solid #3b4f6b;
+  border-radius: 999px;
+  background: #172233;
+  color: #dce9f8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.student-exercise-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.student-exercise-links button,
+.student-exercise-links a {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #7fb0ff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.student-exercise-links button:hover,
+.student-exercise-links a:hover {
+  text-decoration: underline;
+}
+.student-exercise-instructions {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #172233;
+  color: #c9d6e6;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.student-exercise-instructions p {
+  margin: 0;
+}
+.student-exercise-instructions p + p {
+  margin-top: 6px;
+}
+@media (max-width: 720px) {
+  .student-exercise-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 380px) {
+  .student-exercise-card {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .student-exercise-thumb {
+    width: 76px;
+    height: 76px;
+  }
+}
+.student-workout .student-exercise-card {
+  padding: 12px;
+}
+.student-workout .student-exercise-card p {
+  margin-top: 0;
+}

@@ -1,7 +1,6 @@
 import { downloadWorkoutPdf } from "./workout-pdf.js";
 import { openSecureCardForm } from "./mercado-pago-card.js";
 import { createQrCodeImage } from "./pix.js";
-import { findExerciseVideo } from "../data/library.js";
 import { hideStudentExtras, renderStudentExtras } from "./student-extras.js";
 
 const TOKEN_KEY = "farisa-student-token";
@@ -310,137 +309,116 @@ function matchingUploadedVideo(exercise, videos) {
   );
 }
 
-function appendExerciseMedia(parent, exercise, uploadedVideo) {
-  if (uploadedVideo) {
-    const media = element("section", "student-prescription-media");
-    media.append(element("strong", "", "Vídeo demonstrativo"));
-    const load = element(
-      "button",
-      "button button--secondary",
-      "Assistir execução",
-    );
-    load.type = "button";
-    load.addEventListener("click", async () => {
-      load.disabled = true;
-      load.textContent = "Carregando vídeo…";
-      try {
-        const video = hardenVideo(element("video", "student-exercise-video"));
-        video.controls = true;
-        video.preload = "metadata";
-        video.playsInline = true;
-        video.src = await loadStudentExerciseVideo(uploadedVideo.id);
-        video.addEventListener(
-          "loadedmetadata",
-          () => video.play().catch(() => {}),
-          { once: true },
-        );
-        media.append(video);
-        load.remove();
-      } catch (error) {
-        load.disabled = false;
-        load.textContent = error.message;
-      }
+// Cartão do exercício dentro da pasta do treino: miniatura do GIF (toque
+// para ampliar), nome, séries / repetições / descanso e os atalhos
+// "▶ Ver vídeo" (abre o MP4 em tela cheia) e "Ver instruções".
+const DEFAULT_INSTRUCTIONS = "Siga a orientação do personal.";
+function exerciseCard(exercise, uploadedVideos) {
+  const card = element("li", "student-exercise-card");
+  const video = matchingUploadedVideo(exercise, uploadedVideos);
+
+  const thumb = element("button", "student-exercise-thumb");
+  thumb.type = "button";
+  if (exercise.gifId) {
+    const image = element("img");
+    image.alt = "";
+    image.loading = "lazy";
+    thumb.title = "Toque para ampliar o GIF";
+    thumb.setAttribute("aria-label", `Ampliar o GIF de ${exercise.name}`);
+    thumb.append(image);
+    thumb.addEventListener("click", () => {
+      if (image.src) openStudentGifViewer(image.src, exercise.name);
     });
-    media.append(load);
-    parent.append(media);
-    return;
+    void loadStudentGif(exercise.gifId)
+      .then((url) => {
+        if (url) image.src = url;
+        else thumb.classList.add("is-empty");
+      })
+      .catch(() => thumb.classList.add("is-empty"));
+  } else if (video) {
+    thumb.classList.add("is-video");
+    thumb.textContent = "▶";
+    thumb.setAttribute("aria-label", `Assistir o vídeo de ${exercise.name}`);
+    thumb.addEventListener("click", () => openStudentVideoViewer(video.id, exercise.name));
+  } else {
+    thumb.classList.add("is-empty");
+    thumb.disabled = true;
+    thumb.setAttribute("aria-label", "Demonstração em preparação");
   }
-  const libraryVideo = findExerciseVideo(exercise);
-  const mediaUrl = exercise.mediaUrl || libraryVideo?.videoUrl;
-  const mediaType = exercise.mediaType || (libraryVideo ? "video" : "");
-  if (!mediaUrl) {
-    parent.append(
-      element("span", "exercise-3d-pending", "Demonstração em preparação"),
-    );
-    return;
+
+  const body = element("div", "student-exercise-body");
+  body.append(element("strong", "student-exercise-name", exercise.name));
+  const chips = element("div", "student-exercise-chips");
+  const chip = (text) => chips.append(element("span", "", text));
+  if (exercise.sets) chip(`${exercise.sets} ${Number(exercise.sets) === 1 ? "série" : "séries"}`);
+  if (exercise.repetitions) chip(`${exercise.repetitions} reps`);
+  if (Number(exercise.restSeconds)) chip(`descanso ${exercise.restSeconds}s`);
+  body.append(chips);
+
+  const links = element("div", "student-exercise-links");
+  if (video) {
+    const watch = element("button", "", "▶ Ver vídeo");
+    watch.type = "button";
+    watch.addEventListener("click", () => openStudentVideoViewer(video.id, exercise.name));
+    links.append(watch);
+  } else if (!exercise.gifId && exercise.mediaUrl) {
+    const demo = element("a", "", "Ver demonstração");
+    demo.href = exercise.mediaUrl;
+    demo.target = "_blank";
+    demo.rel = "noreferrer";
+    links.append(demo);
   }
-  if (mediaType === "video") {
-    const video = hardenVideo(element("video", "student-exercise-video"));
-    video.controls = true;
-    video.preload = "metadata";
-    video.playsInline = true;
-    video.src = mediaUrl;
-    if (exercise.thumbnailUrl || libraryVideo?.posterUrl)
-      video.poster = exercise.thumbnailUrl || libraryVideo.posterUrl;
-    parent.append(video);
-    return;
+  const texts = [
+    exercise.instructions && exercise.instructions !== DEFAULT_INSTRUCTIONS
+      ? exercise.instructions
+      : "",
+    exercise.notes ? `Observação do personal: ${exercise.notes}` : "",
+  ].filter(Boolean);
+  let details = null;
+  if (texts.length) {
+    const toggle = element("button", "", "Ver instruções");
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "false");
+    details = element("div", "student-exercise-instructions");
+    details.hidden = true;
+    texts.forEach((text) => details.append(element("p", "", text)));
+    toggle.addEventListener("click", () => {
+      details.hidden = !details.hidden;
+      toggle.textContent = details.hidden ? "Ver instruções" : "Ocultar instruções";
+      toggle.setAttribute("aria-expanded", String(!details.hidden));
+    });
+    links.append(toggle);
   }
-  const media = element(
-    "a",
-    "",
-    mediaType === "3d" ? "Abrir demonstração 3D" : "Abrir demonstração",
-  );
-  media.href = mediaUrl;
-  media.target = "_blank";
-  media.rel = "noreferrer";
-  parent.append(media);
+  if (links.childElementCount) body.append(links);
+  card.append(thumb, body);
+  if (details) card.append(details);
+  return card;
 }
 
-// Preferência do aluno: ver os exercícios em GIF (leve, padrão) ou vídeo.
-const MEDIA_KEY = "farisa-student-media";
-const mediaPainters = new Set();
-let fallbackMedia = "gif";
-function preferredMedia() {
-  try {
-    const saved = localStorage.getItem(MEDIA_KEY);
-    if (saved === "video" || saved === "gif") return saved;
-  } catch {
-    /* sem armazenamento: usa a escolha desta visita */
-  }
-  return fallbackMedia;
-}
-function setPreferredMedia(mode) {
-  fallbackMedia = mode;
-  try {
-    localStorage.setItem(MEDIA_KEY, mode);
-  } catch {
-    /* sem armazenamento: vale só até recarregar a página */
-  }
-  document.querySelectorAll(".student-media-toggle").forEach(paintToggle);
-  mediaPainters.forEach((paint) => paint());
-}
-function paintToggle(toggle) {
-  const mode = preferredMedia();
-  toggle.querySelectorAll("[data-media-mode]").forEach((button) => {
-    const active = button.dataset.mediaMode === mode;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
+function openStudentVideoViewer(videoId, title) {
+  if (!videoId) return;
+  const video = hardenVideo(element("video"));
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  let closed = false;
+  openStudentViewer(video, title, () => {
+    closed = true;
+    video.pause();
+    if (video.src.startsWith("blob:")) URL.revokeObjectURL(video.src);
   });
-}
-function mediaToggle() {
-  const toggle = element("div", "student-media-toggle");
-  toggle.setAttribute("role", "group");
-  toggle.setAttribute("aria-label", "Mostrar exercícios em");
-  toggle.append(element("span", "", "Mostrar em:"));
-  [
-    ["gif", "GIF"],
-    ["video", "▶ Vídeo"],
-  ].forEach(([mode, label]) => {
-    const button = element("button", "", label);
-    button.type = "button";
-    button.dataset.mediaMode = mode;
-    button.addEventListener("click", () => setPreferredMedia(mode));
-    toggle.append(button);
-  });
-  paintToggle(toggle);
-  return toggle;
-}
-function appendExerciseGif(parent, exercise) {
-  const animation = element("img", "student-exercise-gif");
-  animation.alt = "";
-  animation.loading = "lazy";
-  animation.title = "Toque para ver em tela cheia";
-  animation.addEventListener("click", () =>
-    openStudentGifViewer(animation.src, exercise.name),
-  );
-  void loadStudentGif(exercise.gifId)
+  loadStudentExerciseVideo(videoId)
     .then((url) => {
-      if (url) animation.src = url;
-      else animation.remove();
+      if (closed) return URL.revokeObjectURL(url);
+      video.src = url;
+      video.play().catch(() => {});
     })
-    .catch(() => animation.remove());
-  parent.append(animation);
+    .catch(() => {
+      const bar = document.querySelector(".student-gif-viewer-bar span");
+      if (bar) bar.textContent = "Não foi possível carregar o vídeo.";
+    });
 }
+
 
 function appendExerciseGroups(parent, exercises, uploadedVideos = []) {
   const sessions = new Map();
@@ -476,41 +454,10 @@ function appendExerciseGroups(parent, exercises, uploadedVideos = []) {
         ),
       );
       section.append(summary);
-      const hasBoth = items.some(
-        (exercise) =>
-          exercise.gifId && matchingUploadedVideo(exercise, uploadedVideos),
+      const list = element("ul", "student-exercise-grid");
+      items.forEach((exercise) =>
+        list.append(exerciseCard(exercise, uploadedVideos)),
       );
-      if (hasBoth) section.append(mediaToggle());
-      const list = element("ol");
-      items.forEach((exercise) => {
-        const item = element("li");
-        const prescription = `${exercise.sets} × ${exercise.repetitions}${exercise.restSeconds ? ` · descanso ${exercise.restSeconds}s` : ""}`;
-        addLine(item, `${exercise.name} — ${prescription}`, true);
-        // A mídia é desenhada num espaço próprio, para o seletor GIF | Vídeo
-        // conseguir trocar sem recarregar a lista.
-        const uploadedVideo = matchingUploadedVideo(exercise, uploadedVideos);
-        const slot = element("div", "student-exercise-media-slot");
-        const paintMedia = () => {
-          slot.replaceChildren();
-          const hasGif = Boolean(exercise.gifId);
-          const mode = preferredMedia();
-          if (uploadedVideo && (mode === "video" || !hasGif)) {
-            appendExerciseMedia(slot, exercise, uploadedVideo);
-          } else if (hasGif) {
-            appendExerciseGif(slot, exercise);
-          } else {
-            appendExerciseMedia(slot, exercise, null);
-          }
-        };
-        paintMedia();
-        mediaPainters.add(paintMedia);
-        item.append(slot);
-        addLine(
-          item,
-          exercise.instructions || "Siga a orientação do personal.",
-        );
-        list.append(item);
-      });
       section.append(list);
       parent.append(section);
     });
@@ -558,7 +505,6 @@ function renderReadyWorkoutLibrary(container, data) {
 }
 
 function renderPortal(container, data) {
-  mediaPainters.clear();
   // Faixa "Meu plano" em uma linha, ocupando a largura toda.
   const plan = element("article", "student-plan-strip student-card--wide");
   plan.append(
