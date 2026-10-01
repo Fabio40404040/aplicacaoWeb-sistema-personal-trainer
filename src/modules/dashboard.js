@@ -682,6 +682,7 @@ function renderExercises() {
 // Avaliações agrupadas por aluno: uma pasta por aluno (fechada), com a
 // última avaliação e a variação no resumo. Ao clicar no nome, abrem os cards.
 const openAssessmentGroups = new Set()
+let assessmentAllOpen = false
 function assessmentCard(a) {
   const card = cloneTemplate('assessment-card-template')
   paintStudent(card.querySelector('.avatar'), a.student, a.studentId)
@@ -708,6 +709,8 @@ function variationText(latest, first, unit) {
 }
 function renderAssessments() {
   const container = document.querySelector('[data-assessments-grid]')
+  const search = document.querySelector('[data-assessment-search]')
+  const query = (search?.value || '').trim().toLocaleLowerCase('pt-BR')
   const groups = new Map()
   // A lista já vem da mais recente para a mais antiga.
   getData().assessments.forEach((a) => {
@@ -715,14 +718,58 @@ function renderAssessments() {
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key).push(a)
   })
-  container.replaceChildren(
-    ...[...groups.entries()].map(([key, items]) => {
+  const entries = [...groups.entries()]
+    .filter(
+      ([, items]) =>
+        !query ||
+        items.some((a) =>
+          `${a.student} ${a.protocol || ''}`.toLocaleLowerCase('pt-BR').includes(query),
+        ),
+    )
+    .sort((a, b) => a[1][0].student.localeCompare(b[1][0].student, 'pt-BR'))
+
+  // Pasta "Todos os alunos": fechada até clicar (abre sozinha ao buscar).
+  const all = document.createElement('details')
+  all.className = 'assessment-group workout-all'
+  all.open = Boolean(query) || assessmentAllOpen
+  all.addEventListener('toggle', () => {
+    if (!query) assessmentAllOpen = all.open
+  })
+  const allSummary = document.createElement('summary')
+  const allIcon = document.createElement('span')
+  allIcon.className = 'workout-all-icon'
+  allIcon.textContent = '👥'
+  const allInfo = document.createElement('div')
+  allInfo.className = 'assessment-group-info'
+  const allTitle = document.createElement('strong')
+  allTitle.textContent = 'Todos os alunos'
+  const allMeta = document.createElement('small')
+  const total = entries.reduce((sum, [, items]) => sum + items.length, 0)
+  allMeta.textContent = `${entries.length} ${entries.length === 1 ? 'aluno' : 'alunos'} · ${total} ${total === 1 ? 'avaliação' : 'avaliações'}`
+  allInfo.append(allTitle, allMeta)
+  allSummary.append(allIcon, allInfo)
+  const allBody = document.createElement('div')
+  allBody.className = 'assessment-groups workout-all-body'
+  all.append(allSummary, allBody)
+  container.replaceChildren(all)
+  if (!entries.length) {
+    const empty = document.createElement('p')
+    empty.className = 'workout-all-empty'
+    empty.textContent = query
+      ? 'Nenhuma avaliação encontrada para essa busca.'
+      : 'Nenhuma avaliação registrada ainda.'
+    allBody.append(empty)
+    return
+  }
+  allBody.replaceChildren(
+    ...entries.map(([key, items]) => {
       const latest = items[0]
       const first = items[items.length - 1]
       const group = document.createElement('details')
       group.className = 'assessment-group'
-      group.open = openAssessmentGroups.has(key)
+      group.open = Boolean(query) || openAssessmentGroups.has(key)
       group.addEventListener('toggle', () => {
+        if (query) return
         if (group.open) openAssessmentGroups.add(key)
         else openAssessmentGroups.delete(key)
       })
@@ -1159,6 +1206,7 @@ export function initDashboard() {
     }
   })
   document.querySelector('[data-workout-search]')?.addEventListener('input', renderWorkouts)
+  document.querySelector('[data-assessment-search]')?.addEventListener('input', renderAssessments)
   document.querySelector('[data-workout-status]')?.addEventListener('change', renderWorkouts)
   document.querySelector('[data-workouts-grid]').addEventListener('click', async (event) => {
     const b = event.target.closest('[data-action]')

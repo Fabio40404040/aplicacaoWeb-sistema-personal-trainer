@@ -3347,3 +3347,10 @@ video.gif-lightbox-image {
   text-align: left;
   cursor: pointer;
 }
+
+/* Avaliação física: pasta "Todos os alunos" com busca */
+.workout-all-empty {
+  margin: 6px 4px 2px;
+  color: var(--ink-500);
+  font-size: 0.92rem;
+}
