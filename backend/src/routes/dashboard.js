@@ -128,6 +128,8 @@ export async function dashboard(db, trainerId) {
     db.query(
       `SELECT code, name, price_cents AS "priceCents", access_type AS "accessType", duration_days AS "durationDays" FROM plans WHERE active=1 ORDER BY price_cents`,
     ),
+    // Sem a migração 023 (agenda online), cai na consulta antiga em vez de
+    // derrubar o painel inteiro.
     db.query(
       `SELECT ap.id,ap.student_id AS "studentId",s.name AS student,ap.starts_at AS "startsAt",
        ap.ends_at AS "endsAt",ap.service,ap.location,ap.notes,ap.status,ap.modality,
@@ -135,6 +137,14 @@ export async function dashboard(db, trainerId) {
        FROM appointments ap JOIN students s ON s.id=ap.student_id
        WHERE ap.trainer_id=$1 ORDER BY ap.starts_at`,
       [trainerId],
+    ).catch(() =>
+      db.query(
+        `SELECT ap.id,ap.student_id AS "studentId",s.name AS student,ap.starts_at AS "startsAt",
+         ap.ends_at AS "endsAt",ap.service,ap.location,ap.notes,ap.status
+         FROM appointments ap JOIN students s ON s.id=ap.student_id
+         WHERE ap.trainer_id=$1 ORDER BY ap.starts_at`,
+        [trainerId],
+      ),
     ),
     db.query(
       `SELECT id,name,goal,level,duration,muscle_groups AS "muscleGroups",description,
