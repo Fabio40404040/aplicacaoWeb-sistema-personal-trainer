@@ -364,3 +364,28 @@
     top: auto;
   }
 }
+/* Nada estica a página no celular: só a tabela rola de lado */
+.admin-main,
+.admin-section {
+  grid-template-columns: minmax(0, 1fr);
+}
+.admin-section > * {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .admin-section .page-heading .button {
+    width: auto;
+    align-self: flex-start;
+    padding: 10px 18px;
+  }
+  .admin-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .admin-tabs button {
+    flex: none;
+  }
+}
+.admin-main .table-wrap {
+  position: relative;
+}

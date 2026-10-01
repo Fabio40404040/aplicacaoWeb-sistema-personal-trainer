@@ -4092,3 +4092,11 @@ video.gif-lightbox-image {
     grid-template-columns: 1fr;
   }
 }
+/* Suporte: botão "Novo chamado" compacto também no celular */
+@media (max-width: 760px) {
+  .page[data-route='suporte'] .page-heading .button {
+    width: auto;
+    align-self: flex-start;
+    padding: 10px 18px;
+  }
+}
