@@ -98,7 +98,8 @@ export async function personalRecovery(request, env, db, action) {
   )
   if (!inserted.rows.length) return generic
 
-  const link = new URL(siteUrl || 'http://localhost:5173')
+  // O link abre no FARISA Painel (/personal/), não no site público.
+  const link = new URL('personal/', siteUrl || 'http://localhost:5173')
   link.hash = `nova-senha-personal?token=${token}`
   if (!hasEmailProvider && isLocal)
     return {

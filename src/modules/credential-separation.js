@@ -3,7 +3,7 @@ function setAutocomplete(form, fieldName, value) {
 }
 
 function clearPersonalLogin() {
-  if (location.hash !== '#login') return
+  if (location.hash !== '#login' && location.hash !== '#acesso-farisa') return
   const form = document.querySelector('[data-login-form]')
   if (!form) return
   const email = form.querySelector('[name="email"]')
@@ -32,7 +32,8 @@ export function initCredentialSeparation() {
   clearPersonalLogin()
   window.addEventListener('hashchange', () => {
     clearPersonalLogin()
-    if (location.hash === '#login') window.setTimeout(clearPersonalLogin, 250)
+    if (location.hash === '#login' || location.hash === '#acesso-farisa')
+      window.setTimeout(clearPersonalLogin, 250)
   })
   window.addEventListener('pageshow', clearPersonalLogin)
 }

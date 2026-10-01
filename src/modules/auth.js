@@ -1,31 +1,53 @@
 import { clearApiSession, login, syncRemoteData } from './api-client.js'
 
 const SESSION_KEY = 'farisa-coach-session-v2'
+// Em /personal/ (FARISA Painel) só existem o login e o painel do personal: as
+// telas do site público e do aluno não abrem ali.
+const isPainel = () => document.documentElement.dataset.surface === 'painel'
+const appTitle = () => (isPainel() ? 'FARISA Painel' : 'FARISA Personal Trainer')
+// Tela de entrada do personal: /personal/#acesso-farisa no Painel e #login no site.
+const loginHash = () => (isPainel() ? '#acesso-farisa' : '#login')
+const isLoginHash = (hash) => hash === '#login' || hash === '#acesso-farisa'
+const PAINEL_ROUTES = new Set([
+  'login',
+  'acesso-farisa',
+  'recuperar-senha-personal',
+  'nova-senha-personal',
+  'ativar-personal',
+])
 
 function showApp() {
   document.querySelector('[data-public-screen]').hidden = true
   document.querySelector('[data-login-screen]').hidden = true
   document.querySelector('[data-app-shell]').hidden = false
-  if (!location.hash || location.hash === '#login') location.hash = '#painel'
+  if (!location.hash || isLoginHash(location.hash)) location.hash = '#painel'
 }
 
 function showLogin() {
   document.querySelector('[data-public-screen]').hidden = true
   document.querySelector('[data-login-screen]').hidden = false
   document.querySelector('[data-app-shell]').hidden = true
-  document.title = 'FARISA Personal Trainer'
-  location.hash = '#login'
+  document.title = appTitle()
+  if (location.hash !== loginHash()) location.hash = loginHash()
 }
 
 function showPublic() {
   document.querySelector('[data-public-screen]').hidden = false
   document.querySelector('[data-login-screen]').hidden = true
   document.querySelector('[data-app-shell]').hidden = true
-  document.title = 'FARISA Personal Trainer'
+  document.title = appTitle()
 }
 
 function handleLocation() {
   const route = location.hash.slice(1)
+  if (isPainel()) {
+    const base = route.split('?')[0]
+    const panelRoute = document.querySelector(`[data-route="${base}"]`)
+    if (!PAINEL_ROUTES.has(base) && !panelRoute) {
+      location.replace('#painel')
+      return
+    }
+  }
   document.querySelectorAll('[data-student-screen]').forEach((screen) => {
     screen.hidden = true
   })
@@ -42,7 +64,7 @@ function handleLocation() {
     document.querySelector('[data-login-screen]').hidden = true
     document.querySelector('[data-app-shell]').hidden = true
     document.querySelector(`[data-student-screen="${studentRoute}"]`).hidden = false
-    document.title = 'FARISA Personal Trainer'
+    document.title = appTitle()
     return
   }
   if (
@@ -52,14 +74,14 @@ function handleLocation() {
     document.querySelector('[data-login-screen]').hidden = true
     document.querySelector('[data-app-shell]').hidden = true
     document.querySelector(`[data-personal-screen="${studentRoute}"]`).hidden = false
-    document.title = 'FARISA Personal Trainer'
+    document.title = appTitle()
     return
   }
   if (!route || ['inicio', 'consultoria', 'planos', 'aluno', 'faq', 'contato'].includes(route)) {
     showPublic()
     return
   }
-  if (route === 'login') {
+  if (route === 'login' || route === 'acesso-farisa') {
     showLogin()
     return
   }
@@ -75,7 +97,7 @@ export function initAuth() {
 
   handleLocation()
   window.addEventListener('hashchange', () => {
-    if (location.hash !== '#login' && pendingLogin) {
+    if (!isLoginHash(location.hash) && pendingLogin) {
       pendingLogin.abort()
       pendingLogin = null
       clearApiSession()
@@ -97,7 +119,7 @@ export function initAuth() {
     try {
       await login(credentials, controller.signal)
       await syncRemoteData()
-      if (controller.signal.aborted || location.hash !== '#login') return
+      if (controller.signal.aborted || !isLoginHash(location.hash)) return
       pendingLogin = null
       sessionStorage.setItem(SESSION_KEY, 'active')
       status.textContent = ''
@@ -126,6 +148,10 @@ export function initAuth() {
   document.querySelector('[data-logout]').addEventListener('click', () => {
     sessionStorage.removeItem(SESSION_KEY)
     clearApiSession()
+    if (isPainel()) {
+      showLogin()
+      return
+    }
     location.hash = '#inicio'
     showPublic()
   })

@@ -3307,3 +3307,43 @@ video.gif-lightbox-image {
     width: 100%;
   }
 }
+
+/* FARISA Painel (/personal/): cor própria (verde) e só o que é do personal */
+/* Os tons de azul do sistema viram verde no Painel. */
+[data-surface='painel'] {
+  --painel-accent: #047857;
+  --blue-950: #022c22;
+  --blue-900: #064e3b;
+  --blue-700: #047857;
+  --blue-600: #059669;
+  --blue-100: #d1fae5;
+  --blue-50: #ecfdf5;
+}
+[data-surface='painel'] .button--primary {
+  background: linear-gradient(135deg, #047857, #059669);
+  box-shadow: 0 10px 24px rgba(5, 150, 105, 0.25);
+}
+[data-surface='painel'] .brand-mark {
+  background: linear-gradient(135deg, #065f46, #059669);
+}
+[data-surface='painel'] .login-brand-panel {
+  background: linear-gradient(160deg, #052e25, #047857);
+}
+[data-surface='painel'] .login-home-button,
+[data-surface='painel'] a[href='#inicio'],
+[data-surface='painel'] a[href='#entrar-aluno'] {
+  display: none !important;
+}
+.painel-install-button svg,
+.painel-install-link svg {
+  width: 18px;
+  height: 18px;
+}
+.painel-install-link {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}

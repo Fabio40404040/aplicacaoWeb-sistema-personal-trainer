@@ -39,6 +39,42 @@
       rel="apple-touch-icon"
       href="/icons/apple-touch-icon.png"
     />
+    <script>
+      // Em /personal/ abre o "FARISA Painel" (painel do personal): outro app
+      // instalável, com ícone, nome e cor próprios. O site público continua em /.
+      // A entrada do personal é /personal/#acesso-farisa.
+      ;(function () {
+        var path = location.pathname.replace(/\/+$/, '')
+        if (path === '/app' || path === '/app.html') {
+          location.replace('/personal/' + location.hash)
+          return
+        }
+        if (path !== '/personal') return
+        var root = document.documentElement
+        root.dataset.surface = 'painel'
+        var set = function (selector, attr, value) {
+          var node = document.querySelector(selector)
+          if (node) node.setAttribute(attr, value)
+        }
+        set('link[rel="manifest"]', 'href', '/painel.webmanifest')
+        set('link[rel="icon"]', 'href', '/icons/painel-192.png')
+        set('link[rel="icon"]', 'type', 'image/png')
+        set('link[rel="apple-touch-icon"]', 'href', '/icons/painel-apple-touch-icon.png')
+        set('meta[name="theme-color"]', 'content', '#047857')
+        set('meta[name="apple-mobile-web-app-title"]', 'content', 'FARISA Painel')
+        document.title = 'FARISA Painel'
+        var logged = false
+        try {
+          logged = Boolean(sessionStorage.getItem('farisa-coach-session-v2'))
+        } catch (error) {}
+        if (!location.hash)
+          history.replaceState(
+            null,
+            '',
+            location.pathname + (logged ? '#painel' : '#acesso-farisa'),
+          )
+      })()
+    </script>
     <link
       rel="stylesheet"
       href="/src/styles/main.css"
@@ -307,11 +343,6 @@
           <a href="#planos">Planos</a>
           <a href="#aluno">Área do Aluno</a>
           <a href="#contato">Contato</a>
-          <a
-            class="personal-access-link"
-            href="#painel"
-            ><svg aria-hidden="true"><use href="#icon-lock"></use></svg>Área do Personal</a
-          >
         </nav>
         <div class="public-menu-wrap">
           <button
@@ -345,11 +376,6 @@
             <a href="#planos"><span>03</span>Planos</a>
             <a href="#aluno"><span>04</span>Área do Aluno</a>
             <a href="#contato"><span>05</span>Contato</a>
-            <a
-              class="personal-access-link"
-              href="#painel"
-              ><svg aria-hidden="true"><use href="#icon-lock"></use></svg>Área do Personal</a
-            >
           </nav>
         </div>
       </header>
@@ -804,7 +830,6 @@
         </button>
         <a href="#recuperar-senha">Esqueci minha senha</a>
         <a href="#cadastro-aluno">Criar minha conta de aluno</a>
-        <a href="#login">Sou personal trainer</a>
       </form>
     </section>
     <section
@@ -1271,6 +1296,14 @@
           >
             Ativar conta do personal
           </a>
+          <button
+            class="button button--secondary button--large painel-install-button"
+            type="button"
+            data-install-app
+            hidden
+          >
+            <svg><use href="#icon-download"></use></svg>Instalar o FARISA Painel
+          </button>
           <p
             class="login-note"
             role="status"
@@ -1398,6 +1431,14 @@
           >
         </nav>
         <div class="sidebar-footer">
+          <button
+            class="nav-link painel-install-link"
+            type="button"
+            data-install-app
+            hidden
+          >
+            <svg><use href="#icon-download"></use></svg><span>Instalar o app</span>
+          </button>
           <a
             class="nav-link"
             href="#inicio"

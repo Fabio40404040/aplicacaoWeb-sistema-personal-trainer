@@ -159,3 +159,39 @@
 .admin-login-status .button {
   margin-top: 10px;
 }
+
+/* Cor própria do FARISA Admin (roxo), diferente do site e do Painel */
+.admin-body {
+  --admin-accent: #6d28d9;
+  --admin-accent-dark: #4c1d95;
+}
+.admin-body .brand-mark {
+  background: var(--admin-accent);
+}
+.admin-login {
+  background: linear-gradient(160deg, #1e1038, var(--admin-accent));
+}
+.admin-body .button--primary {
+  background: linear-gradient(135deg, var(--admin-accent-dark), var(--admin-accent));
+  box-shadow: 0 10px 24px rgba(109, 40, 217, 0.28);
+}
+.admin-body .eyebrow--blue,
+.admin-link {
+  color: var(--admin-accent);
+}
+.admin-body .stat-icon {
+  color: var(--admin-accent);
+}
+.admin-body .admin-badge {
+  background: #ede9fe;
+  color: var(--admin-accent);
+}
+.admin-install-button {
+  width: 100%;
+}
+
+/* Logo do FARISA Admin em amarelo */
+.admin-body .brand-mark {
+  background: #facc15;
+  color: #1e1038;
+}

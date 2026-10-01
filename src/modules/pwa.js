@@ -45,7 +45,7 @@ export function initPwa() {
   })
   window.addEventListener('pageshow', () => void reloadWhenAppChanged())
 
-  const installButton = document.querySelector('[data-install-app]')
+  const installButtons = [...document.querySelectorAll('[data-install-app]')]
   const dialog = document.querySelector('[data-install-dialog]')
   const instructions = dialog.querySelector('[data-install-instructions]')
   const isIos = /iPad|iPhone|iPod/u.test(navigator.userAgent)
@@ -54,30 +54,35 @@ export function initPwa() {
   if (isStandalone) return
 
   let installPrompt
-  if (isIos) installButton.hidden = false
+  const showButtons = (visible) =>
+    installButtons.forEach((button) => {
+      button.hidden = !visible
+    })
+  if (isIos) showButtons(true)
 
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault()
     installPrompt = event
-    installButton.hidden = false
+    showButtons(true)
   })
   window.addEventListener('appinstalled', () => {
     installPrompt = null
-    installButton.hidden = true
+    showButtons(false)
   })
 
-  installButton.addEventListener('click', async () => {
+  const install = async () => {
     if (installPrompt) {
       installPrompt.prompt()
       await installPrompt.userChoice
       installPrompt = null
-      installButton.hidden = true
+      showButtons(false)
       return
     }
     instructions.textContent = isIos
       ? 'No Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. Depois toque em Adicionar.'
       : 'Abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.'
     dialog.showModal()
-  })
+  }
+  installButtons.forEach((button) => button.addEventListener('click', install))
   dialog.querySelector('[data-close-install]').addEventListener('click', () => dialog.close())
 }

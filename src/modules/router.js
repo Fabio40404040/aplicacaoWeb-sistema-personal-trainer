@@ -26,7 +26,8 @@ function renderRoute() {
     if (active) link.setAttribute('aria-current', 'page')
     else link.removeAttribute('aria-current')
   })
-  document.title = 'FARISA Personal Trainer'
+  document.title =
+    document.documentElement.dataset.surface === 'painel' ? 'FARISA Painel' : 'FARISA Personal Trainer'
   window.scrollTo({ top: 0, behavior: 'smooth' })
   closeMenu()
 }

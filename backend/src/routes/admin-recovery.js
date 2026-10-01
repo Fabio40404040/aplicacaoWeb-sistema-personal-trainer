@@ -108,7 +108,7 @@ export async function adminRecovery(request, env, db, action) {
   )
   if (!inserted.rows.length) return generic
 
-  const link = new URL(isLocal ? 'admin.html' : 'admin', siteUrl)
+  const link = new URL('admin/', siteUrl)
   link.hash = `nova-senha?token=${token}`
   if (!hasEmailProvider && isLocal)
     return {

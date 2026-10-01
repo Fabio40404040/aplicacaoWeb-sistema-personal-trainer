@@ -54,7 +54,7 @@ Documentação: https://developers.cloudflare.com/d1/get-started/ e https://deve
 
 ## Área do administrador (/admin)
 
-A área do dono da plataforma fica numa página separada: `/admin` no site publicado (`/admin.html` no `npm run dev`). Ela tem login próprio e não aparece no painel dos personais nem no site público.
+A área do dono da plataforma fica numa página separada: `/admin/#acesso-farisa`, no site publicado e no `npm run dev`. Ela tem login próprio e não aparece no painel dos personais nem no site público.
 
 - A conta de administrador fica na tabela `platform_admins` (migração 021), separada das contas de personal.
 - Criar ou trocar a senha do administrador: `npm run admin` (na pasta principal). O script pede nome, e-mail e senha e grava no computador, no site ou nos dois.

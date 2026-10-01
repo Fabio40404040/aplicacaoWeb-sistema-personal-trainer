@@ -131,10 +131,14 @@ function showScreen(name) {
   })
 }
 
+// Entrada da administração: /admin/#acesso-farisa
+const LOGIN_HASH = '#acesso-farisa'
 function showLogin(message = '') {
   $('[data-admin-shell]').hidden = true
   $('[data-admin-login]').hidden = false
   showScreen('login')
+  if (location.hash !== LOGIN_HASH)
+    history.replaceState(null, '', location.pathname + LOGIN_HASH)
   $('[data-admin-login-status]').textContent = message
 }
 
@@ -148,6 +152,7 @@ async function showPanel() {
   $('[data-admin-user]').textContent = me?.name || me?.email || ''
   $('[data-admin-login]').hidden = true
   $('[data-admin-shell]').hidden = false
+  if (location.hash) history.replaceState(null, '', location.pathname)
   trainers = (await api('/admin/trainers')) || []
   render()
 }
@@ -182,7 +187,8 @@ function init() {
   })
   document.querySelectorAll('[data-admin-go]').forEach((button) =>
     button.addEventListener('click', () => {
-      if (button.dataset.adminGo === 'login') history.replaceState(null, '', location.pathname)
+      if (button.dataset.adminGo === 'login')
+        history.replaceState(null, '', location.pathname + LOGIN_HASH)
       showScreen(button.dataset.adminGo)
       document.querySelectorAll('[data-admin-login] [role="status"]').forEach((node) => {
         node.textContent = ''
@@ -259,5 +265,51 @@ function init() {
   else showLogin()
 }
 
+// App instalável "FARISA Admin" (ícone e cor próprios, separado do site e do
+// FARISA Painel).
+function initInstall() {
+  if (!window.isSecureContext || !('serviceWorker' in navigator)) return
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {})
+  })
+  const buttons = [...document.querySelectorAll('[data-admin-install]')]
+  const standalone =
+    window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+  if (standalone) return
+  const isIos = /iPad|iPhone|iPod/u.test(navigator.userAgent)
+  let prompt = null
+  const show = (visible) =>
+    buttons.forEach((button) => {
+      button.hidden = !visible
+    })
+  if (isIos) show(true)
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault()
+    prompt = event
+    show(true)
+  })
+  window.addEventListener('appinstalled', () => {
+    prompt = null
+    show(false)
+  })
+  buttons.forEach((button) =>
+    button.addEventListener('click', async () => {
+      if (prompt) {
+        prompt.prompt()
+        await prompt.userChoice
+        prompt = null
+        show(false)
+        return
+      }
+      window.alert(
+        isIos
+          ? 'No Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.'
+          : 'Abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.',
+      )
+    }),
+  )
+}
+
 initPasswordControls()
+initInstall()
 init()
