@@ -3269,3 +3269,41 @@ video.gif-lightbox-image {
 [data-ready-workout-grid] .media-library-card h3 {
   font-weight: 700;
 }
+
+/* Treinos personalizados: pasta "Todos os alunos" e filtro de situação */
+.workout-toolbar select {
+  flex: 0 0 auto;
+  width: auto;
+}
+.workout-all > summary .assessment-group-info {
+  flex: 1;
+}
+.workout-all-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--blue-50, #eff6ff);
+  font-size: 1.25rem;
+}
+.workout-all-body {
+  padding: 4px 14px 14px;
+}
+.workout-all-body .assessment-group > summary .assessment-group-info {
+  flex: 1;
+}
+.ready-library-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.ready-library-toolbar select {
+  width: auto;
+}
+@media (max-width: 720px) {
+  .workout-toolbar select,
+  .ready-library-toolbar select {
+    width: 100%;
+  }
+}

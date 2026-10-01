@@ -1760,7 +1760,15 @@
                 placeholder="Buscar ficha pelo nome do aluno"
                 aria-label="Buscar ficha pelo nome do aluno"
                 data-workout-search
-            /></label>
+            /></label
+            ><select
+              data-workout-status
+              aria-label="Filtrar fichas por situação"
+            >
+              <option value="all">Todas as fichas</option>
+              <option value="published">Publicadas</option>
+              <option value="draft">Rascunhos</option>
+            </select>
           </div>
           <div
             class="assessment-groups workout-groups"

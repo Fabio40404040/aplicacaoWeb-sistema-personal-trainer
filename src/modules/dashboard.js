@@ -325,6 +325,8 @@ function renderRecentStudents() {
 // Fichas personalizadas agrupadas por aluno (uma pasta por aluno) e busca
 // pelo nome do aluno: ao buscar, aparecem só as fichas de quem bate.
 const openWorkoutGroups = new Set()
+// A pasta "Todos os alunos" começa fechada e só abre com um clique.
+let workoutAllOpen = false
 function workoutCard(w) {
   const card = cloneTemplate('workout-card-template')
   card.dataset.id = w.id
@@ -344,8 +346,16 @@ function renderWorkouts() {
   const workouts = getData().workouts
   const search = document.querySelector('[data-workout-search]')
   const query = (search?.value || '').trim().toLocaleLowerCase('pt-BR')
+  const status = document.querySelector('[data-workout-status]')?.value || 'all'
   const groups = new Map()
-  workouts.forEach((w) => {
+  workouts
+    .filter(
+      (w) =>
+        status === 'all' ||
+        (status === 'published' && w.publishedAt) ||
+        (status === 'draft' && !w.publishedAt),
+    )
+    .forEach((w) => {
     const key = w.studentId || w.student
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key).push(w)
@@ -359,7 +369,31 @@ function renderWorkouts() {
     )
     .sort((a, b) => a[1][0].student.localeCompare(b[1][0].student, 'pt-BR'))
   const container = document.querySelector('[data-workouts-grid]')
-  container.replaceChildren(
+  const filtering = Boolean(query) || status !== 'all'
+  const all = document.createElement('details')
+  all.className = 'assessment-group workout-all'
+  all.open = filtering || workoutAllOpen
+  all.addEventListener('toggle', () => {
+    if (!filtering) workoutAllOpen = all.open
+  })
+  const allSummary = document.createElement('summary')
+  const allIcon = document.createElement('span')
+  allIcon.className = 'workout-all-icon'
+  allIcon.textContent = '👥'
+  const allInfo = document.createElement('div')
+  allInfo.className = 'assessment-group-info'
+  const allTitle = document.createElement('strong')
+  allTitle.textContent = 'Todos os alunos'
+  const allMeta = document.createElement('small')
+  const fichas = entries.reduce((sum, [, items]) => sum + items.length, 0)
+  allMeta.textContent = `${entries.length} ${entries.length === 1 ? 'aluno' : 'alunos'} · ${fichas} ${fichas === 1 ? 'ficha' : 'fichas'}`
+  allInfo.append(allTitle, allMeta)
+  allSummary.append(allIcon, allInfo)
+  const allBody = document.createElement('div')
+  allBody.className = 'assessment-groups workout-groups workout-all-body'
+  all.append(allSummary, allBody)
+  container.replaceChildren(all)
+  allBody.replaceChildren(
     ...entries.map(([key, items]) => {
       const group = document.createElement('details')
       group.className = 'assessment-group workout-group'
@@ -390,13 +424,14 @@ function renderWorkouts() {
       return group
     }),
   )
+  all.hidden = entries.length === 0
   const empty = document.querySelector('[data-workouts-empty]')
   empty.hidden = entries.length > 0
   empty.querySelector('h3').textContent = workouts.length
     ? 'Nenhuma ficha encontrada'
     : 'Nenhuma ficha cadastrada'
   empty.querySelector('p').textContent = workouts.length
-    ? 'Confira o nome do aluno digitado na busca.'
+    ? 'Confira o nome do aluno digitado na busca ou o filtro de situação.'
     : 'Crie a primeira ficha de treino para começar.'
 }
 const openExerciseFolders = new Set()
@@ -1124,6 +1159,7 @@ export function initDashboard() {
     }
   })
   document.querySelector('[data-workout-search]')?.addEventListener('input', renderWorkouts)
+  document.querySelector('[data-workout-status]')?.addEventListener('change', renderWorkouts)
   document.querySelector('[data-workouts-grid]').addEventListener('click', async (event) => {
     const b = event.target.closest('[data-action]')
     if (!b) return

@@ -1123,7 +1123,7 @@ function createReadyWorkoutLibraryPanel() {
   const panel = document.createElement('article')
   panel.className = 'panel media-library-panel'
   panel.dataset.readyWorkoutLibrary = ''
-  panel.innerHTML = `<div class="panel-heading"><div><span class="eyebrow eyebrow--blue">Produto de valor único</span><h2>Treinos Prontos — acesso permanente</h2><p>Monte o PDF completo dentro do sistema. Ao publicar, ele aparece automaticamente para todos os compradores desta modalidade.</p></div><div class="ready-library-actions"><button class="button button--secondary" type="button" data-new-ready-preview>+ Montar prévia do site</button><button class="button button--primary workout-create-button" type="button" data-new-ready-program>+ Novo treino</button></div></div><div class="media-library-grid" data-ready-workout-grid></div>`
+  panel.innerHTML = `<div class="panel-heading"><div><span class="eyebrow eyebrow--blue">Produto de valor único</span><h2>Treinos Prontos — acesso permanente</h2><p>Monte o PDF completo dentro do sistema. Ao publicar, ele aparece automaticamente para todos os compradores desta modalidade.</p></div><div class="ready-library-actions"><button class="button button--secondary" type="button" data-new-ready-preview>+ Montar prévia do site</button><button class="button button--primary workout-create-button" type="button" data-new-ready-program>+ Novo treino</button></div></div><div class="ready-library-toolbar"><select data-ready-status aria-label="Filtrar treinos prontos por situação"><option value="all">Todas as fichas</option><option value="published">Publicadas</option><option value="draft">Rascunhos</option></select></div><div class="media-library-grid" data-ready-workout-grid></div>`
   page.append(panel)
 
   const dialog = document.createElement('dialog')
@@ -1197,6 +1197,9 @@ function createReadyWorkoutLibraryPanel() {
     .querySelector('[data-new-ready-program]')
     .addEventListener('click', () => openReadyProgramDialog())
   panel
+    .querySelector('[data-ready-status]')
+    .addEventListener('change', () => renderReadyWorkoutLibrary())
+  panel
     .querySelector('[data-new-ready-preview]')
     .addEventListener('click', () => openReadyProgramDialog(null, { asPreview: true }))
   renderReadyWorkoutLibrary()
@@ -1207,7 +1210,15 @@ function renderReadyWorkoutLibrary() {
   if (!grid) return
   // Prévia do site e treinos dos compradores no mesmo formato de cartão; a
   // prévia vem primeiro e ganha só a borda roxa e a etiqueta "Prévia do site".
-  const programs = [...(getData().readyPrograms || [])].sort(
+  const status = document.querySelector('[data-ready-status]')?.value || 'all'
+  const programs = [...(getData().readyPrograms || [])]
+    .filter(
+      (program) =>
+        status === 'all' ||
+        (status === 'published' && program.published) ||
+        (status === 'draft' && !program.published),
+    )
+    .sort(
     (a, b) => Number(Boolean(b.sitePreview)) - Number(Boolean(a.sitePreview)),
   )
   grid.replaceChildren()
@@ -1334,7 +1345,12 @@ function renderReadyWorkoutLibrary() {
   })
   if (!programs.length) {
     const empty = document.createElement('p')
-    empty.textContent = 'Nenhum treino pronto montado. Crie o primeiro programa completo ABCDE.'
+    empty.textContent =
+      status === 'all'
+        ? 'Nenhum treino pronto montado. Crie o primeiro programa completo ABCDE.'
+        : status === 'published'
+          ? 'Nenhum treino pronto publicado.'
+          : 'Nenhum rascunho.'
     grid.append(empty)
   }
 }
