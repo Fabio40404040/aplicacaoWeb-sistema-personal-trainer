@@ -59,7 +59,7 @@ export async function studentRecovery(request, env, db, action) {
     return { error: 'Informe um e-mail válido.', status: 400 }
   const requestUrl = new URL(request.url)
   const isLocal = ['localhost', '127.0.0.1'].includes(requestUrl.hostname)
-  const siteUrl = env.PUBLIC_SITE_URL || request.headers.get('Origin') || env.ALLOWED_ORIGIN
+  const siteUrl = env.PUBLIC_SITE_URL || (isLocal ? request.headers.get('Origin') : null) || env.ALLOWED_ORIGIN
   const hasEmailProvider = hasRecoveryEmailProvider(env)
   if ((!hasEmailProvider || !siteUrl) && !isLocal) {
     const missing = missingEmailConfig(env, siteUrl)
@@ -100,7 +100,7 @@ export async function studentRecovery(request, env, db, action) {
       env,
       {
         to: account.email,
-        subject: `NOVO LINK · Redefinição de senha FARISA Personal · ${token.slice(0, 6).toUpperCase()}`,
+        subject: 'Redefinição de senha · FARISA Personal',
         text: `Acesse ${link.href} para redefinir sua senha. O link vale por 30 minutos. Se você não solicitou, ignore esta mensagem.`,
         html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:32px;color:#18212d">
           <h1 style="font-size:24px">Redefina sua senha</h1>

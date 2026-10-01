@@ -160,11 +160,13 @@ function createMediaFilter(page) {
 /* ------------------------------------------------------------------ */
 /* Envio único: GIF + MP4 de mesmo nome = um exercício                 */
 /* ------------------------------------------------------------------ */
+const escapeHtml = (value) =>
+  String(value).replace(/[&<>"']/gu, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 function groupOptions(selected) {
   return allGroupNames()
     .map(
       (name) =>
-        `<option value="${name.replace(/"/gu, '&quot;')}"${name === selected ? ' selected' : ''}>${name}</option>`,
+        `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`,
     )
     .join('')
 }

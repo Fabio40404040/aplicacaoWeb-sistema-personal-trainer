@@ -1,4 +1,4 @@
-import { getData, replaceData } from "./state.js";
+import { clearStoredData, getData, replaceData } from "./state.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const TOKEN_KEY = "farisa-coach-api-token";
@@ -9,6 +9,7 @@ const TOKEN_KEY = "farisa-coach-api-token";
 function handleUnauthorized(status) {
   if (status !== 401 || !sessionStorage.getItem(TOKEN_KEY)) return;
   sessionStorage.removeItem(TOKEN_KEY);
+  clearStoredData();
   window.dispatchEvent(new CustomEvent("farisa:session-expired"));
 }
 const sessionExpiredError = () =>
@@ -77,6 +78,7 @@ export async function login(credentials, signal) {
 }
 export function clearApiSession() {
   sessionStorage.removeItem(TOKEN_KEY);
+  clearStoredData();
 }
 export function persistRecord(collection, record, editingId = null) {
   return request(`/${collection}${editingId ? `/${editingId}` : ""}`, {

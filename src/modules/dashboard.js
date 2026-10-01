@@ -828,6 +828,7 @@ function renderStudentOptions() {
       ...available.map((s) => {
         const o = document.createElement('option')
         o.value = s.name
+        o.dataset.studentId = s.id
         o.textContent = select.closest('[data-form="workout"]')
           ? `${s.name} — ${s.planCode === 'athlete' ? 'Performance Atleta' : s.planCode === 'premium' ? 'Consultoria Premium' : 'Consultoria Básica'}`
           : s.name

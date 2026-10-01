@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /personal/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://aplicacaoweb-sistema-personal-trainer.pages.dev/sitemap.xml

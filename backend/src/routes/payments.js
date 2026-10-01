@@ -1,11 +1,11 @@
-const BILLING_CYCLES = {
+export const BILLING_CYCLES = {
   monthly: { days: 30, months: 1, discount: 1 },
   quarterly: { days: 90, months: 3, discount: 0.95 },
   semiannual: { days: 180, months: 6, discount: 0.9 },
   annual: { days: 365, months: 12, discount: 0.85 },
 }
 
-function amountFor(plan, billingCycle) {
+export function amountFor(plan, billingCycle) {
   if (plan.accessType === 'permanent') return Number(plan.priceCents)
   const cycle = BILLING_CYCLES[billingCycle] || BILLING_CYCLES.quarterly
   return Math.round(Number(plan.priceCents) * cycle.months * cycle.discount)
@@ -72,16 +72,7 @@ export async function createCheckout(db, accountId, env, body) {
   const method =
     body?.method === 'pix' ? 'pix' : body?.method === 'credit_card' ? 'credit_card' : null
   if (!method) return { error: 'Escolha PIX ou cartão de crédito.', status: 400 }
-  const row = (
-    await db.query(
-      `SELECT s.id AS "studentId", s.trainer_id AS "trainerId", s.plan_code AS "planCode",
-       s.billing_cycle AS "billingCycle", a.name, a.email, p.name AS "planName",
-       p.price_cents AS "priceCents", p.access_type AS "accessType"
-       FROM student_accounts a JOIN students s ON s.id=a.student_id
-       JOIN plans p ON p.code=s.plan_code WHERE a.id=$1 AND p.active=1 LIMIT 1`,
-      [accountId],
-    )
-  ).rows[0]
+  const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
   if (row.accessType !== 'permanent' && !BILLING_CYCLES[row.billingCycle])
     row.billingCycle = 'quarterly'
@@ -143,16 +134,30 @@ export async function createCheckout(db, accountId, env, body) {
 }
 
 async function paymentAccount(db, accountId) {
-  return (
-    await db.query(
+  // Mudança de plano pedida pelo aluno (migração 025): cobra o plano novo.
+  try {
+    return (
+      await db.query(
+        `SELECT s.id AS "studentId", s.trainer_id AS "trainerId", p.code AS "planCode",
+         COALESCE(a.change_billing_cycle, s.billing_cycle) AS "billingCycle", a.name, a.email, p.name AS "planName",
+         p.price_cents AS "priceCents", p.access_type AS "accessType"
+         FROM student_accounts a JOIN students s ON s.id=a.student_id
+         JOIN plans p ON p.code=COALESCE(a.change_plan_code, s.plan_code) WHERE a.id=$1 AND p.active=1 LIMIT 1`,
+        [accountId],
+      )
+    ).rows[0]
+  } catch {
+    return (
+      await db.query(
       `SELECT s.id AS "studentId", s.trainer_id AS "trainerId", s.plan_code AS "planCode",
-       s.billing_cycle AS "billingCycle", a.name, a.email, p.name AS "planName",
-       p.price_cents AS "priceCents", p.access_type AS "accessType"
-       FROM student_accounts a JOIN students s ON s.id=a.student_id
-       JOIN plans p ON p.code=s.plan_code WHERE a.id=$1 AND p.active=1 LIMIT 1`,
-      [accountId],
+         s.billing_cycle AS "billingCycle", a.name, a.email, p.name AS "planName",
+         p.price_cents AS "priceCents", p.access_type AS "accessType"
+         FROM student_accounts a JOIN students s ON s.id=a.student_id
+         JOIN plans p ON p.code=s.plan_code WHERE a.id=$1 AND p.active=1 LIMIT 1`,
+        [accountId],
     )
   ).rows[0]
+  }
 }
 
 export async function cardPaymentConfig(db, accountId, env) {
@@ -406,6 +411,15 @@ async function approvePayment(db, intent, payment, paymentId) {
       values: [intent.trainer_id, intent.student_id, intent.plan_code, `mercadopago:${paymentId}`],
     },
   ])
+  // Pagou: a mudança de plano foi concluída.
+  try {
+    await db.query(
+      `UPDATE student_accounts SET change_plan_code=NULL, change_billing_cycle=NULL WHERE student_id=$1`,
+      [intent.student_id],
+    )
+  } catch {
+    // sem a migração 025
+  }
 }
 
 async function officialPaymentForIntent(intent, env) {

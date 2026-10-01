@@ -78,7 +78,7 @@ export async function adminRecovery(request, env, db, action) {
   // No computador o link volta para o endereço aberto no navegador (Vite).
   const siteUrl = isLocal
     ? request.headers.get('Origin') || env.PUBLIC_SITE_URL || 'http://localhost:5173'
-    : env.PUBLIC_SITE_URL || request.headers.get('Origin') || env.ALLOWED_ORIGIN
+    : env.PUBLIC_SITE_URL || (isLocal ? request.headers.get('Origin') : null) || env.ALLOWED_ORIGIN
   const hasEmailProvider = hasRecoveryEmailProvider(env)
   if ((!hasEmailProvider || !siteUrl) && !isLocal) {
     const missing = missingEmailConfig(env, siteUrl)

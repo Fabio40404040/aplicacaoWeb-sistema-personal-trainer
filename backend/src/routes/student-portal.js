@@ -1,4 +1,5 @@
 import { studentProfileFields } from "./profile.js";
+import { amountFor, BILLING_CYCLES } from "./payments.js";
 
 const PLAN_FEATURES = {
   ready: ["workouts", "exercises"],
@@ -98,6 +99,9 @@ export async function studentPortal(db, accountId, version) {
     appointments: [],
     // Foto, telefone, nascimento e dia do check-in (null sem a migração 018).
     profile: await studentProfileFields(db, accountId),
+    // Planos para "Mudar de plano" (valores já calculados por período).
+    planOptions: await planOptions(db),
+    pendingChange: await pendingChange(db, accountId),
   };
   if (!accessActive || !account.studentId) return response;
 
@@ -296,4 +300,109 @@ export async function requestPlan(db, accountId, body) {
           : "Plano solicitado. Combine o pagamento com o personal pelo WhatsApp.",
     },
   };
+}
+
+async function planOptions(db) {
+  const plans = (
+    await db.query(
+      `SELECT code, name, price_cents AS "priceCents", access_type AS "accessType" FROM plans
+       WHERE active=1 ORDER BY price_cents`,
+    )
+  ).rows;
+  return plans.map((plan) => ({
+    code: plan.code,
+    name: plan.name,
+    accessType: plan.accessType,
+    prices:
+      plan.accessType === "permanent"
+        ? [{ cycle: "permanent", amountCents: amountFor(plan, "permanent") }]
+        : Object.keys(BILLING_CYCLES).map((cycle) => ({
+            cycle,
+            amountCents: amountFor(plan, cycle),
+            monthlyCents: Math.round(amountFor(plan, cycle) / BILLING_CYCLES[cycle].months),
+          })),
+  }));
+}
+
+async function pendingChange(db, accountId) {
+  try {
+    const row = (
+      await db.query(
+        `SELECT a.change_plan_code AS "planCode", a.change_billing_cycle AS "billingCycle", p.name AS "planName"
+         FROM student_accounts a JOIN plans p ON p.code=a.change_plan_code WHERE a.id=$1 LIMIT 1`,
+        [accountId],
+      )
+    ).rows[0];
+    return row?.planCode ? row : null;
+  } catch {
+    return null;
+  }
+}
+
+// Aluno escolhe outro plano. Com o acesso ativo, ele continua no plano atual
+// até pagar o novo (a mudança fica "aguardando pagamento"). Sem acesso ativo,
+// troca direto o plano do pré-cadastro.
+export async function changePlan(db, accountId, body) {
+  const account = (
+    await db.query(
+      `SELECT s.id, s.plan_code AS "planCode", s.billing_cycle AS "billingCycle", s.access_status AS "accessStatus",
+         s.payment_status AS "paymentStatus", s.access_type AS "accessType", s.access_expires_at AS "accessExpiresAt"
+       FROM student_accounts a JOIN students s ON s.id=a.student_id WHERE a.id=$1 LIMIT 1`,
+      [accountId],
+    )
+  ).rows[0];
+  if (!account) return { error: "Cadastro não encontrado.", status: 404 };
+  if (body?.cancel) {
+    try {
+      await db.query(
+        "UPDATE student_accounts SET change_plan_code=NULL, change_billing_cycle=NULL WHERE id=$1",
+        [accountId],
+      );
+    } catch {
+      // sem a migração 025
+    }
+    return { data: { cancelled: true } };
+  }
+  const plan = (
+    await db.query(
+      'SELECT code, name, access_type AS "accessType" FROM plans WHERE code=$1 AND active=1',
+      [String(body?.planCode || "")],
+    )
+  ).rows[0];
+  if (!plan) return { error: "Plano inválido.", status: 400 };
+  const cycle =
+    plan.accessType === "permanent"
+      ? "permanent"
+      : BILLING_CYCLES[body?.billingCycle]
+        ? body.billingCycle
+        : "monthly";
+  if (plan.code === account.planCode && cycle === account.billingCycle && hasCurrentAccess(account))
+    return { error: "Esse já é o seu plano atual.", status: 400 };
+  if (!hasCurrentAccess(account)) {
+    await db.query(
+      `UPDATE students SET plan_code=$2, access_type=$3, billing_cycle=$4, updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
+      [account.id, plan.code, plan.accessType, cycle],
+    );
+    try {
+      await db.query(
+        "UPDATE student_accounts SET change_plan_code=NULL, change_billing_cycle=NULL WHERE id=$1",
+        [accountId],
+      );
+    } catch {
+      // sem a migração 025
+    }
+    return { data: { mode: "direct", planName: plan.name } };
+  }
+  try {
+    await db.query(
+      "UPDATE student_accounts SET change_plan_code=$2, change_billing_cycle=$3 WHERE id=$1",
+      [accountId, plan.code, cycle],
+    );
+  } catch {
+    return {
+      error: "A mudança de plano ainda não está disponível. Fale com o personal.",
+      status: 503,
+    };
+  }
+  return { data: { mode: "pending", planName: plan.name } };
 }

@@ -21,6 +21,9 @@ function closeModal(form) {
 const formData = (form) => new FormData(form)
 const value = (form, field) => formData(form).get(field)?.toString().trim() || ''
 const checked = (form, field) => Boolean(formData(form).get(field))
+// Id do aluno escolhido na lista (evita confusão entre alunos de mesmo nome).
+const studentIdOf = (form) =>
+  form.elements.student?.selectedOptions?.[0]?.dataset.studentId || null
 
 function saveAndRefresh(collection, record, id) {
   void persistRecord(collection, record, id)
@@ -113,6 +116,7 @@ function handleWorkout(form) {
   const record = {
     name: value(form, 'name'),
     student: value(form, 'student'),
+    studentId: studentIdOf(form),
     goal: value(form, 'goal'),
     duration: value(form, 'duration'),
     exerciseIds: exercisePrescriptions.map((item) => item.exerciseId),
@@ -178,6 +182,7 @@ function handleExercise(form) {
 function handleAssessment(form) {
   const r = {
     student: value(form, 'student'),
+    studentId: studentIdOf(form),
     protocol: value(form, 'protocol'),
     weight: value(form, 'weight'),
     height: value(form, 'height'),
@@ -228,6 +233,7 @@ function handleAppointment(form) {
   const end = new Date(start.getTime() + duration * 60_000)
   const record = {
     student: value(form, 'student'),
+    studentId: studentIdOf(form),
     startsAt: start.toISOString(),
     endsAt: end.toISOString(),
     service: value(form, 'service'),

@@ -534,6 +534,8 @@ export async function createStudentBooking(db, accountId, body, env) {
        WHERE NOT EXISTS (
          SELECT 1 FROM appointments WHERE trainer_id=$1 AND status IN ('pending','scheduled')
          AND starts_at < $4 AND ends_at > $3)
+       AND ($12 < 0 OR (SELECT COUNT(*) FROM appointments WHERE student_id=$2 AND service_id=$11
+         AND status IN ('pending','scheduled','completed') AND starts_at >= $13 AND starts_at < $14) < $12)
        RETURNING ${appointmentColumns}`,
       [
         student.trainerId,
@@ -547,10 +549,16 @@ export async function createStudentBooking(db, accountId, body, env) {
         modality,
         modality === "online" ? config.settings.defaultMeetingUrl : null,
         service.id,
+        service.perMonth,
+        ...monthRange(start, offset).map((time) => new Date(time).toISOString()),
       ],
     )
   ).rows[0];
-  if (!row) return { error: "Esse horário acabou de ser ocupado. Escolha outro.", status: 409 };
+  if (!row)
+    return {
+      error: "Esse horário acabou de ser ocupado ou a cota do mês já foi usada. Atualize e tente de novo.",
+      status: 409,
+    };
   await notifyTrainer(
     env,
     student,

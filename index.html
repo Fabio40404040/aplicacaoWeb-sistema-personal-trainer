@@ -28,9 +28,21 @@
     />
     <link
       rel="icon"
-      type="image/svg+xml"
+      type="image/png"
       href="/favicon.png"
     />
+    <link rel="canonical" href="https://aplicacaoweb-sistema-personal-trainer.pages.dev/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="FARISA Personal" />
+    <meta property="og:title" content="FARISA Personal — consultoria e treino personalizado" />
+    <meta
+      property="og:description"
+      content="Treino personalizado, avaliação física e acompanhamento online ou presencial com o FARISA Personal."
+    />
+    <meta property="og:url" content="https://aplicacaoweb-sistema-personal-trainer.pages.dev/" />
+    <meta property="og:image" content="https://aplicacaoweb-sistema-personal-trainer.pages.dev/og.jpg" />
+    <meta name="twitter:card" content="summary" />
     <link
       rel="manifest"
       href="/app.webmanifest"
@@ -52,6 +64,10 @@
         if (path !== '/personal') return
         var root = document.documentElement
         root.dataset.surface = 'painel'
+        var robots = document.createElement('meta')
+        robots.name = 'robots'
+        robots.content = 'noindex, nofollow'
+        document.head.appendChild(robots)
         var set = function (selector, attr, value) {
           var node = document.querySelector(selector)
           if (node) node.setAttribute(attr, value)

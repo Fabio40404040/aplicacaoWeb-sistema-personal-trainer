@@ -68,7 +68,7 @@ export async function personalRecovery(request, env, db, action) {
 
   const requestUrl = new URL(request.url)
   const isLocal = ['localhost', '127.0.0.1'].includes(requestUrl.hostname)
-  const siteUrl = env.PUBLIC_SITE_URL || request.headers.get('Origin') || env.ALLOWED_ORIGIN
+  const siteUrl = env.PUBLIC_SITE_URL || (isLocal ? request.headers.get('Origin') : null) || env.ALLOWED_ORIGIN
   const hasEmailProvider = hasRecoveryEmailProvider(env)
   if ((!hasEmailProvider || !siteUrl) && !isLocal) {
     const missing = missingEmailConfig(env, siteUrl)

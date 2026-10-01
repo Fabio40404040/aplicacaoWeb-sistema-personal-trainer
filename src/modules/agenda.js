@@ -46,6 +46,7 @@ function openNewAppointment(date) {
 async function changeStatus(item, status) {
   const record = {
     student: item.student,
+    studentId: item.studentId || null,
     startsAt: item.startsAt,
     endsAt: item.endsAt,
     service: item.service,

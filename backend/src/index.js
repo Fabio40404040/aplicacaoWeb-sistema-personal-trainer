@@ -1,6 +1,7 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { readSession } from "./lib/session.js";
+import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
 import { adminLogin, adminTrainers, currentAdmin } from "./routes/admin.js";
 import { adminRecovery } from "./routes/admin-recovery.js";
 import { login } from "./routes/auth.js";
@@ -31,6 +32,7 @@ import {
 } from "./routes/resources.js";
 import { paymentWebhook, updateStudentAccess } from "./routes/access.js";
 import {
+  changePlan,
   requestPlan,
   studentPortal,
   submitCheckin,
@@ -79,7 +81,46 @@ import {
   updateReadyProgram,
 } from "./routes/ready-programs.js";
 
+
+// Login e "esqueci a senha" com limite de tentativas (contra força bruta).
+const LIMITED_ROUTES = {
+  "auth/login": "login",
+  "student/auth/login": "login",
+  "admin/auth/login": "login",
+  "auth/forgot": "forgot",
+  "student/auth/forgot": "forgot",
+  "admin/auth/forgot": "forgot",
+};
 async function handle(request, env) {
+  const route = new URL(request.url).pathname.replace(/^\/api\/?/u, "").replace(/\/+$/u, "");
+  const kind = request.method === "POST" ? LIMITED_ROUTES[route] : null;
+  if (!kind || !env.DB) return handleRoutes(request, env);
+  let email = "";
+  try {
+    email = (await request.clone().json())?.email || "";
+  } catch {
+    // corpo inválido: a rota responde o erro normal
+  }
+  const { account, ip } = attemptKeys(request, route, email);
+  const keys = [account, ip];
+  const limits = kind === "login" ? [8, 40] : [5, 20];
+  const blocked = await withDb(env, async (db) =>
+    (await isBlocked(db, [account], limits[0])) || (await isBlocked(db, [ip], limits[1])),
+  );
+  if (blocked)
+    return {
+      error: "Muitas tentativas. Aguarde 15 minutos e tente de novo.",
+      status: 429,
+    };
+  const result = await handleRoutes(request, env);
+  const failed = kind === "forgot" || [400, 401, 403].includes(result?.status);
+  await withDb(env, (db) =>
+    failed ? addAttempt(db, keys) : clearAttempts(db, [account]),
+  );
+  return result;
+}
+
+async function handleRoutes(request, env) {
   const url = new URL(request.url);
   const segments = url.pathname
     .replace(/^\/api\/?/u, "")
@@ -163,6 +204,15 @@ async function handle(request, env) {
     if (session.role !== "student")
       return { error: "Use sua conta de aluno.", status: 403 };
     return withDb(env, async (db) => {
+      // Senha trocada (ou "sair de todos") invalida tokens antigos em todas
+      // as rotas do aluno, não só em student/me.
+      const account = (
+        await db.query(
+          "SELECT id FROM student_accounts WHERE id=$1 AND auth_version=$2 LIMIT 1",
+          [session.sub, session.version || 0],
+        )
+      ).rows[0];
+      if (!account) return { error: "Sessão inválida ou expirada.", status: 401 };
       if (request.method === "GET" && route === "student/me") {
         await reconcileStudentPayments(
           db,
@@ -191,6 +241,8 @@ async function handle(request, env) {
         return cancelStudentBooking(db, session.sub, segments[2], env);
       if (request.method === "POST" && route === "student/checkins")
         return submitCheckin(db, session.sub, await readJson(request));
+      if (request.method === "POST" && route === "student/plan-change")
+        return changePlan(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/plan-request")
         return requestPlan(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/payments/checkout")

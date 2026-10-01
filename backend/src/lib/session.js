@@ -37,6 +37,15 @@ async function signature(payload, secret) {
   return base64url(new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(payload))))
 }
 
+// Comparação em tempo constante (não vaza, pelo tempo, quantos caracteres batem).
+export function safeEqual(a, b) {
+  const x = encoder.encode(String(a))
+  const y = encoder.encode(String(b))
+  let diff = x.length ^ y.length
+  for (let i = 0; i < Math.max(x.length, y.length); i += 1) diff |= (x[i] || 0) ^ (y[i] || 0)
+  return diff === 0
+}
+
 export async function createSession(trainer, env, role = 'coach') {
   const expiresAt = Math.floor(Date.now() / 1000) + Number(env.SESSION_TTL_SECONDS || 43200)
   const payload = base64url(
@@ -60,10 +69,15 @@ export async function readSession(request, env) {
   if (
     !payload ||
     !suppliedSignature ||
-    (await signature(payload, env.SESSION_SECRET)) !== suppliedSignature
+    !safeEqual(await signature(payload, env.SESSION_SECRET), suppliedSignature)
   )
     return null
-  const session = JSON.parse(decoder.decode(decodeBase64url(payload)))
+  let session
+  try {
+    session = JSON.parse(decoder.decode(decodeBase64url(payload)))
+  } catch {
+    return null
+  }
   return session.exp > Math.floor(Date.now() / 1000) ? session : null
 }
 
@@ -83,7 +97,7 @@ export async function verifyPassword(password, encodedHash) {
     key,
     256,
   )
-  return base64url(new Uint8Array(bits)) === expected
+  return safeEqual(base64url(new Uint8Array(bits)), expected)
 }
 
 export async function hashPassword(password) {

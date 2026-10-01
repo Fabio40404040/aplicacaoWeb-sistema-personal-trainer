@@ -1,5 +1,18 @@
 import { hashPassword, isStrongPassword } from "../lib/session.js";
 
+// Só links https:// ou caminhos do próprio site (bloqueia "javascript:").
+function safeMediaUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  if (text.startsWith("/") && !text.startsWith("//")) return text.slice(0, 500);
+  try {
+    const url = new URL(text);
+    return url.protocol === "https:" ? url.href.slice(0, 500) : null;
+  } catch {
+    return null;
+  }
+}
+
 const configs = {
   students: {
     select: `SELECT id,name,email,goal,status,assessment_date AS "assessmentDate", access_status AS "accessStatus",
@@ -8,7 +21,7 @@ const configs = {
       FROM students WHERE trainer_id=$1 ORDER BY created_at DESC`,
     insert: `INSERT INTO students (trainer_id,name,email,goal,status,assessment_date) VALUES ($1,$2,$3,$4,$5,$6)
       RETURNING id,name,email,goal,status,assessment_date AS "assessmentDate"`,
-    update: `UPDATE students SET name=$3,email=$4,goal=$5,status=$6,assessment_date=$7,updated_at=CURRENT_TIMESTAMP
+    update: `UPDATE students SET name=$3,email=$4,goal=$5,assessment_date=$7,updated_at=CURRENT_TIMESTAMP
       WHERE id=$2 AND trainer_id=$1 RETURNING id`,
     values: (b) => [
       b.name,
@@ -37,8 +50,8 @@ const configs = {
       b.instructions || null,
       b.difficulty || "Intermediário",
       b.mediaType || "3d",
-      b.mediaUrl || null,
-      b.thumbnailUrl || null,
+      safeMediaUrl(b.mediaUrl),
+      safeMediaUrl(b.thumbnailUrl),
       b.animationClip || null,
       b.gifId || null,
       b.videoId || null,
@@ -52,7 +65,7 @@ const configs = {
       a.published_at AS "publishedAt" FROM assessments a JOIN students s ON s.id=a.student_id WHERE a.trainer_id=$1 ORDER BY a.assessed_at DESC`,
     insert: `INSERT INTO assessments (trainer_id,student_id,protocol,weight_kg,height_cm,bmi,body_fat_percent,waist_cm,hip_cm,whr,
       chest_cm,arm_cm,thigh_cm,calf_cm,blood_pressure,resting_hr,restriction,parq,push_ups,plank_seconds,sit_and_reach_cm,notes,published_at)
-      VALUES ($1,(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
+      VALUES ($1,COALESCE((SELECT id FROM students WHERE trainer_id=$1 AND id=$24),(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1)),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,
       CASE WHEN $23=1 THEN CURRENT_TIMESTAMP ELSE NULL END) RETURNING id`,
     update: `UPDATE assessments SET weight_kg=$3,body_fat_percent=$4,waist_cm=$5,notes=$6,
       published_at=CASE WHEN $7=1 THEN COALESCE(published_at,CURRENT_TIMESTAMP) ELSE NULL END WHERE id=$2 AND trainer_id=$1 RETURNING id`,
@@ -83,6 +96,7 @@ const configs = {
         b.sitAndReach || null,
         b.notes || null,
         b.published ? 1 : 0,
+        b.studentId || null,
       ];
     },
     updateValues: (b) => [
@@ -100,10 +114,10 @@ const configs = {
       FROM appointments ap JOIN students s ON s.id=ap.student_id
       WHERE ap.trainer_id=$1 ORDER BY ap.starts_at`,
     insert: `INSERT INTO appointments (trainer_id,student_id,starts_at,ends_at,service,location,notes,status,modality,meeting_url,service_id)
-      VALUES ($1,(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1),$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      VALUES ($1,COALESCE((SELECT id FROM students WHERE trainer_id=$1 AND id=$12),(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1)),$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING id,student_id AS "studentId",starts_at AS "startsAt",ends_at AS "endsAt",service,location,notes,status,
       modality,meeting_url AS "meetingUrl",service_id AS "serviceId",source`,
-    update: `UPDATE appointments SET student_id=(SELECT id FROM students WHERE trainer_id=$1 AND name=$3 LIMIT 1),
+    update: `UPDATE appointments SET student_id=COALESCE((SELECT id FROM students WHERE trainer_id=$1 AND id=$13),(SELECT id FROM students WHERE trainer_id=$1 AND name=$3 LIMIT 1)),
       starts_at=$4,ends_at=$5,service=$6,location=$7,notes=$8,status=$9,modality=$10,meeting_url=$11,
       service_id=COALESCE($12,service_id),
       cancelled_by=CASE WHEN $9='cancelled' THEN COALESCE(cancelled_by,'trainer') ELSE NULL END,
@@ -122,6 +136,7 @@ const configs = {
       b.modality === "online" ? "online" : "presencial",
       /^https?:\/\//u.test(String(b.meetingUrl || "")) ? String(b.meetingUrl).slice(0, 500) : null,
       b.serviceId || null,
+      b.studentId || null,
     ],
   },
 };
@@ -202,7 +217,7 @@ export async function createResource(db, resource, trainerId, body) {
     const row = (
       await db.query(
         `INSERT INTO workouts (trainer_id,student_id,name,goal,duration,published_at,permanent_access)
-      VALUES ($1,(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1),$3,$4,$5,
+      VALUES ($1,COALESCE((SELECT id FROM students WHERE trainer_id=$1 AND id=$8),(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1)),$3,$4,$5,
       CASE WHEN $6=1 THEN CURRENT_TIMESTAMP ELSE NULL END,$7) RETURNING id,name,goal,duration,progress,published_at AS "publishedAt"`,
         [
           trainerId,
@@ -212,6 +227,7 @@ export async function createResource(db, resource, trainerId, body) {
           body.duration,
           body.published ? 1 : 0,
           body.permanentAccess ? 1 : 0,
+          body.studentId || null,
         ],
       )
     ).rows[0];
@@ -264,7 +280,7 @@ export async function updateResource(db, resource, trainerId, id, body) {
   if (resource === "workouts") {
     const row = (
       await db.query(
-        `UPDATE workouts SET student_id=(SELECT id FROM students WHERE trainer_id=$1 AND name=$3 LIMIT 1),
+        `UPDATE workouts SET student_id=COALESCE((SELECT id FROM students WHERE trainer_id=$1 AND id=$9),(SELECT id FROM students WHERE trainer_id=$1 AND name=$3 LIMIT 1)),
       name=$4,goal=$5,duration=$6,published_at=CASE WHEN $7=1 THEN COALESCE(published_at,CURRENT_TIMESTAMP) ELSE NULL END,
       permanent_access=$8,updated_at=CURRENT_TIMESTAMP WHERE id=$2 AND trainer_id=$1 RETURNING id`,
         [
@@ -276,6 +292,7 @@ export async function updateResource(db, resource, trainerId, id, body) {
           body.duration,
           body.published ? 1 : 0,
           body.permanentAccess ? 1 : 0,
+          body.studentId || null,
         ],
       )
     ).rows[0];

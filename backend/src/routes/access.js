@@ -1,3 +1,4 @@
+import { safeEqual } from '../lib/session.js'
 const BILLING_CYCLES = {
   monthly: { days: 30, months: 1, discount: 1 },
   quarterly: { days: 90, months: 3, discount: 0.95 },
@@ -120,10 +121,19 @@ export async function updateStudentAccess(db, trainerId, studentId, body) {
 export async function paymentWebhook(request, env, db) {
   if (!env.PAYMENT_WEBHOOK_SECRET)
     return { error: 'Pagamento online ainda não foi configurado.', status: 503 }
-  if (request.headers.get('X-Payment-Secret') !== env.PAYMENT_WEBHOOK_SECRET)
+  if (!safeEqual(request.headers.get('X-Payment-Secret') || '', env.PAYMENT_WEBHOOK_SECRET))
     return { error: 'Assinatura de pagamento inválida.', status: 401 }
   const body = await request.json()
   if (body?.status !== 'paid') return { data: { accepted: true } }
+  // Sem referência única o mesmo aviso poderia renovar o acesso várias vezes.
+  if (!body.providerReference)
+    return { error: 'Informe providerReference.', status: 400 }
+  const already = (
+    await db.query('SELECT id FROM payments WHERE provider_reference=$1 LIMIT 1', [
+      String(body.providerReference),
+    ])
+  ).rows[0]
+  if (already) return { data: { accepted: true, duplicate: true } }
   const plan = (
     await db.query(
       `SELECT code, price_cents AS "priceCents", access_type AS "accessType", duration_days AS "durationDays"

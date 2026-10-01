@@ -1372,3 +1372,126 @@
     width: auto;
   }
 }
+
+/* Mudar de plano */
+.student-plan-strip .student-plan-change {
+  margin-left: auto;
+  padding: 6px 14px;
+  min-height: 0;
+  font-size: 0.85rem;
+}
+.student-plan-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  flex-basis: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  color: #fcd34d;
+}
+.student-plan-pending span {
+  flex: 1 1 240px;
+}
+.student-plan-pending .button {
+  padding: 6px 12px;
+  min-height: 0;
+  font-size: 0.85rem;
+}
+.student-plan-dialog .eyebrow {
+  color: #9cc2ff;
+}
+.plan-options,
+.plan-cycles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: 8px;
+}
+.plan-option,
+.plan-cycle {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid #40546e;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e6edf6;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.plan-option.is-active,
+.plan-cycle.is-active {
+  border-color: #3d8bfd;
+  background: rgba(61, 139, 253, 0.2);
+}
+.plan-option-price,
+.plan-cycle span {
+  color: #7ee2b8;
+  font-weight: 700;
+}
+.plan-cycle small {
+  color: #8ea3bd;
+}
+.plan-option-tag {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #b8c7d9;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+.plan-summary {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid #2b3c52;
+  border-radius: 12px;
+}
+.plan-summary strong {
+  color: #f5f7fb;
+  font-size: 1.05rem;
+}
+.plan-summary small {
+  color: #b8c7d9;
+}
+.plan-note {
+  color: #b8c7d9;
+  font-size: 0.88rem;
+}
+.plan-status {
+  color: #ffb4a8;
+}
+.plan-status:empty {
+  display: none;
+}
+.plan-pay img.pix-qr-code {
+  max-width: 240px;
+}
+
+/* Janela de agendar: nada vaza para a direita */
+.student-booking-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+.student-booking-body > *,
+.student-booking-body section {
+  min-width: 0;
+}
+.booking-days {
+  scrollbar-width: thin;
+  scrollbar-color: #40546e transparent;
+}
+.booking-days::-webkit-scrollbar {
+  height: 6px;
+}
+.booking-days::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #40546e;
+}
+.booking-days::-webkit-scrollbar-track {
+  background: transparent;
+}

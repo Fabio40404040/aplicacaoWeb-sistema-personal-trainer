@@ -18,7 +18,7 @@ const modalityLabel = (modality) =>
 const statusLabel = {
   pending: 'Aguardando confirmação',
   scheduled: 'Confirmado',
-  completed: 'Realizado',
+  completed: 'Concluído',
   cancelled: 'Cancelado',
 }
 const capitalize = (value) => value.charAt(0).toUpperCase() + value.slice(1)

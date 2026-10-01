@@ -3,6 +3,7 @@ import { openSecureCardForm } from "./mercado-pago-card.js";
 import { createQrCodeImage } from "./pix.js";
 import { hideStudentExtras, renderStudentExtras } from "./student-extras.js";
 import { renderStudentAgenda } from "./student-agenda.js";
+import { cancelPlanChange, openPlanChange } from "./student-plan.js";
 
 // Recarrega a área do aluno (definido quando a área inicia).
 let reloadStudentPanel = async () => {};
@@ -184,6 +185,93 @@ const billingCycleLabels = {
 function billingCycleLabel(access) {
   return billingCycleLabels[access.billingCycle] || "";
 }
+// Botões "Gerar QR Code PIX" e "Pagar com cartão" (cadastro novo ou
+// mudança de plano). O valor vem do servidor conforme o plano escolhido.
+function paymentControls(onRefresh) {
+  const actions = element("div", "student-payment-actions");
+  const pix = element(
+    "button",
+    "button button--primary",
+    "Gerar QR Code PIX",
+  );
+  const card = element(
+    "button",
+    "button button--primary",
+    "Pagar com cartão",
+  );
+  const paymentStatus = element("p", "student-payment-status");
+  const pixCheckout = element("div", "student-pix-checkout");
+  pix.type = card.type = "button";
+  pix.addEventListener("click", async () => {
+    pix.disabled = true;
+    paymentStatus.textContent = "Preparando o PIX seguro do Mercado Pago…";
+    try {
+      const checkout = await studentRequest("payments/pix", {});
+      const image = element("img", "pix-qr-code");
+      image.src = checkout.qrCodeBase64
+        ? `data:image/png;base64,${checkout.qrCodeBase64}`
+        : await createQrCodeImage(checkout.qrCode);
+      image.alt = "QR Code PIX gerado pelo Mercado Pago";
+      const value = Number(checkout.amount).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+      const title = element(
+        "strong",
+        "",
+        `PIX Mercado Pago — ${value}`,
+      );
+      const instructions = element(
+        "p",
+        "",
+        "Escaneie o QR Code ou copie o código PIX. O acesso será liberado automaticamente após a aprovação.",
+      );
+      const copy = element(
+        "button",
+        "button button--secondary",
+        "Copiar código PIX",
+      );
+      copy.type = "button";
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(checkout.qrCode);
+          copy.textContent = "Código PIX copiado";
+        } catch {
+          copy.textContent = "Não foi possível copiar";
+        }
+      });
+      pixCheckout.replaceChildren(title, instructions, image, copy);
+      paymentStatus.textContent =
+        "Aguardando o pagamento. A situação será consultada automaticamente.";
+    } catch (error) {
+      paymentStatus.textContent = error.message;
+      pix.disabled = false;
+    }
+  });
+  card.addEventListener("click", async () => {
+    card.disabled = true;
+    paymentStatus.textContent = "Abrindo o pagamento seguro…";
+    try {
+      await openSecureCardForm(studentRequest, {
+        onApproved() {
+          sessionStorage.setItem(
+            "farisa-student-payment-message",
+            "Pagamento confirmado. Seu cadastro foi concluído e o acesso está liberado.",
+          );
+          window.setTimeout(onRefresh, 1300);
+        },
+      });
+      paymentStatus.textContent =
+        "Conclua o pagamento no formulário protegido do Mercado Pago.";
+    } catch (error) {
+      paymentStatus.textContent = error.message;
+    } finally {
+      card.disabled = false;
+    }
+  });
+  actions.append(pix, card);
+  return [actions, paymentStatus, pixCheckout];
+}
 function renderLocked(container, data, onRefresh) {
   const plan = article("Plano e acesso");
   addLine(plan, data.access.planName, true);
@@ -203,89 +291,7 @@ function renderLocked(container, data, onRefresh) {
       payment,
       "Seu pré-cadastro está salvo. Escolha uma forma de pagamento abaixo.",
     );
-    const actions = element("div", "student-payment-actions");
-    const pix = element(
-      "button",
-      "button button--primary",
-      "Gerar QR Code PIX",
-    );
-    const card = element(
-      "button",
-      "button button--primary",
-      "Pagar com cartão",
-    );
-    const paymentStatus = element("p", "student-payment-status");
-    const pixCheckout = element("div", "student-pix-checkout");
-    pix.type = card.type = "button";
-    pix.addEventListener("click", async () => {
-      pix.disabled = true;
-      paymentStatus.textContent = "Preparando o PIX seguro do Mercado Pago…";
-      try {
-        const checkout = await studentRequest("payments/pix", {});
-        const image = element("img", "pix-qr-code");
-        image.src = checkout.qrCodeBase64
-          ? `data:image/png;base64,${checkout.qrCodeBase64}`
-          : await createQrCodeImage(checkout.qrCode);
-        image.alt = "QR Code PIX gerado pelo Mercado Pago";
-        const value = Number(checkout.amount).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        });
-        const title = element(
-          "strong",
-          "",
-          `PIX Mercado Pago — ${value}`,
-        );
-        const instructions = element(
-          "p",
-          "",
-          "Escaneie o QR Code ou copie o código PIX. O acesso será liberado automaticamente após a aprovação.",
-        );
-        const copy = element(
-          "button",
-          "button button--secondary",
-          "Copiar código PIX",
-        );
-        copy.type = "button";
-        copy.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(checkout.qrCode);
-            copy.textContent = "Código PIX copiado";
-          } catch {
-            copy.textContent = "Não foi possível copiar";
-          }
-        });
-        pixCheckout.replaceChildren(title, instructions, image, copy);
-        paymentStatus.textContent =
-          "Aguardando o pagamento. A situação será consultada automaticamente.";
-      } catch (error) {
-        paymentStatus.textContent = error.message;
-        pix.disabled = false;
-      }
-    });
-    card.addEventListener("click", async () => {
-      card.disabled = true;
-      paymentStatus.textContent = "Abrindo o pagamento seguro…";
-      try {
-        await openSecureCardForm(studentRequest, {
-          onApproved() {
-            sessionStorage.setItem(
-              "farisa-student-payment-message",
-              "Pagamento confirmado. Seu cadastro foi concluído e o acesso está liberado.",
-            );
-            window.setTimeout(onRefresh, 1300);
-          },
-        });
-        paymentStatus.textContent =
-          "Conclua o pagamento no formulário protegido do Mercado Pago.";
-      } catch (error) {
-        paymentStatus.textContent = error.message;
-      } finally {
-        card.disabled = false;
-      }
-    });
-    actions.append(pix, card);
-    payment.append(actions, paymentStatus, pixCheckout);
+    payment.append(...paymentControls(onRefresh));
     container.append(payment);
   }
   [
@@ -365,7 +371,7 @@ function exerciseCard(exercise, uploadedVideos) {
     watch.type = "button";
     watch.addEventListener("click", () => openStudentVideoViewer(video.id, exercise.name));
     links.append(watch);
-  } else if (!exercise.gifId && exercise.mediaUrl) {
+  } else if (!exercise.gifId && /^(https:\/\/|\/(?!\/))/u.test(String(exercise.mediaUrl || ""))) {
     const demo = element("a", "", "Ver demonstração");
     demo.href = exercise.mediaUrl;
     demo.target = "_blank";
@@ -526,6 +532,34 @@ function renderPortal(container, data) {
         : `Acesso até ${new Intl.DateTimeFormat("pt-BR").format(new Date(data.access.expiresAt))}`,
     ),
   );
+  // Mudar de plano (upgrade/downgrade ou outro período).
+  const planOptions = {
+    request: studentRequest,
+    reload: () => reloadStudentPanel(),
+    paymentControls: (done) => paymentControls(done),
+  };
+  const change = element("button", "button button--secondary student-plan-change", "Mudar plano");
+  change.type = "button";
+  change.addEventListener("click", () => openPlanChange(data, planOptions));
+  plan.append(change);
+  if (data.pendingChange) {
+    const pending = element("div", "student-plan-pending");
+    pending.append(
+      element(
+        "span",
+        "",
+        `⏳ Mudança para ${data.pendingChange.planName} aguardando pagamento. Você segue no plano atual até lá.`,
+      ),
+    );
+    const pay = element("button", "button button--primary", "Pagar agora");
+    pay.type = "button";
+    pay.addEventListener("click", () => openPlanChange(data, { ...planOptions, resume: true }));
+    const quit = element("button", "button button--secondary", "Desistir");
+    quit.type = "button";
+    quit.addEventListener("click", () => void cancelPlanChange(planOptions));
+    pending.append(pay, quit);
+    plan.append(pending);
+  }
   container.replaceChildren(plan);
   // "Minha agenda": atendimentos online/presenciais e agendamento pelo app.
   const agenda = element("article");
