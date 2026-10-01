@@ -23,6 +23,46 @@ const statusLabel = {
 }
 const capitalize = (value) => value.charAt(0).toUpperCase() + value.slice(1)
 
+
+// Cartão de aviso/confirmação no visual da área do aluno (no lugar das
+// janelas cinzas do navegador). Devolve true quando confirmar.
+let noticeDialog
+function noticeCard({ tone = 'success', icon = '✓', title, message = '', lines = [], confirmLabel = 'Entendi', cancelLabel = '' }) {
+  if (!noticeDialog?.isConnected) {
+    noticeDialog = el('dialog', 'student-notice-dialog')
+    noticeDialog.innerHTML = `<form method="dialog" class="student-notice">
+      <span class="student-notice-icon" data-notice-icon></span>
+      <h2 data-notice-title></h2>
+      <p data-notice-message></p>
+      <ul class="student-notice-lines" data-notice-lines></ul>
+      <div class="student-notice-actions">
+        <button class="button button--secondary" type="submit" value="cancel" data-notice-cancel></button>
+        <button class="button button--primary" type="submit" value="confirm" data-notice-confirm></button>
+      </div>
+    </form>`
+    document.body.append(noticeDialog)
+  }
+  const box = noticeDialog
+  box.className = `student-notice-dialog student-notice-dialog--${tone}`
+  box.querySelector('[data-notice-icon]').textContent = icon
+  box.querySelector('[data-notice-title]').textContent = title
+  const text = box.querySelector('[data-notice-message]')
+  text.textContent = message
+  text.hidden = !message
+  const list = box.querySelector('[data-notice-lines]')
+  list.replaceChildren(...lines.filter(Boolean).map((line) => el('li', '', line)))
+  list.hidden = !list.children.length
+  const cancel = box.querySelector('[data-notice-cancel]')
+  cancel.textContent = cancelLabel
+  cancel.hidden = !cancelLabel
+  box.querySelector('[data-notice-confirm]').textContent = confirmLabel
+  box.returnValue = 'cancel'
+  box.showModal()
+  return new Promise((resolve) => {
+    box.addEventListener('close', () => resolve(box.returnValue === 'confirm'), { once: true })
+  })
+}
+
 function appointmentRow(item, { request, reload, settings }) {
   const start = new Date(item.startsAt)
   const end = new Date(item.endsAt)
@@ -70,8 +110,20 @@ function appointmentRow(item, { request, reload, settings }) {
     const cancel = el('button', 'button button--secondary', 'Cancelar')
     cancel.type = 'button'
     cancel.addEventListener('click', async () => {
-      if (!window.confirm(`Cancelar ${item.service} de ${longDate.format(start)} às ${hourFmt.format(start)}?`))
-        return
+      const ok = await noticeCard({
+        tone: 'warn',
+        icon: '!',
+        title: 'Cancelar este atendimento?',
+        lines: [
+          item.service,
+          `${capitalize(longDate.format(start))} às ${hourFmt.format(start)}`,
+          modalityLabel(item.modality),
+        ],
+        message: 'O horário volta a ficar livre para outros alunos.',
+        confirmLabel: 'Sim, cancelar',
+        cancelLabel: 'Manter',
+      })
+      if (!ok) return
       cancel.disabled = true
       cancel.textContent = 'Cancelando…'
       try {
@@ -80,7 +132,7 @@ function appointmentRow(item, { request, reload, settings }) {
       } catch (error) {
         cancel.disabled = false
         cancel.textContent = 'Cancelar'
-        window.alert(error.message)
+        void noticeCard({ tone: 'error', icon: '×', title: 'Não foi possível cancelar', message: error.message })
       }
     })
     actions.append(cancel)
@@ -278,12 +330,25 @@ function openBooking(booking, { request, reload }) {
         notes: form.elements.notes.value,
       })
       box.close()
+      const when = new Date(created.startsAt || state.slot.startsAt)
+      const pending = created.status === 'pending'
+      void noticeCard({
+        tone: pending ? 'warn' : 'success',
+        icon: pending ? '⏳' : '✓',
+        title: pending ? 'Pedido enviado!' : 'Atendimento agendado!',
+        message: pending
+          ? 'Você será avisado no sininho quando o personal confirmar.'
+          : created.modality === 'online'
+            ? 'O botão “Entrar na chamada” aparece em Minha agenda 15 min antes.'
+            : 'Já está na sua agenda. Até lá!',
+        lines: [
+          state.service.name,
+          `${capitalize(longDate.format(when))} às ${hourFmt.format(when)}`,
+          created.modality === 'online' ? '💻 Online (vídeo)' : `📍 Presencial${created.location ? ` · ${created.location}` : ''}`,
+        ],
+        confirmLabel: 'Ótimo',
+      })
       await reload()
-      window.alert(
-        created.status === 'pending'
-          ? 'Pedido enviado! Você será avisado quando o personal confirmar.'
-          : 'Agendado! O atendimento já está na sua agenda.',
-      )
     } catch (error) {
       status.textContent = error.message
       if (/ocupado/u.test(error.message)) void loadSlots()
