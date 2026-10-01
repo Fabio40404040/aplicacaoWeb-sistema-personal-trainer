@@ -45,3 +45,24 @@ export function missingEmailConfig(env, siteUrl) {
   if (!siteUrl) missing.push('PUBLIC_SITE_URL')
   return missing
 }
+
+// Avisos gerais (ex.: agenda). Só envia pela Brevo; sem chave, não faz nada.
+export async function sendNoticeEmail(env, message) {
+  const fromEmail = env.EMAIL_FROM || env.BREVO_FROM_EMAIL
+  if (!env.BREVO_API_KEY || !fromEmail) return null
+  return fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'api-key': env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: env.BREVO_FROM_NAME || 'FARISA Personal Trainer', email: fromEmail },
+      to: [{ email: message.to }],
+      subject: message.subject,
+      htmlContent: message.html,
+      tags: ['agenda'],
+    }),
+  })
+}

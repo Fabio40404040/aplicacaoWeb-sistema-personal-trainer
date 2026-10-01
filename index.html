@@ -1740,18 +1740,37 @@
         >
           <div class="page-heading">
             <div>
-              <span class="eyebrow eyebrow--blue">Atendimentos presenciais</span>
+              <span class="eyebrow eyebrow--blue">Online e presencial</span>
               <h1>Agenda</h1>
-              <p>Organize a semana: avaliações, treinos presenciais e orientações.</p>
+              <p>Avaliações, consultas por vídeo e treinos presenciais. Os alunos agendam nos seus horários livres.</p>
             </div>
-            <button
-              class="button button--primary"
-              type="button"
-              data-agenda-new
-            >
-              <svg><use href="#icon-plus"></use></svg>Novo atendimento
-            </button>
+            <div class="agenda-heading-actions">
+              <button
+                class="button button--secondary"
+                type="button"
+                data-agenda-config
+              >
+                ⚙ Configurar agenda
+              </button>
+              <button
+                class="button button--primary"
+                type="button"
+                data-agenda-new
+              >
+                <svg><use href="#icon-plus"></use></svg>Novo atendimento
+              </button>
+            </div>
           </div>
+          <div
+            class="agenda-pending"
+            data-agenda-pending
+            hidden
+          ></div>
+          <div
+            class="agenda-setup-hint"
+            data-agenda-setup-hint
+            hidden
+          ></div>
           <div class="agenda-toolbar">
             <button
               class="icon-button"

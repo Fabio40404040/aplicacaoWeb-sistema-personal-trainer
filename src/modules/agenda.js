@@ -3,6 +3,7 @@
 import { getData, updateData } from './state.js'
 import { persistRecord, removeRecord, syncRemoteData } from './api-client.js'
 import { askConfirm, showToast } from './utils.js'
+import { bookingConfig, openBookingConfig } from './agenda-settings.js'
 
 let weekOffset = 0 // 0 = semana atual, -1 = anterior, 1 = próxima…
 
@@ -22,7 +23,12 @@ const rangeLabel = fmt({ day: '2-digit', month: 'short' })
 const isoDate = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
-const statusLabel = { scheduled: 'Agendado', completed: 'Concluído', cancelled: 'Cancelado' }
+const statusLabel = {
+  pending: 'Aguardando confirmação',
+  scheduled: 'Confirmado',
+  completed: 'Concluído',
+  cancelled: 'Cancelado',
+}
 
 // Abre o "Novo atendimento" (a mesma janela do Painel) já com a data escolhida.
 function openNewAppointment(date) {
@@ -45,6 +51,9 @@ async function changeStatus(item, status) {
     service: item.service,
     location: item.location || '',
     notes: item.notes || '',
+    modality: item.modality || 'presencial',
+    meetingUrl: item.meetingUrl || '',
+    serviceId: item.serviceId || null,
     status,
   }
   updateData((data) => {
@@ -54,7 +63,17 @@ async function changeStatus(item, status) {
   try {
     await persistRecord('appointments', record, item.id)
     await syncRemoteData()
-    showToast(status === 'completed' ? 'Atendimento concluído.' : status === 'cancelled' ? 'Atendimento cancelado.' : 'Atendimento reaberto.')
+    showToast(
+      status === 'completed'
+        ? 'Atendimento concluído.'
+        : status === 'cancelled'
+          ? item.status === 'pending'
+            ? 'Pedido recusado. O horário voltou a ficar livre.'
+            : 'Atendimento cancelado.'
+          : item.status === 'pending'
+            ? `Confirmado! ${item.student} já vê na agenda dele.`
+            : 'Atendimento reaberto.',
+    )
   } catch (error) {
     showToast(error.message)
     await syncRemoteData()
@@ -103,18 +122,48 @@ function appointmentCard(item, now) {
   const name = document.createElement('strong')
   name.textContent = item.student
   const detail = document.createElement('small')
-  detail.textContent = [item.service, item.location].filter(Boolean).join(' · ')
+  detail.textContent = [item.service, item.modality === 'online' ? '' : item.location]
+    .filter(Boolean)
+    .join(' · ')
+  const chips = document.createElement('div')
+  chips.className = 'agenda-chips'
+  const modality = document.createElement('span')
+  modality.className = `agenda-chip agenda-chip--${item.modality === 'online' ? 'online' : 'presencial'}`
+  modality.textContent = item.modality === 'online' ? '💻 Online' : '📍 Presencial'
+  chips.append(modality)
+  if (item.source === 'student') {
+    const by = document.createElement('span')
+    by.className = 'agenda-chip agenda-chip--student'
+    by.textContent = 'Agendado pelo aluno'
+    chips.append(by)
+  }
   const status = document.createElement('span')
   status.className = 'agenda-status'
   status.textContent = current ? 'Agora' : past ? 'Aguardando conclusão' : statusLabel[item.status] || 'Agendado'
   const actions = document.createElement('div')
   actions.className = 'agenda-actions'
+  if (item.modality === 'online' && item.meetingUrl && ['scheduled', 'pending'].includes(item.status)) {
+    const join = document.createElement('a')
+    join.className = 'agenda-action agenda-action--join'
+    join.href = item.meetingUrl
+    join.target = '_blank'
+    join.rel = 'noopener'
+    join.textContent = '▶'
+    join.title = 'Abrir a chamada de vídeo'
+    join.setAttribute('aria-label', join.title)
+    actions.append(join)
+  }
   actions.append(
     actionButton('✎', 'Editar atendimento', () =>
       window.dispatchEvent(new CustomEvent('farisa:edit-appointment', { detail: item.id })),
     ),
   )
-  if (item.status === 'scheduled') {
+  if (item.status === 'pending') {
+    actions.append(
+      actionButton('✓', 'Confirmar pedido', () => changeStatus(item, 'scheduled'), 'agenda-action--done'),
+      actionButton('⊘', 'Recusar pedido', () => changeStatus(item, 'cancelled'), 'agenda-action--cancel'),
+    )
+  } else if (item.status === 'scheduled') {
     actions.append(
       actionButton('✓', 'Marcar como concluído', () => changeStatus(item, 'completed'), 'agenda-action--done'),
       actionButton('⊘', 'Cancelar atendimento', () => changeStatus(item, 'cancelled'), 'agenda-action--cancel'),
@@ -125,7 +174,7 @@ function appointmentCard(item, now) {
   actions.append(
     actionButton('×', 'Excluir atendimento', () => removeAppointment(item), 'agenda-action--delete'),
   )
-  card.append(time, name, detail, status, actions)
+  card.append(time, name, detail, chips, status, actions)
   if (item.notes) {
     const notes = document.createElement('p')
     notes.className = 'agenda-notes'
@@ -189,6 +238,61 @@ function renderAgenda() {
   )
 }
 
+// Pedidos de agendamento esperando sua resposta (no topo da Agenda).
+function renderPending() {
+  const box = document.querySelector('[data-agenda-pending]')
+  if (!box) return
+  const now = new Date()
+  const pending = (getData().appointments || [])
+    .filter((item) => item.status === 'pending' && new Date(item.endsAt) >= now)
+    .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))
+  box.hidden = !pending.length
+  if (!pending.length) return box.replaceChildren()
+  const title = document.createElement('strong')
+  title.textContent = `🗓️ ${pending.length} pedido${pending.length === 1 ? '' : 's'} de agendamento aguardando sua confirmação`
+  const list = document.createElement('div')
+  list.className = 'agenda-pending-list'
+  pending.forEach((item) => {
+    const start = new Date(item.startsAt)
+    const row = document.createElement('div')
+    row.className = 'agenda-pending-item'
+    const info = document.createElement('span')
+    info.textContent = `${item.student} · ${item.service} · ${item.modality === 'online' ? 'Online' : 'Presencial'} · ${dayName.format(start)}, ${dayNumber.format(start)} às ${hour.format(start)}`
+    const accept = document.createElement('button')
+    accept.type = 'button'
+    accept.className = 'button button--primary'
+    accept.textContent = 'Confirmar'
+    accept.addEventListener('click', () => changeStatus(item, 'scheduled'))
+    const decline = document.createElement('button')
+    decline.type = 'button'
+    decline.className = 'button button--secondary'
+    decline.textContent = 'Recusar'
+    decline.addEventListener('click', () => changeStatus(item, 'cancelled'))
+    row.append(info, accept, decline)
+    list.append(row)
+  })
+  box.replaceChildren(title, list)
+}
+
+// Dica enquanto o agendamento pelo aluno está desligado.
+function renderSetupHint() {
+  const box = document.querySelector('[data-agenda-setup-hint]')
+  if (!box) return
+  const config = bookingConfig()
+  box.hidden = !config || config.settings.enabled
+  if (box.hidden) return
+  box.replaceChildren()
+  const text = document.createElement('span')
+  text.textContent =
+    'Seus alunos ainda não agendam pelo app. Defina seus horários livres, os atendimentos online/presenciais e quanto cada plano dá direito — leva 2 minutos.'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'button button--primary'
+  button.textContent = 'Configurar agora'
+  button.addEventListener('click', () => void openBookingConfig())
+  box.append(text, button)
+}
+
 function paintMenuCount() {
   const badge = document.querySelector('[data-agenda-count]')
   if (!badge) return
@@ -196,16 +300,23 @@ function paintMenuCount() {
   const today = (getData().appointments || []).filter(
     (item) => item.status === 'scheduled' && sameDay(new Date(item.startsAt), now),
   ).length
-  badge.hidden = today === 0
-  badge.textContent = String(today)
-  badge.title = `${today} atendimento(s) hoje`
+  const pending = (getData().appointments || []).filter(
+    (item) => item.status === 'pending' && new Date(item.endsAt) >= now,
+  ).length
+  const total = today + pending
+  badge.hidden = total === 0
+  badge.textContent = String(total)
+  badge.title = `${today} atendimento(s) hoje${pending ? ` · ${pending} pedido(s) aguardando confirmação` : ''}`
 }
 
 export function initAgenda() {
   const refresh = () => {
     renderAgenda()
+    renderPending()
+    renderSetupHint()
     paintMenuCount()
   }
+  window.addEventListener('farisa:booking-config', renderSetupHint)
   document.querySelector('[data-agenda-prev]')?.addEventListener('click', () => {
     weekOffset -= 1
     renderAgenda()

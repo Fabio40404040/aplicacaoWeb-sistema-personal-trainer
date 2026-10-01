@@ -157,11 +157,18 @@ function studentNotifications(data) {
     if (days < 0 || days > 7) return
     if (days === 0 && parseDate(appointment.endsAt) < now) return
     items.push({
-      id: `agenda:${appointment.id}:${appointment.startsAt}`,
+      id: `agenda:${appointment.id}:${appointment.startsAt}:${appointment.status}`,
       tone: days === 0 ? 'warn' : 'info',
-      icon: '📅',
+      icon: appointment.modality === 'online' ? '💻' : '📅',
       title: `${days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : shortDate(start)} às ${timeOf(start)} · ${appointment.service}`,
-      detail: appointment.location || 'Atendimento com o personal.',
+      detail:
+        appointment.status === 'pending'
+          ? 'Aguardando confirmação do personal.'
+          : appointment.modality === 'online'
+            ? 'Online · o botão “Entrar na chamada” aparece em Minha agenda.'
+            : appointment.location || 'Atendimento presencial com o personal.',
+      onClick: () =>
+        document.querySelector('#student-agenda')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     })
   })
 

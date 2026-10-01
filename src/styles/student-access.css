@@ -939,3 +939,320 @@
 .student-workout .student-exercise-card p {
   margin-top: 0;
 }
+
+/* ---------- Minha agenda (área do aluno) ---------- */
+.student-agenda-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+.student-agenda-head h2 {
+  margin-bottom: 2px;
+}
+.student-agenda-sub,
+.student-agenda-hint {
+  color: #8ea3bd;
+  font-size: 0.85rem;
+}
+.student-agenda-quotas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.student-agenda-quota {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #40546e;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+.student-agenda-quota strong {
+  color: #f5f7fb;
+  font-weight: 600;
+}
+.student-agenda-quota small {
+  color: #8ea3bd;
+}
+.student-agenda-list {
+  display: grid;
+  gap: 10px;
+}
+.student-agenda-item {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #40546e;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.student-agenda-item--cancelled,
+.student-agenda-item--completed {
+  opacity: 0.7;
+}
+.student-agenda-date {
+  display: grid;
+  place-items: center;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: rgba(61, 139, 253, 0.16);
+  text-align: center;
+}
+.student-agenda-date small {
+  color: #9cc2ff;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.student-agenda-date strong {
+  color: #f5f7fb;
+  font-size: 1.05rem;
+}
+.student-agenda-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.student-agenda-info > strong {
+  color: #f5f7fb;
+}
+.student-agenda-info > small {
+  color: #b8c7d9;
+}
+.student-agenda-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.student-agenda-actions {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  max-width: 220px;
+  text-align: right;
+}
+.student-agenda-empty {
+  padding: 14px;
+  border: 1px dashed #40546e;
+  border-radius: 12px;
+  color: #b8c7d9;
+}
+.student-agenda-history {
+  margin-top: 12px;
+}
+.student-agenda-history summary {
+  cursor: pointer;
+  color: #9cc2ff;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+@media (max-width: 640px) {
+  .student-agenda-item {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+  .student-agenda-actions {
+    grid-column: 1 / -1;
+    justify-items: stretch;
+    max-width: none;
+    text-align: left;
+  }
+  .student-agenda-head > .button {
+    width: 100%;
+  }
+}
+
+/* Janela "Agendar atendimento" */
+.student-booking-dialog {
+  width: min(640px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 1px solid #40546e;
+  border-radius: 16px;
+  background: #13202f;
+  color: #e6edf6;
+}
+.student-booking-dialog::backdrop {
+  background: rgba(3, 10, 20, 0.7);
+}
+.student-booking {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 26px);
+}
+.student-booking header,
+.student-booking footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2b3c52;
+}
+.student-booking footer {
+  justify-content: flex-end;
+  border-top: 1px solid #2b3c52;
+  border-bottom: 0;
+}
+.student-booking header h2 {
+  color: #f5f7fb;
+  font-size: 1.2rem;
+}
+.student-booking .icon-button {
+  color: #e6edf6;
+  background: transparent;
+}
+.student-booking-body {
+  display: grid;
+  gap: 18px;
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+.student-booking-body h3 {
+  margin-bottom: 8px;
+  color: #9cc2ff;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.student-booking .field span {
+  color: #b8c7d9;
+}
+.student-booking textarea {
+  background: #0d1724;
+  color: #f5f7fb;
+  border-color: #40546e;
+}
+.booking-services {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+}
+.booking-service,
+.booking-day,
+.booking-time,
+.booking-toggle button {
+  border: 1px solid #40546e;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e6edf6;
+  font: inherit;
+  cursor: pointer;
+}
+.booking-service {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  text-align: left;
+}
+.booking-service small {
+  color: #8ea3bd;
+}
+.booking-quota {
+  color: #7ee2b8;
+  font-size: 0.78rem;
+}
+.booking-service:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.booking-service:disabled .booking-quota {
+  color: #f0b46b;
+}
+.booking-service.is-active,
+.booking-day.is-active,
+.booking-time.is-active,
+.booking-toggle button.is-active {
+  border-color: #3d8bfd;
+  background: rgba(61, 139, 253, 0.2);
+}
+.booking-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.booking-toggle button {
+  padding: 10px 14px;
+}
+.booking-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+}
+.booking-day {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: center;
+  gap: 1px;
+  min-width: 76px;
+  padding: 8px 10px;
+  scroll-snap-align: start;
+}
+.booking-day small {
+  color: #9cc2ff;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.booking-day span {
+  color: #8ea3bd;
+  font-size: 0.7rem;
+}
+.booking-times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.booking-time {
+  padding: 9px 6px;
+  font-weight: 600;
+}
+.booking-empty {
+  color: #8ea3bd;
+  font-size: 0.9rem;
+}
+.booking-summary {
+  color: #f5f7fb;
+  font-weight: 600;
+}
+.booking-summary:empty,
+.student-booking [role="status"]:empty {
+  display: none;
+}
+.student-booking [role="status"] {
+  color: #ffb4a8;
+}
+.student-booking-body {
+  overflow-x: hidden;
+}
+.student-booking .eyebrow {
+  color: #9cc2ff;
+}
+.student-booking textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 520px) {
+  .booking-services {
+    grid-template-columns: 1fr;
+  }
+  .student-booking-body {
+    padding: 16px;
+  }
+}
+.student-agenda-actions a.button {
+  color: #fff;
+  text-decoration: none;
+}
+.student-booking [data-booking-submit]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -3410,3 +3410,303 @@ video.gif-lightbox-image {
   border-color: var(--blue-600, #2563eb);
   background: var(--blue-50, #eff6ff);
 }
+
+/* ---------- Agenda: selos de modalidade e situação ---------- */
+.agenda-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.agenda-chip--online {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+.agenda-chip--presencial {
+  background: #e0f2fe;
+  color: #075985;
+}
+.agenda-chip--status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+.agenda-chip--status-scheduled {
+  background: #dcfce7;
+  color: #166534;
+}
+.agenda-chip--status-completed {
+  background: #e2e8f0;
+  color: #334155;
+}
+.agenda-chip--status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.agenda-chip--student {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* ---------- Agenda do personal: online e presencial ---------- */
+.agenda-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.agenda-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.agenda-item .agenda-chip {
+  font-size: 0.64rem;
+  padding: 1px 6px;
+  white-space: normal;
+}
+.agenda-item {
+  min-width: 0;
+}
+.agenda-item--pending {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+.agenda-item--pending .agenda-status {
+  color: #b45309;
+}
+.agenda-action--join {
+  display: inline-grid;
+  place-items: center;
+  color: #6d28d9;
+  border-color: #c4b5fd;
+  text-decoration: none;
+}
+.agenda-pending,
+.agenda-setup-hint {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-lg, 16px);
+  background: #fffbeb;
+}
+.agenda-pending-list {
+  display: grid;
+  gap: 8px;
+}
+.agenda-pending-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.agenda-pending-item span {
+  flex: 1 1 260px;
+  color: var(--ink-700);
+  font-size: 0.9rem;
+}
+.agenda-pending-item .button {
+  padding: 7px 14px;
+  min-height: 0;
+}
+.agenda-setup-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  border-color: var(--blue-100, #dbeafe);
+  background: var(--blue-50, #eff6ff);
+}
+.agenda-setup-hint span {
+  flex: 1 1 320px;
+  color: var(--ink-700);
+}
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-500);
+  font-size: 0.78rem;
+}
+
+/* Janela "Configurar agenda" */
+.modal.booking-config-dialog {
+  width: min(96vw, 900px);
+}
+.booking-config-body {
+  display: grid;
+  gap: 22px;
+}
+.booking-config-section {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.booking-config-section:last-of-type {
+  border-bottom: 0;
+}
+.booking-config-section h3 {
+  font-size: 1rem;
+}
+.booking-help {
+  margin: -6px 0 0;
+  color: var(--ink-500);
+  font-size: 0.85rem;
+}
+.booking-config-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.booking-switches {
+  display: grid;
+  gap: 10px;
+}
+.booking-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.booking-switch input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--blue-600);
+}
+.booking-switch span {
+  display: grid;
+}
+.booking-switch small {
+  color: var(--ink-500);
+}
+.booking-week {
+  display: grid;
+  gap: 8px;
+}
+.booking-day-config {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.booking-day-head {
+  display: grid;
+  gap: 6px;
+}
+.booking-add-range {
+  justify-self: start;
+  padding: 4px 10px;
+  min-height: 0;
+  font-size: 0.8rem;
+}
+.booking-rule-list {
+  display: grid;
+  gap: 6px;
+}
+.booking-day-off {
+  color: var(--ink-500);
+  padding-top: 6px;
+}
+.booking-rule,
+.booking-block-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.booking-rule input[type='time'],
+.booking-block-row input[type='date'] {
+  width: auto;
+}
+.booking-rule select {
+  width: auto;
+  min-width: 170px;
+}
+.booking-block-row input[data-role='reason'] {
+  flex: 1 1 200px;
+}
+.booking-rule-sep {
+  color: var(--ink-500);
+  font-size: 0.85rem;
+}
+.booking-remove {
+  width: 32px;
+  height: 32px;
+}
+.booking-service-list {
+  display: grid;
+  gap: 10px;
+}
+.booking-service-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 120px auto 32px;
+  gap: 6px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.booking-service-row input[name='description'] {
+  grid-column: 1 / -1;
+}
+.booking-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.booking-quota-wrap {
+  overflow-x: auto;
+}
+.booking-quota-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.booking-quota-table th,
+.booking-quota-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.booking-quota-table select {
+  width: auto;
+  min-width: 96px;
+}
+.booking-block-list {
+  display: grid;
+  gap: 6px;
+}
+@media (max-width: 720px) {
+  .booking-config-grid {
+    grid-template-columns: 1fr;
+  }
+  .booking-day-config {
+    grid-template-columns: 1fr;
+  }
+  .booking-day-head {
+    display: flex;
+    justify-content: space-between;
+  }
+  .booking-service-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .booking-service-row input[name='name'] {
+    grid-column: 1 / -1;
+  }
+}
+.agenda-day-list {
+  min-width: 0;
+}

@@ -19,6 +19,7 @@ import { initProgressPicker } from './modules/progress-picker.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
+import { initAgendaSettings } from './modules/agenda-settings.js'
 import { initWhatsappFloat } from './modules/whatsapp.js'
 import { initExerciseHub } from './modules/exercise-hub.js'
 import { initPlanPreview } from './modules/plan-preview.js'
@@ -48,6 +49,7 @@ initialize('biblioteca unificada', initExerciseHub)
 initialize('perfil e notificações', initPersonalExtras)
 initialize('check-ins', initCheckins)
 initialize('agenda', initAgenda)
+initialize('configuração da agenda', initAgendaSettings)
 initialize('formulários', initForms)
 initialize('atalhos', initShortcuts)
 initialize('sincronização remota', initRemoteSync)

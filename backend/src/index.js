@@ -10,6 +10,15 @@ import { studentRecovery } from "./routes/student-recovery.js";
 import { dashboard } from "./routes/dashboard.js";
 import { answerCheckin } from "./routes/checkins.js";
 import {
+  cancelStudentBooking,
+  createStudentBooking,
+  getBookingConfig,
+  saveBookingConfig,
+  studentBooking,
+  studentBookingSlots,
+  trainerFreeSlots,
+} from "./routes/booking.js";
+import {
   trainerProfile,
   updateStudentProfile,
   updateTrainerProfile,
@@ -167,6 +176,19 @@ async function handle(request, env) {
       }
       if (request.method === "POST" && route === "student/profile")
         return updateStudentProfile(db, session.sub, await readJson(request));
+      if (request.method === "GET" && route === "student/booking")
+        return studentBooking(db, session.sub);
+      if (request.method === "GET" && route === "student/booking/slots")
+        return studentBookingSlots(db, session.sub, url);
+      if (request.method === "POST" && route === "student/booking")
+        return createStudentBooking(db, session.sub, await readJson(request), env);
+      if (
+        request.method === "POST" &&
+        segments[1] === "booking" &&
+        segments[2] &&
+        segments[3] === "cancel"
+      )
+        return cancelStudentBooking(db, session.sub, segments[2], env);
       if (request.method === "POST" && route === "student/checkins")
         return submitCheckin(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/plan-request")
@@ -225,6 +247,12 @@ async function handle(request, env) {
       segments[2] === "feedback"
     )
       return answerCheckin(db, session.sub, segments[1], await readJson(request));
+    if (request.method === "GET" && route === "booking/config")
+      return getBookingConfig(db, session.sub);
+    if (request.method === "PUT" && route === "booking/config")
+      return saveBookingConfig(db, session.sub, await readJson(request));
+    if (request.method === "GET" && route === "booking/slots")
+      return trainerFreeSlots(db, session.sub, url);
     if (request.method === "GET" && route === "profile") {
       const profile = await trainerProfile(db, session.sub);
       return profile

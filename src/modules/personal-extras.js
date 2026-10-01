@@ -179,7 +179,25 @@ function trainerNotifications() {
         tone: today ? 'info' : 'neutral',
         icon: '📅',
         title: `${today ? 'Hoje' : 'Amanhã'} às ${timeOf(start)} · ${item.student}`,
-        detail: [item.service, item.location].filter(Boolean).join(' · '),
+        detail: [item.service, item.modality === 'online' ? 'Online' : item.location]
+          .filter(Boolean)
+          .join(' · '),
+        href: '#agenda',
+      })
+    })
+
+  // Pedidos de agendamento feitos pelo aluno (aguardando sua confirmação).
+  ;(data.appointments || [])
+    .filter((item) => item.status === 'pending')
+    .forEach((item) => {
+      const start = parseDate(item.startsAt)
+      if (!start || start < now) return
+      items.push({
+        id: `pedido:${item.id}`,
+        tone: 'warn',
+        icon: '🗓️',
+        title: `${item.student} pediu ${item.service}`,
+        detail: `${shortDate(start)} às ${timeOf(start)} · ${item.modality === 'online' ? 'Online' : 'Presencial'} · Confirme ou recuse na Agenda.`,
         href: '#agenda',
       })
     })

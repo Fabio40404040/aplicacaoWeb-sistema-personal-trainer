@@ -95,14 +95,19 @@ const configs = {
   },
   appointments: {
     select: `SELECT ap.id,ap.student_id AS "studentId",s.name AS student,ap.starts_at AS "startsAt",
-      ap.ends_at AS "endsAt",ap.service,ap.location,ap.notes,ap.status
+      ap.ends_at AS "endsAt",ap.service,ap.location,ap.notes,ap.status,ap.modality,
+      ap.meeting_url AS "meetingUrl",ap.service_id AS "serviceId",ap.source
       FROM appointments ap JOIN students s ON s.id=ap.student_id
       WHERE ap.trainer_id=$1 ORDER BY ap.starts_at`,
-    insert: `INSERT INTO appointments (trainer_id,student_id,starts_at,ends_at,service,location,notes,status)
-      VALUES ($1,(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1),$3,$4,$5,$6,$7,$8)
-      RETURNING id,student_id AS "studentId",starts_at AS "startsAt",ends_at AS "endsAt",service,location,notes,status`,
+    insert: `INSERT INTO appointments (trainer_id,student_id,starts_at,ends_at,service,location,notes,status,modality,meeting_url,service_id)
+      VALUES ($1,(SELECT id FROM students WHERE trainer_id=$1 AND name=$2 LIMIT 1),$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      RETURNING id,student_id AS "studentId",starts_at AS "startsAt",ends_at AS "endsAt",service,location,notes,status,
+      modality,meeting_url AS "meetingUrl",service_id AS "serviceId",source`,
     update: `UPDATE appointments SET student_id=(SELECT id FROM students WHERE trainer_id=$1 AND name=$3 LIMIT 1),
-      starts_at=$4,ends_at=$5,service=$6,location=$7,notes=$8,status=$9,updated_at=CURRENT_TIMESTAMP
+      starts_at=$4,ends_at=$5,service=$6,location=$7,notes=$8,status=$9,modality=$10,meeting_url=$11,
+      service_id=COALESCE($12,service_id),
+      cancelled_by=CASE WHEN $9='cancelled' THEN COALESCE(cancelled_by,'trainer') ELSE NULL END,
+      updated_at=CURRENT_TIMESTAMP
       WHERE id=$2 AND trainer_id=$1 RETURNING id`,
     values: (b) => [
       b.student,
@@ -111,9 +116,12 @@ const configs = {
       b.service,
       b.location || null,
       b.notes || null,
-      ["scheduled", "completed", "cancelled"].includes(b.status)
+      ["pending", "scheduled", "completed", "cancelled"].includes(b.status)
         ? b.status
         : "scheduled",
+      b.modality === "online" ? "online" : "presencial",
+      /^https?:\/\//u.test(String(b.meetingUrl || "")) ? String(b.meetingUrl).slice(0, 500) : null,
+      b.serviceId || null,
     ],
   },
 };

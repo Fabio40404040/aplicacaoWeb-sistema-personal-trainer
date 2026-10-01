@@ -257,3 +257,10 @@ export function saveCheckinFeedback(id, feedback) {
     body: JSON.stringify({ feedback }),
   });
 }
+// Agenda online/presencial: horários, tipos de atendimento e cota por plano.
+export function fetchBookingConfig() {
+  return request("/booking/config");
+}
+export function saveBookingConfig(config) {
+  return request("/booking/config", { method: "PUT", body: JSON.stringify(config) });
+}
