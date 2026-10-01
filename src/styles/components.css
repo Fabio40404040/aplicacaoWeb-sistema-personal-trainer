@@ -3212,3 +3212,60 @@ video.gif-lightbox-image {
     width: 100%;
   }
 }
+
+/* Treinos Prontos: prévia do site no mesmo formato dos treinos dos compradores */
+.ready-library-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.ready-library-actions .button {
+  white-space: nowrap;
+}
+.ready-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.ready-card-tags .tag {
+  margin: 0;
+}
+.tag--published {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+.tag--draft {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+.tag--preview {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+.media-library-card--preview {
+  grid-column: auto;
+  border: 2px solid #7c5cdb;
+  background: var(--white, #fff);
+  box-shadow: 0 8px 22px rgba(124, 92, 219, 0.12);
+}
+@media (max-width: 720px) {
+  .ready-library-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    width: 100%;
+  }
+  .ready-library-actions .button {
+    flex: 1 1 auto;
+  }
+}
+/* Cartões com o mesmo tamanho, mesmo quando há só um treino */
+[data-ready-workout-grid] {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  align-items: stretch;
+}
+[data-ready-workout-grid] .media-library-card h3 {
+  font-weight: 700;
+}

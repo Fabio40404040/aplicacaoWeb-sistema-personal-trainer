@@ -1067,21 +1067,26 @@ function renderReadyWizard(form) {
       : `Montando Treino ${form.readyActiveSession}`
 }
 
-function openReadyProgramDialog(program = null) {
+// asPreview: "+ Montar prévia do site" usa o mesmo montador do "+ Novo
+// treino"; ao salvar, o treino já fica marcado como a prévia do site.
+function openReadyProgramDialog(program = null, { asPreview = false } = {}) {
   const dialog = document.querySelector('[data-ready-program-dialog]')
   const form = dialog.querySelector('form')
   editingReadyProgram = program?.id || null
+  form.readyAsPreview = !program && asPreview
   form.reset()
   form.querySelector('h2').textContent = program
     ? 'Editar treino pronto'
-    : 'Montar treino pronto completo'
+    : asPreview
+      ? 'Montar prévia do site'
+      : 'Montar treino pronto completo'
   form.elements.name.value = program?.name || ''
   form.elements.goal.value = program?.goal || 'Hipertrofia'
   form.elements.level.value = program?.level || 'Intermediário'
   form.elements.durationWeeks.value = Number.parseInt(program?.duration, 10) || 12
   form.elements.description.value = program?.description || ''
   form.elements.colorTheme.value = program?.colorTheme || 'blue'
-  form.elements.published.checked = program ? Boolean(program.published) : true
+  form.elements.published.checked = program ? Boolean(program.published) : !asPreview
   let prescriptions
   try {
     prescriptions =
@@ -1118,7 +1123,7 @@ function createReadyWorkoutLibraryPanel() {
   const panel = document.createElement('article')
   panel.className = 'panel media-library-panel'
   panel.dataset.readyWorkoutLibrary = ''
-  panel.innerHTML = `<div class="panel-heading"><div><span class="eyebrow eyebrow--blue">Produto de valor único</span><h2>Treinos Prontos — acesso permanente</h2><p>Monte o PDF completo dentro do sistema. Ao publicar, ele aparece automaticamente para todos os compradores desta modalidade.</p></div><button class="button button--primary workout-create-button" type="button" data-new-ready-program>+ Novo treino</button></div><div class="media-library-grid" data-ready-workout-grid></div>`
+  panel.innerHTML = `<div class="panel-heading"><div><span class="eyebrow eyebrow--blue">Produto de valor único</span><h2>Treinos Prontos — acesso permanente</h2><p>Monte o PDF completo dentro do sistema. Ao publicar, ele aparece automaticamente para todos os compradores desta modalidade.</p></div><div class="ready-library-actions"><button class="button button--secondary" type="button" data-new-ready-preview>+ Montar prévia do site</button><button class="button button--primary workout-create-button" type="button" data-new-ready-program>+ Novo treino</button></div></div><div class="media-library-grid" data-ready-workout-grid></div>`
   page.append(panel)
 
   const dialog = document.createElement('dialog')
@@ -1158,7 +1163,7 @@ function createReadyWorkoutLibraryPanel() {
     const button = form.querySelector('[type="submit"]')
     button.disabled = true
     try {
-      await persistReadyProgram(
+      const saved = await persistReadyProgram(
         {
           name: form.elements.name.value,
           goal: form.elements.goal.value,
@@ -1171,11 +1176,15 @@ function createReadyWorkoutLibraryPanel() {
         },
         editingReadyProgram,
       )
+      const savedId = saved?.id || saved?.data?.id
+      if (form.readyAsPreview && savedId) await setReadyProgramSitePreview(savedId, true)
       dialog.close()
       showToast(
-        form.elements.published.checked
-          ? 'Treino pronto publicado para os compradores.'
-          : 'Treino pronto salvo como rascunho.',
+        form.readyAsPreview
+          ? 'Prévia do site salva. O “Ver prévia” do site já mostra este treino.'
+          : form.elements.published.checked
+            ? 'Treino pronto publicado para os compradores.'
+            : 'Treino pronto salvo como rascunho.',
       )
       window.dispatchEvent(new Event('farisa:remote-refresh'))
     } catch (error) {
@@ -1187,43 +1196,22 @@ function createReadyWorkoutLibraryPanel() {
   panel
     .querySelector('[data-new-ready-program]')
     .addEventListener('click', () => openReadyProgramDialog())
+  panel
+    .querySelector('[data-new-ready-preview]')
+    .addEventListener('click', () => openReadyProgramDialog(null, { asPreview: true }))
   renderReadyWorkoutLibrary()
 }
 
 function renderReadyWorkoutLibrary() {
   const grid = document.querySelector('[data-ready-workout-grid]')
   if (!grid) return
-  // A prévia do site fica separada, no topo, para não se misturar com os
-  // treinos que vão para quem comprou Treinos Prontos.
+  // Prévia do site e treinos dos compradores no mesmo formato de cartão; a
+  // prévia vem primeiro e ganha só a borda roxa e a etiqueta "Prévia do site".
   const programs = [...(getData().readyPrograms || [])].sort(
     (a, b) => Number(Boolean(b.sitePreview)) - Number(Boolean(a.sitePreview)),
   )
   grid.replaceChildren()
-  const hasPreview = programs.some((program) => program.sitePreview)
-  const addSectionTitle = (title, text) => {
-    const heading = document.createElement('div')
-    heading.className = 'ready-library-section'
-    const strong = document.createElement('strong')
-    strong.textContent = title
-    const small = document.createElement('small')
-    small.textContent = text
-    heading.append(strong, small)
-    grid.append(heading)
-  }
-  let buyersTitleAdded = false
-  if (hasPreview)
-    addSectionTitle(
-      'Prévia do site',
-      'Aparece para os visitantes no botão “Ver prévia” do card Treinos Prontos.',
-    )
   programs.forEach((program) => {
-    if (hasPreview && !program.sitePreview && !buyersTitleAdded) {
-      buyersTitleAdded = true
-      addSectionTitle(
-        'Treinos dos compradores',
-        'Os publicados aparecem para quem comprou Treinos Prontos.',
-      )
-    }
     try {
       program.exercisePrescriptions = JSON.parse(program.exercisePrescriptionsJson || '[]')
     } catch {
@@ -1234,15 +1222,12 @@ function renderReadyWorkoutLibrary() {
     ].sort()
     const card = document.createElement('section')
     card.className = 'media-library-card'
-    card.innerHTML = `<div><span class="tag">${program.published ? 'Publicado para compradores' : 'Rascunho'}</span>${program.sitePreview ? ' <span class="tag tag--preview">Prévia do site</span>' : ''}<h3></h3><p></p><small></small></div><div class="media-library-actions"></div>`
+    card.innerHTML = `<div><div class="ready-card-tags"><span class="tag ${program.published ? 'tag--published' : 'tag--draft'}">${program.published ? 'Publicado' : 'Rascunho'}</span>${program.sitePreview ? '<span class="tag tag--preview">Prévia do site</span>' : ''}</div><h3></h3><p></p><small></small></div><div class="media-library-actions"></div>`
     if (program.sitePreview) {
       card.classList.add('media-library-card--preview')
-      const note = document.createElement('p')
-      note.className = 'ready-preview-note'
-      note.textContent = program.published
-        ? 'Este treino também está liberado para os compradores.'
-        : 'Só os visitantes do site veem este treino. Ele não vai para os compradores.'
-      card.querySelector('div').append(note)
+      card.title = program.published
+        ? 'Prévia do site — também liberada para os compradores.'
+        : 'Prévia do site — só os visitantes veem; não vai para os compradores.'
     }
     card.querySelector('h3').textContent = program.name
     card.querySelector('p').textContent =
@@ -1324,7 +1309,7 @@ function renderReadyWorkoutLibrary() {
     sitePreview.className = 'button button--secondary'
     sitePreview.type = 'button'
     sitePreview.textContent = program.sitePreview
-      ? 'Remover da prévia do site'
+      ? 'Tirar da prévia do site'
       : 'Usar como prévia do site'
     sitePreview.addEventListener('click', async () => {
       sitePreview.disabled = true
@@ -1344,7 +1329,7 @@ function renderReadyWorkoutLibrary() {
         sitePreview.disabled = false
       }
     })
-    actions.append(toggle, pdf, sitePreview, edit, remove)
+    actions.append(toggle, sitePreview, pdf, edit, remove)
     grid.append(card)
   })
   if (!programs.length) {
