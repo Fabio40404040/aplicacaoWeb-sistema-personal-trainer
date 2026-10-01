@@ -1135,3 +1135,32 @@
     transition: none;
   }
 }
+
+/* Botão do WhatsApp com a palavra "Dúvidas?" ao lado do ícone */
+.whatsapp-float {
+  grid-auto-flow: column;
+  gap: 8px;
+  width: auto;
+  padding: 0 20px 0 14px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.whatsapp-float-label {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .whatsapp-float {
+    width: auto;
+    padding: 0 16px 0 12px;
+  }
+  .whatsapp-float svg {
+    width: 28px;
+    height: 28px;
+  }
+  .whatsapp-float-label {
+    font-size: 0.92rem;
+  }
+}
