@@ -1976,14 +1976,20 @@
                 <option value="all">Todos os check-ins</option>
                 <option value="answered">Respondidos</option>
               </select>
-              <select
-                data-checkin-filter-student
-                aria-label="Filtrar por aluno"
-              ></select>
             </div>
           </div>
+          <div class="toolbar workout-toolbar">
+            <label class="search-box"
+              ><svg><use href="#icon-search"></use></svg
+              ><input
+                type="search"
+                placeholder="Buscar check-in pelo nome do aluno"
+                aria-label="Buscar check-in pelo nome do aluno"
+                data-checkin-search
+            /></label>
+          </div>
           <div
-            class="checkin-list"
+            class="assessment-groups"
             data-checkin-list
           ></div>
         </section>
@@ -2002,8 +2008,23 @@
               class="student-select"
               data-progress-student
               aria-label="Selecionar aluno"
+              hidden
             ></select>
           </div>
+          <div class="toolbar workout-toolbar">
+            <label class="search-box"
+              ><svg><use href="#icon-search"></use></svg
+              ><input
+                type="search"
+                placeholder="Buscar aluno para ver a evolução"
+                aria-label="Buscar aluno para ver a evolução"
+                data-progress-search
+            /></label>
+          </div>
+          <div
+            class="assessment-groups progress-picker"
+            data-progress-picker
+          ></div>
           <div class="progress-summary">
             <article class="progress-profile panel">
               <div class="profile-large">

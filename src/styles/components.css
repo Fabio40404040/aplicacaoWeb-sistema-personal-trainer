@@ -3354,3 +3354,59 @@ video.gif-lightbox-image {
   color: var(--ink-500);
   font-size: 0.92rem;
 }
+
+/* Check-ins agrupados por aluno dentro de "Todos os alunos" */
+.checkin-group > summary .assessment-group-info {
+  flex: 1;
+}
+.checkin-group > summary .checkin-status {
+  flex: 0 0 auto;
+}
+.checkin-group-body {
+  padding: 4px 14px 14px;
+}
+
+/* Evolução: escolha do aluno */
+.progress-picker {
+  margin-bottom: 18px;
+}
+.progress-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 10px;
+}
+.progress-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.progress-picker-item span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.progress-picker-item strong,
+.progress-picker-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress-picker-item small {
+  color: var(--ink-500);
+  font-size: 0.8rem;
+}
+.progress-picker-item:hover {
+  border-color: var(--blue-600, #2563eb);
+}
+.progress-picker-item.is-active {
+  border-color: var(--blue-600, #2563eb);
+  background: var(--blue-50, #eff6ff);
+}

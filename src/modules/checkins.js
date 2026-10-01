@@ -5,6 +5,7 @@ import { getData } from './state.js'
 import { saveCheckinFeedback, syncRemoteData } from './api-client.js'
 import { showToast } from './utils.js'
 import { paintAvatar, parseDate } from './profile-kit.js'
+import { allStudentsFolder, emptyLine, normalize, plural } from './student-folders.js'
 
 const dateTime = (date) =>
   new Intl.DateTimeFormat('pt-BR', {
@@ -203,47 +204,82 @@ function isTyping(container) {
   )
 }
 
+let checkinAllOpen = false
+const openCheckinStudents = new Set()
+
 function renderCheckinsPage() {
   const list = document.querySelector('[data-checkin-list]')
   const statusFilter = document.querySelector('[data-checkin-filter-status]')
-  const studentFilter = document.querySelector('[data-checkin-filter-student]')
-  if (!list || !statusFilter || !studentFilter) return
-  const checkins = getData().checkins || []
-
-  // Filtro por aluno (mantém a escolha atual).
-  const chosen = studentFilter.value
-  const names = [...new Set(checkins.map((checkin) => checkin.student))].sort((a, b) =>
-    a.localeCompare(b, 'pt-BR'),
-  )
-  studentFilter.replaceChildren(
-    Object.assign(document.createElement('option'), { value: '', textContent: 'Todos os alunos' }),
-    ...names.map((name) =>
-      Object.assign(document.createElement('option'), { value: name, textContent: name }),
-    ),
-  )
-  studentFilter.value = names.includes(chosen) ? chosen : ''
-
+  if (!list || !statusFilter) return
   if (isTyping(list)) return
+  const checkins = getData().checkins || []
+  const query = normalize(document.querySelector('[data-checkin-search]')?.value)
   const status = statusFilter.value
   const visible = checkins.filter(
     (checkin) =>
-      (!studentFilter.value || checkin.student === studentFilter.value) &&
+      (!query || normalize(checkin.student).includes(query)) &&
       (status === 'all' ||
         (status === 'pending' && !checkin.trainerFeedback) ||
         (status === 'answered' && checkin.trainerFeedback)),
   )
-  if (!visible.length) {
-    const empty = document.createElement('p')
-    empty.className = 'checkin-empty'
-    empty.textContent =
-      status === 'pending'
-        ? 'Nenhum check-in aguardando resposta. Tudo em dia! 🎉'
-        : 'Nenhum check-in por aqui ainda.'
-    list.replaceChildren(empty)
+  const groups = groupByStudent(visible)
+  const waiting = visible.filter((checkin) => !checkin.trainerFeedback).length
+  const { folder, body } = allStudentsFolder({
+    meta: `${plural(groups.length, 'aluno', 'alunos')} · ${plural(visible.length, 'check-in', 'check-ins')}${waiting ? ` · ${waiting} aguardando resposta` : ''}`,
+    open: Boolean(query) || checkinAllOpen,
+    onToggle: (open) => {
+      if (!query) checkinAllOpen = open
+    },
+  })
+  list.replaceChildren(folder)
+  if (!groups.length) {
+    body.append(
+      emptyLine(
+        query
+          ? 'Nenhum check-in encontrado para essa busca.'
+          : status === 'pending'
+            ? 'Nenhum check-in aguardando resposta. Tudo em dia! 🎉'
+            : 'Nenhum check-in por aqui ainda.',
+      ),
+    )
     return
   }
-  list.replaceChildren(
-    ...groupByStudent(visible).map(([key, items]) => studentBlock(items, { key: `page:${key}` })),
+  body.append(
+    ...groups.map(([key, items]) => {
+      const group = document.createElement('details')
+      group.className = 'assessment-group checkin-group'
+      group.open = Boolean(query) || openCheckinStudents.has(key)
+      group.addEventListener('toggle', () => {
+        if (query) return
+        if (group.open) openCheckinStudents.add(key)
+        else openCheckinStudents.delete(key)
+      })
+      const summary = document.createElement('summary')
+      const avatar = document.createElement('span')
+      avatar.className = 'avatar'
+      paintAvatar(avatar, { name: items[0].student, avatar: studentOf(items[0])?.avatar })
+      const info = document.createElement('div')
+      info.className = 'assessment-group-info'
+      const name = document.createElement('strong')
+      name.textContent = items[0].student
+      const meta = document.createElement('small')
+      const pending = items.filter((item) => !item.trainerFeedback).length
+      const last = parseDate(items[0].createdAt)
+      meta.textContent = `${plural(items.length, 'check-in', 'check-ins')}${last ? ` · último em ${last.toLocaleDateString('pt-BR')}` : ''}`
+      info.append(name, meta)
+      summary.append(avatar, info)
+      if (pending) {
+        const badge = document.createElement('span')
+        badge.className = 'checkin-status checkin-status--wait'
+        badge.textContent = `${pending} sem resposta`
+        summary.append(badge)
+      }
+      const inner = document.createElement('div')
+      inner.className = 'checkin-list checkin-list--single checkin-group-body'
+      inner.append(studentBlock(items, { key: `page:${key}` }))
+      group.append(summary, inner)
+      return group
+    }),
   )
 }
 
@@ -303,7 +339,7 @@ export function initCheckins() {
     document.querySelector('[data-checkin-list]')?.replaceChildren()
     renderCheckinsPage()
   })
-  document.querySelector('[data-checkin-filter-student]')?.addEventListener('change', () => {
+  document.querySelector('[data-checkin-search]')?.addEventListener('input', () => {
     document.querySelector('[data-checkin-list]')?.replaceChildren()
     renderCheckinsPage()
   })

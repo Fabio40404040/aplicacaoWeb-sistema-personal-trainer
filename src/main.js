@@ -15,6 +15,7 @@ import { initIntegratedPortal } from './modules/integrated-portal.js'
 import { initExerciseGifs } from './modules/exercise-gifs.js'
 import { initPwa } from './modules/pwa.js'
 import { initLogoSecret } from './modules/logo-secret.js'
+import { initProgressPicker } from './modules/progress-picker.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
@@ -55,5 +56,6 @@ initialize('menu público', initPublicMenu)
 initialize('acesso do personal', initPersonalAccess)
 initialize('aplicativo instalável', initPwa)
 initialize('atalho da logo', initLogoSecret)
+initialize('escolha do aluno na evolução', initProgressPicker)
 initialize('WhatsApp flutuante', initWhatsappFloat)
 initialize('prévia dos treinos prontos', initPlanPreview)
