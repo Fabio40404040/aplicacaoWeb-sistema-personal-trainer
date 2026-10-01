@@ -275,13 +275,16 @@ function initInstall() {
   const buttons = [...document.querySelectorAll('[data-admin-install]')]
   const standalone =
     window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
-  if (standalone) return
-  const isIos = /iPad|iPhone|iPod/u.test(navigator.userAgent)
-  let prompt = null
   const show = (visible) =>
     buttons.forEach((button) => {
       button.hidden = !visible
     })
+  if (standalone) {
+    show(false)
+    return
+  }
+  const isIos = /iPad|iPhone|iPod/u.test(navigator.userAgent)
+  let prompt = null
   if (isIos) show(true)
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault()
@@ -295,10 +298,11 @@ function initInstall() {
   buttons.forEach((button) =>
     button.addEventListener('click', async () => {
       if (prompt) {
-        prompt.prompt()
-        await prompt.userChoice
+        const current = prompt
         prompt = null
-        show(false)
+        current.prompt()
+        const choice = await current.userChoice.catch(() => null)
+        if (choice?.outcome === 'accepted') show(false)
         return
       }
       window.alert(

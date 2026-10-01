@@ -14,6 +14,7 @@ import { initCredentialSeparation } from './modules/credential-separation.js'
 import { initIntegratedPortal } from './modules/integrated-portal.js'
 import { initExerciseGifs } from './modules/exercise-gifs.js'
 import { initPwa } from './modules/pwa.js'
+import { initLogoSecret } from './modules/logo-secret.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
@@ -53,5 +54,6 @@ initialize('ferramentas web', initWebTools)
 initialize('menu público', initPublicMenu)
 initialize('acesso do personal', initPersonalAccess)
 initialize('aplicativo instalável', initPwa)
+initialize('atalho da logo', initLogoSecret)
 initialize('WhatsApp flutuante', initWhatsappFloat)
 initialize('prévia dos treinos prontos', initPlanPreview)

@@ -49,15 +49,18 @@ export function initPwa() {
   const dialog = document.querySelector('[data-install-dialog]')
   const instructions = dialog.querySelector('[data-install-instructions]')
   const isIos = /iPad|iPhone|iPod/u.test(navigator.userAgent)
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
-  if (isStandalone) return
-
-  let installPrompt
   const showButtons = (visible) =>
     installButtons.forEach((button) => {
       button.hidden = !visible
     })
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+  if (isStandalone) {
+    showButtons(false)
+    return
+  }
+
+  let installPrompt
   if (isIos) showButtons(true)
 
   window.addEventListener('beforeinstallprompt', (event) => {
@@ -69,13 +72,18 @@ export function initPwa() {
     installPrompt = null
     showButtons(false)
   })
+  window.matchMedia('(display-mode: standalone)').addEventListener?.('change', (event) => {
+    if (event.matches) showButtons(false)
+  })
 
   const install = async () => {
     if (installPrompt) {
-      installPrompt.prompt()
-      await installPrompt.userChoice
+      const prompt = installPrompt
       installPrompt = null
-      showButtons(false)
+      prompt.prompt()
+      const choice = await prompt.userChoice.catch(() => null)
+      // Só some quando instalar; se recusar, o botão continua (mostra as instruções).
+      if (choice?.outcome === 'accepted') showButtons(false)
       return
     }
     instructions.textContent = isIos
