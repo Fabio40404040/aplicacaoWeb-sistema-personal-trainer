@@ -128,39 +128,85 @@
         </div>
       </header>
       <main class="admin-main">
-        <div class="page-heading">
-          <div>
-            <span class="eyebrow eyebrow--blue">Plataforma FARISA</span>
-            <h1>Personal trainers</h1>
-            <p>Todos os personais cadastrados na plataforma e o uso de cada um.</p>
+        <nav class="admin-tabs" role="tablist" aria-label="Seções da administração">
+          <button type="button" role="tab" class="is-active" data-admin-tab="personais" aria-selected="true">Personais</button>
+          <button type="button" role="tab" data-admin-tab="suporte" aria-selected="false">Suporte <span class="admin-tab-count" data-admin-support-count hidden></span></button>
+          <button type="button" role="tab" data-admin-tab="registro" aria-selected="false">Registro de ações</button>
+        </nav>
+
+        <section class="admin-section" data-admin-section="personais">
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Plataforma FARISA</span>
+              <h1>Personal trainers</h1>
+              <p>Crie, edite, bloqueie ou exclua contas e acesse o painel de um personal para dar suporte.</p>
+            </div>
+            <button class="button button--primary" type="button" data-admin-new-trainer>
+              + Novo personal
+            </button>
           </div>
-        </div>
-        <div class="stats-grid admin-stats">
-          <article class="stat-card"><div class="stat-icon stat-icon--blue"><svg><use href="#icon-lock"></use></svg></div>
-            <div><span>Personais</span><strong data-admin-stat="trainers">—</strong><small class="trend">Contas cadastradas</small></div></article>
-          <article class="stat-card"><div class="stat-icon stat-icon--cyan"><svg><use href="#icon-users"></use></svg></div>
-            <div><span>Alunos</span><strong data-admin-stat="students">—</strong><small class="trend">Somando todos os personais</small></div></article>
-          <article class="stat-card"><div class="stat-icon stat-icon--green"><svg><use href="#icon-check"></use></svg></div>
-            <div><span>Alunos com acesso</span><strong data-admin-stat="active">—</strong><small class="trend">Liberados agora</small></div></article>
-          <article class="stat-card"><div class="stat-icon stat-icon--violet"><svg><use href="#icon-activity"></use></svg></div>
-            <div><span>Ativos em 30 dias</span><strong data-admin-stat="recent">—</strong><small class="trend">Personais que entraram</small></div></article>
-        </div>
-        <article class="panel content-panel">
-          <div class="toolbar">
-            <label class="search-box"><svg><use href="#icon-search"></use></svg><input type="search" placeholder="Buscar personal por nome ou e-mail" data-admin-search /></label>
+          <div class="stats-grid admin-stats">
+            <article class="stat-card"><div class="stat-icon stat-icon--blue"><svg><use href="#icon-lock"></use></svg></div>
+              <div><span>Personais</span><strong data-admin-stat="trainers">—</strong><small class="trend" data-admin-stat="blocked">Contas cadastradas</small></div></article>
+            <article class="stat-card"><div class="stat-icon stat-icon--cyan"><svg><use href="#icon-users"></use></svg></div>
+              <div><span>Alunos</span><strong data-admin-stat="students">—</strong><small class="trend" data-admin-stat="active">Somando todos</small></div></article>
+            <article class="stat-card"><div class="stat-icon stat-icon--green"><svg><use href="#icon-check"></use></svg></div>
+              <div><span>Faturamento dos personais</span><strong data-admin-stat="revenue">—</strong><small class="trend" data-admin-stat="payments">Últimos 30 dias</small></div></article>
+            <article class="stat-card"><div class="stat-icon stat-icon--violet"><svg><use href="#icon-activity"></use></svg></div>
+              <div><span>Ativos em 30 dias</span><strong data-admin-stat="recent">—</strong><small class="trend">Personais que entraram</small></div></article>
           </div>
-          <div class="table-wrap">
-            <table class="admin-table">
-              <thead><tr><th>Personal</th><th>Alunos</th><th>Fichas</th><th>Cadastro</th><th>Último acesso</th></tr></thead>
-              <tbody data-admin-trainers></tbody>
-            </table>
+          <article class="panel content-panel">
+            <div class="toolbar">
+              <label class="search-box"><svg><use href="#icon-search"></use></svg><input type="search" placeholder="Buscar personal por nome ou e-mail" data-admin-search /></label>
+              <select data-admin-filter aria-label="Filtrar por situação">
+                <option value="all">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="blocked">Bloqueados</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>Personal</th><th>Situação</th><th>Alunos</th><th>Fichas</th><th>Último acesso</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                <tbody data-admin-trainers></tbody>
+              </table>
+            </div>
+            <div class="empty-state" data-admin-empty hidden>
+              <svg><use href="#icon-users"></use></svg>
+              <h3>Nenhum personal encontrado</h3>
+              <p>Tente outro termo de busca.</p>
+            </div>
+          </article>
+          <p class="admin-privacy-note">🔒 Por privacidade (LGPD), aqui aparecem só dados dos personais e números agregados. Dados dos alunos ficam com cada personal; para dar suporte, use “Acessar painel”, que pede um motivo e fica registrado.</p>
+        </section>
+
+        <section class="admin-section" data-admin-section="suporte" hidden>
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Atendimento</span>
+              <h1>Suporte aos personais</h1>
+              <p>Chamados abertos pelos personais em “Falar com o suporte”. Responda por aqui — eles recebem aviso no painel e por e-mail.</p>
+            </div>
           </div>
-          <div class="empty-state" data-admin-empty hidden>
-            <svg><use href="#icon-users"></use></svg>
-            <h3>Nenhum personal encontrado</h3>
-            <p>Tente outro termo de busca.</p>
+          <div class="support-layout" data-admin-support></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="registro" hidden>
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Transparência</span>
+              <h1>Registro de ações</h1>
+              <p>Tudo o que é feito na administração: criação, edição, bloqueio, exclusão, acessos de suporte e respostas.</p>
+            </div>
           </div>
-        </article>
+          <article class="panel content-panel">
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>Quando</th><th>Ação</th><th>Alvo</th><th>Detalhes</th><th>Por</th></tr></thead>
+                <tbody data-admin-audit></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
       </main>
     </div>
     <script type="module" src="/src/admin/admin.js"></script>

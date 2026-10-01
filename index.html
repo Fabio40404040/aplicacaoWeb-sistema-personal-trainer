@@ -79,6 +79,20 @@
         set('meta[name="theme-color"]', 'content', '#047857')
         set('meta[name="apple-mobile-web-app-title"]', 'content', 'FARISA Painel')
         document.title = 'FARISA Painel'
+        // Acesso de suporte aberto pelo FARISA Admin (o token vem no endereço
+        // e é guardado só nesta aba; o endereço é limpo na hora).
+        if (location.hash.indexOf('#suporte-acesso?') === 0) {
+          try {
+            var q = new URLSearchParams(location.hash.split('?')[1] || '')
+            if (q.get('token')) {
+              sessionStorage.removeItem('farisa-coach-data-v1')
+              sessionStorage.setItem('farisa-coach-api-token', q.get('token'))
+              sessionStorage.setItem('farisa-coach-session-v2', 'active')
+              sessionStorage.setItem('farisa-support-mode', q.get('nome') || 'personal')
+            }
+          } catch (error) {}
+          history.replaceState(null, '', location.pathname + '#painel')
+        }
         var logged = false
         try {
           logged = Boolean(sessionStorage.getItem('farisa-coach-session-v2'))
@@ -776,7 +790,10 @@
           aria-label="Voltar ao início"
           ><span class="brand-mark">FARISA</span><span class="brand-name">Personal</span></a
         >
-        <p>© 2026 Personal Trainer Pro | Todos os direitos reservados.</p>
+        <p>
+          © 2026 FARISA Personal · <a href="/termos.html">Termos de Uso</a> ·
+          <a href="/privacidade.html">Política de Privacidade</a>
+        </p>
         <a href="#inicio">Voltar ao topo <span>↑</span></a>
       </footer>
 
@@ -906,6 +923,18 @@
           A senha deve ter no mínimo 8 caracteres, incluindo uma letra maiúscula, uma letra
           minúscula, um número e um caractere especial.
         </p>
+        <label class="consent-check">
+          <input
+            type="checkbox"
+            name="acceptPrivacy"
+            required
+          />
+          <span
+            >Li e concordo com os <a href="/termos.html" target="_blank" rel="noopener">Termos de Uso</a> e a
+            <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>, e autorizo o uso dos
+            meus dados de saúde (avaliação física, PAR-Q e check-ins) para o meu acompanhamento.</span
+          >
+        </label>
         <p
           role="status"
           aria-live="polite"
@@ -1326,6 +1355,11 @@
             aria-live="polite"
             data-personal-login-status
           ></p>
+          <p class="login-legal">
+            Ao entrar, você concorda com os <a href="/termos.html" target="_blank" rel="noopener">Termos de Uso</a>
+            e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Você é o
+            controlador dos dados dos seus alunos (LGPD).
+          </p>
         </form>
       </div>
     </section>
@@ -1454,6 +1488,17 @@
             href="#evolucao"
             data-route-link="evolucao"
             ><svg><use href="#icon-chart"></use></svg><span>Evolução</span></a
+          >
+          <a
+            class="nav-link"
+            href="#suporte"
+            data-route-link="suporte"
+            ><svg><use href="#icon-mail"></use></svg><span>Falar com o suporte</span
+            ><small
+              class="nav-count--alert"
+              data-support-count
+              hidden
+            ></small></a
           >
         </nav>
         <div class="sidebar-footer">
@@ -2167,6 +2212,30 @@
               <span>Aderência ao treino</span><strong>—</strong><small>Aguardando registros</small>
             </article>
           </div>
+        </section>
+
+        <section
+          class="page"
+          data-route="suporte"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">FARISA</span>
+              <h1>Falar com o suporte</h1>
+              <p>Dúvidas, problemas ou sugestões sobre a plataforma. Respondemos por aqui e por e-mail.</p>
+            </div>
+            <button
+              class="button button--primary"
+              type="button"
+              data-support-new
+            >
+              <svg><use href="#icon-plus"></use></svg>Novo chamado
+            </button>
+          </div>
+          <div
+            class="support-layout"
+            data-support-root
+          ></div>
         </section>
       </main>
     </div>

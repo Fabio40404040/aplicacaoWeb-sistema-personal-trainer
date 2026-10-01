@@ -1,4 +1,4 @@
-const routes = new Set(['painel', 'alunos', 'agenda', 'treinos', 'exercicios', 'avaliacoes', 'checkins', 'evolucao'])
+const routes = new Set(['painel', 'alunos', 'agenda', 'treinos', 'exercicios', 'avaliacoes', 'checkins', 'evolucao', 'suporte'])
 
 function setMenuState(open) {
   const sidebar = document.querySelector('[data-sidebar]')

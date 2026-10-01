@@ -27,6 +27,12 @@ export async function studentAuth(request, env, db, action) {
       }
     if (typeof name !== 'string' || name.trim().length < 3 || name.trim().length > 140)
       return { error: 'Informe seu nome completo.', status: 400 }
+    // LGPD: dados de saúde exigem consentimento explícito.
+    if (body.acceptPrivacy !== true && body.acceptPrivacy !== 'on' && body.acceptPrivacy !== 'true')
+      return {
+        error: 'Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.',
+        status: 400,
+      }
     const trainer = (await db.query('SELECT id FROM trainers ORDER BY created_at LIMIT 1')).rows[0]
     if (!trainer)
       return { error: 'O cadastro ainda não foi habilitado pelo personal.', status: 503 }
@@ -58,6 +64,15 @@ export async function studentAuth(request, env, db, action) {
       ],
     )
     account = result.rows[0]
+    try {
+      await db.query(
+        `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version='2026-10'
+         WHERE lower(email)=lower($1)`,
+        [email.trim()],
+      )
+    } catch {
+      /* sem a migração 026 */
+    }
     let resumedPendingRegistration = false
     if (!account) {
       const existing = (

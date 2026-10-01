@@ -2,7 +2,24 @@ import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { readSession } from "./lib/session.js";
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
-import { adminLogin, adminTrainers, currentAdmin } from "./routes/admin.js";
+import {
+  adminAuditLog,
+  adminCreateTrainer,
+  adminDeleteTrainer,
+  adminImpersonate,
+  adminLogin,
+  adminOverview,
+  adminReplyTicket,
+  adminResetTrainerPassword,
+  adminSetTrainerStatus,
+  adminTicket,
+  adminTickets,
+  adminTrainers,
+  adminUpdateTrainer,
+  currentAdmin,
+} from "./routes/admin.js";
+import { createTicket, replyTicket, trainerTicket, trainerTickets } from "./routes/support.js";
+import { deleteStudentAccount } from "./routes/student-account.js";
 import { adminRecovery } from "./routes/admin-recovery.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
@@ -197,6 +214,31 @@ async function handleRoutes(request, env) {
       if (request.method === "GET" && route === "admin/me") return { data: admin };
       if (request.method === "GET" && route === "admin/trainers")
         return { data: await adminTrainers(db) };
+      if (request.method === "GET" && route === "admin/overview")
+        return { data: await adminOverview(db) };
+      if (request.method === "POST" && route === "admin/trainers")
+        return adminCreateTrainer(db, admin, await readJson(request));
+      if (segments[1] === "trainers" && segments[2]) {
+        const id = segments[2];
+        if (request.method === "PUT" && !segments[3])
+          return adminUpdateTrainer(db, admin, id, await readJson(request));
+        if (request.method === "POST" && segments[3] === "status")
+          return adminSetTrainerStatus(db, admin, id, await readJson(request));
+        if (request.method === "POST" && segments[3] === "password")
+          return adminResetTrainerPassword(db, admin, id);
+        if (request.method === "POST" && segments[3] === "impersonate")
+          return adminImpersonate(env, db, admin, id, await readJson(request));
+        if (request.method === "POST" && segments[3] === "delete")
+          return adminDeleteTrainer(env, db, admin, id, await readJson(request));
+      }
+      if (request.method === "GET" && route === "admin/audit")
+        return { data: await adminAuditLog(db) };
+      if (request.method === "GET" && route === "admin/support")
+        return { data: await adminTickets(db) };
+      if (request.method === "GET" && segments[1] === "support" && segments[2])
+        return adminTicket(db, segments[2]);
+      if (request.method === "POST" && segments[1] === "support" && segments[2])
+        return adminReplyTicket(env, db, admin, segments[2], await readJson(request));
       return { error: "Rota não encontrada.", status: 404 };
     });
   }
@@ -241,6 +283,8 @@ async function handleRoutes(request, env) {
         return cancelStudentBooking(db, session.sub, segments[2], env);
       if (request.method === "POST" && route === "student/checkins")
         return submitCheckin(db, session.sub, await readJson(request));
+      if (request.method === "POST" && route === "student/account/delete")
+        return deleteStudentAccount(env, db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/plan-change")
         return changePlan(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/plan-request")
@@ -290,6 +334,28 @@ async function handleRoutes(request, env) {
     );
     if (!trainer.rows.length)
       return { error: "Sessão inválida ou expirada.", status: 401 };
+    // Conta bloqueada pelo dono da plataforma (o acesso de suporte continua).
+    if (!session.support) {
+      const status = await db
+        .query("SELECT status, blocked_reason AS reason FROM trainers WHERE id=$1", [session.sub])
+        .then((result) => result.rows[0])
+        .catch(() => null);
+      if (status?.status === "blocked")
+        return {
+          error: `Conta bloqueada${status.reason ? `: ${status.reason}` : ""}. Fale com o suporte.`,
+          status: 403,
+        };
+    }
+    if (request.method === "GET" && route === "session")
+      return { data: { support: session.support || null } };
+    if (request.method === "GET" && route === "support/tickets")
+      return trainerTickets(db, session.sub);
+    if (request.method === "POST" && route === "support/tickets")
+      return createTicket(env, db, session.sub, await readJson(request));
+    if (request.method === "GET" && segments[0] === "support" && segments[1] === "tickets" && segments[2])
+      return trainerTicket(db, session.sub, segments[2]);
+    if (request.method === "POST" && segments[0] === "support" && segments[1] === "tickets" && segments[2])
+      return replyTicket(env, db, session.sub, segments[2], await readJson(request));
     if (request.method === "GET" && segments[0] === "dashboard")
       return { data: await dashboard(db, session.sub) };
     if (

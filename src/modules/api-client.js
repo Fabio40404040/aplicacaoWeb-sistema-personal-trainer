@@ -78,6 +78,7 @@ export async function login(credentials, signal) {
 }
 export function clearApiSession() {
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem("farisa-support-mode");
   clearStoredData();
 }
 export function persistRecord(collection, record, editingId = null) {
@@ -265,4 +266,17 @@ export function fetchBookingConfig() {
 }
 export function saveBookingConfig(config) {
   return request("/booking/config", { method: "PUT", body: JSON.stringify(config) });
+}
+// Suporte (personal ↔ dono da plataforma).
+export function fetchSupportTickets() {
+  return request("/support/tickets");
+}
+export function fetchSupportTicket(id) {
+  return request(`/support/tickets/${id}`);
+}
+export function createSupportTicket(data) {
+  return request("/support/tickets", { method: "POST", body: JSON.stringify(data) });
+}
+export function replySupportTicket(id, body) {
+  return request(`/support/tickets/${id}`, { method: "POST", body: JSON.stringify({ body }) });
 }

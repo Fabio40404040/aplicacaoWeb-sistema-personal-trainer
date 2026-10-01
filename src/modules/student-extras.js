@@ -1,3 +1,4 @@
+import { showToast } from './utils.js'
 // Área do aluno: foto/perfil e central de notificações (sininho) no topo
 // do painel do aluno.
 import {
@@ -227,6 +228,59 @@ function studentNotifications(data) {
   return items.sort((a, b) => weight[a.tone] - weight[b.tone])
 }
 
+// Excluir a própria conta (direito do titular, LGPD art. 18).
+let deleteDialog
+function openDeleteAccount() {
+  if (!deleteDialog) {
+    deleteDialog = document.createElement('dialog')
+    deleteDialog.className = 'modal profile-modal delete-account-modal'
+    document.body.append(deleteDialog)
+  }
+  deleteDialog.innerHTML = `<form method="dialog">
+    <header><div><span class="eyebrow eyebrow--blue">Privacidade</span><h2>Excluir minha conta</h2></div>
+      <button class="icon-button" type="submit" value="cancel" aria-label="Fechar">×</button></header>
+    <div class="modal-body">
+      <p class="delete-warning">Isto apaga <b>definitivamente</b> sua conta e todos os seus dados: fichas, avaliações físicas,
+        check-ins, agenda e histórico de pagamentos da plataforma. Seu acesso ao plano termina na hora e
+        <b>não há como desfazer</b>. Pagamentos já feitos não são devolvidos automaticamente — fale com o personal se precisar.</p>
+      <label class="field"><span>Sua senha</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <label class="field"><span>Digite EXCLUIR para confirmar</span><input name="confirm" autocomplete="off" required pattern="EXCLUIR"></label>
+      <p role="status" data-delete-status></p>
+    </div>
+    <footer><button class="button button--secondary" type="submit" value="cancel">Manter minha conta</button>
+      <button class="button button--danger" type="submit" value="delete">Excluir definitivamente</button></footer>
+  </form>`
+  const form = deleteDialog.querySelector('form')
+  form.addEventListener('submit', async (event) => {
+    if (event.submitter?.value !== 'delete') return
+    event.preventDefault()
+    if (!form.reportValidity()) return
+    const status = form.querySelector('[data-delete-status]')
+    const button = event.submitter
+    button.disabled = true
+    status.textContent = 'Excluindo…'
+    try {
+      await options.request('account/delete', {
+        password: form.elements.password.value,
+        confirm: form.elements.confirm.value.trim(),
+      })
+      try {
+        sessionStorage.removeItem('farisa-student-token')
+      } catch {
+        // ignora
+      }
+      deleteDialog.close()
+      hideStudentExtras()
+      location.hash = '#inicio'
+      window.setTimeout(() => showToast('Sua conta e seus dados foram excluídos.'), 200)
+    } catch (error) {
+      status.textContent = error.message
+      button.disabled = false
+    }
+  })
+  deleteDialog.showModal()
+}
+
 function openProfileDialog() {
   if (!latest) return
   if (!latest.profile) {
@@ -258,11 +312,22 @@ function openProfileDialog() {
         <select name="checkinWeekday">${WEEKDAYS.map((day, index) => `<option value="${index}">${day}</option>`).join('')}</select>
         <small>Nesse dia o sininho lembra você de enviar o check-in.</small></label>
       <p role="status" data-profile-status></p>
+      <section class="privacy-zone">
+        <strong>Privacidade e dados (LGPD)</strong>
+        <small>Seus dados ficam nesta área e são usados só no seu acompanhamento.
+          Leia a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> e os
+          <a href="/termos.html" target="_blank" rel="noopener">Termos de Uso</a>.</small>
+        <button class="button button--danger-outline" type="button" data-delete-account>Excluir minha conta e meus dados</button>
+      </section>
     </div>
     <footer><button class="button button--secondary" type="submit" value="cancel">Cancelar</button>
       <button class="button button--primary" type="submit" value="save">Salvar perfil</button></footer>
   </form>`
   const form = dialog.querySelector('form')
+  form.querySelector('[data-delete-account]').addEventListener('click', () => {
+    dialog.close()
+    openDeleteAccount()
+  })
   const photo = avatarField(dialog.querySelector('[data-avatar-slot]'), {
     name: data.name,
     avatar: data.profile.avatar,

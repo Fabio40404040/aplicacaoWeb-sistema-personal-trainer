@@ -5,4 +5,10 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://aplicacaoweb-sistema-personal-trainer.pages.dev/privacidade.html</loc>
+  </url>
+  <url>
+    <loc>https://aplicacaoweb-sistema-personal-trainer.pages.dev/termos.html</loc>
+  </url>
 </urlset>

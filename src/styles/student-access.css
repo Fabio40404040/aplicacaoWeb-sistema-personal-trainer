@@ -1495,3 +1495,53 @@
 .booking-days::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Consentimento LGPD no cadastro */
+.consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #b8c7d9;
+  cursor: pointer;
+}
+.consent-check input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #3d8bfd;
+}
+.consent-check a {
+  color: #9cc2ff;
+}
+
+/* Perfil do aluno: privacidade e exclusão de conta */
+.privacy-zone {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 14px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+}
+.privacy-zone small {
+  color: var(--ink-500, #64748b);
+}
+.button--danger-outline {
+  justify-self: start;
+  border: 1px solid #fca5a5;
+  background: #fff;
+  color: #b91c1c;
+}
+.button--danger-outline:hover {
+  background: #fef2f2;
+}
+.delete-warning {
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #7f1d1d;
+}
