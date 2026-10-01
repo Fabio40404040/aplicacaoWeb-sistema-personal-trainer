@@ -3926,3 +3926,16 @@ video.gif-lightbox-image {
     width: 100%;
   }
 }
+.appointment-conflict {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.86rem;
+}
+.status--warning {
+  color: #92400e;
+  background: #fef3c7;
+}

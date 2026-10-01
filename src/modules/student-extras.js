@@ -153,6 +153,18 @@ function studentNotifications(data) {
   ;(data.appointments || []).forEach((appointment) => {
     const start = parseDate(appointment.startsAt)
     if (!start) return
+    if (appointment.status === 'cancelled') {
+      items.push({
+        id: `agenda-cancelada:${appointment.id}`,
+        tone: 'danger',
+        icon: '⊘',
+        title: `O personal cancelou: ${appointment.service}`,
+        detail: `Era ${shortDate(start)} às ${timeOf(start)}. Agende outro horário em Minha agenda.`,
+        onClick: () =>
+          document.querySelector('#student-agenda')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      })
+      return
+    }
     const days = daysUntil(start, now)
     if (days < 0 || days > 7) return
     if (days === 0 && parseDate(appointment.endsAt) < now) return

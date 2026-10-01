@@ -4,6 +4,7 @@
 // atendimento" com modalidade, link da chamada e duração de cada tipo.
 import { fetchBookingConfig, saveBookingConfig } from './api-client.js'
 import { showToast } from './utils.js'
+import { getData } from './state.js'
 
 const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
@@ -103,10 +104,47 @@ function paintServiceOptions(form, keep) {
   if (current) select.value = current
 }
 
+// Aviso de horário ocupado na janela "Novo atendimento".
+let editingId = null
+function checkConflict(form) {
+  let warning = form.querySelector('[data-appointment-conflict]')
+  if (!warning) {
+    warning = el('p', 'appointment-conflict')
+    warning.dataset.appointmentConflict = ''
+    form.querySelector('.modal-body')?.prepend(warning)
+  }
+  const date = form.elements.date?.value
+  const time = form.elements.time?.value
+  if (!date || !time) {
+    warning.hidden = true
+    return
+  }
+  const start = new Date(`${date}T${time}:00`)
+  const end = new Date(start.getTime() + (Number(form.elements.duration.value) || 60) * 60_000)
+  const hourFmt = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const clashes = (getData().appointments || []).filter(
+    (item) =>
+      item.id !== editingId &&
+      ['scheduled', 'pending'].includes(item.status) &&
+      new Date(item.startsAt) < end &&
+      new Date(item.endsAt) > start,
+  )
+  warning.hidden = !clashes.length
+  warning.textContent = clashes.length
+    ? `⚠ Horário ocupado: ${clashes
+        .map((item) => `${item.student} (${hourFmt.format(new Date(item.startsAt))}–${hourFmt.format(new Date(item.endsAt))})`)
+        .join(', ')}. Você ainda pode salvar se for proposital.`
+    : ''
+}
+
 function enhanceAppointmentForm() {
   const form = document.querySelector('[data-form="appointment"]')
   if (!form || form.dataset.bookingReady) return
   form.dataset.bookingReady = '1'
+  ;['date', 'time', 'duration'].forEach((name) => {
+    form.elements[name]?.addEventListener('input', () => checkConflict(form))
+    form.elements[name]?.addEventListener('change', () => checkConflict(form))
+  })
   const select = form.querySelector('[data-appointment-services]')
   select?.addEventListener('change', () => {
     const option = select.selectedOptions[0]
@@ -129,12 +167,18 @@ function enhanceAppointmentForm() {
     'click',
     (event) => {
       if (!event.target.closest('[data-open-modal="appointment"]')) return
+      editingId = null
       paintServiceOptions(form)
-      queueMicrotask(() => syncAppointmentForm(form, { fillDefaults: true }))
+      queueMicrotask(() => {
+        syncAppointmentForm(form, { fillDefaults: true })
+        checkConflict(form)
+      })
     },
     true,
   )
   window.addEventListener('farisa:appointment-form-filled', (event) => {
+    editingId = event.detail?.id || null
+    queueMicrotask(() => checkConflict(form))
     paintServiceOptions(form, event.detail?.service)
     form.elements.modality.value = event.detail?.modality || 'presencial'
     form.elements.meetingUrl.value = event.detail?.meetingUrl || ''

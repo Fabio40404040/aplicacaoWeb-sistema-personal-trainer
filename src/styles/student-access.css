@@ -1344,3 +1344,31 @@
 .student-notice-actions [hidden] {
   display: none;
 }
+/* Minha agenda compacta (auditoria) */
+.student-agenda-head {
+  align-items: center;
+}
+.student-agenda-head .student-agenda-sub {
+  font-size: 0.8rem;
+}
+.student-agenda-empty {
+  padding: 10px 12px;
+  border-style: solid;
+  border-color: #2b3c52;
+  font-size: 0.9rem;
+}
+.student-agenda-ics {
+  justify-self: start;
+  margin-top: 4px;
+  color: #9cc2ff;
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+.student-agenda-ics:hover {
+  text-decoration: underline;
+}
+@media (max-width: 640px) {
+  .student-agenda-head > .button {
+    width: auto;
+  }
+}

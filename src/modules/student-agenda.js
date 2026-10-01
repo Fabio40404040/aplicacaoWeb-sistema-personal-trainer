@@ -361,74 +361,92 @@ function openBooking(booking, { request, reload }) {
 }
 
 // ---------- cartão "Minha agenda"
-export async function renderStudentAgenda(card, { request, reload }) {
-  card.id = 'student-agenda'
-  card.classList.add('student-agenda', 'student-card--wide')
-  const head = el('div', 'student-agenda-head')
-  const title = el('div')
-  title.append(el('h2', '', 'Minha agenda'), el('p', 'student-agenda-sub', 'Atendimentos online e presenciais com o seu personal.'))
-  head.append(title)
-  const body = el('div', 'student-agenda-body')
-  body.append(el('p', 'student-agenda-hint', 'Carregando sua agenda…'))
-  card.replaceChildren(head, body)
+// Atualiza sozinho a cada minuto (o botão "Entrar na chamada" aparece na
+// hora certa e a confirmação do personal chega sem recarregar a página).
+let refreshTimer = 0
+const icsDate = (iso) => new Date(iso).toISOString().replace(/[-:]/gu, '').replace(/\.\d{3}/u, '')
+function calendarLink(item) {
+  const text = (value) => String(value || '').replace(/[,;\\]/gu, ' ').replace(/\n/gu, ' ')
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//FARISA//Agenda//PT',
+    'BEGIN:VEVENT',
+    `UID:${item.id}@farisa`,
+    `DTSTAMP:${icsDate(new Date().toISOString())}`,
+    `DTSTART:${icsDate(item.startsAt)}`,
+    `DTEND:${icsDate(item.endsAt)}`,
+    `SUMMARY:${text(item.service)} · FARISA`,
+    `LOCATION:${text(item.modality === 'online' ? item.meetingUrl || 'Online' : item.location)}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT1H',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${text(item.service)}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ]
+  const link = el('a', 'student-agenda-ics', '📅 Salvar no meu calendário')
+  link.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(lines.join('\r\n'))}`
+  link.download = 'atendimento-farisa.ics'
+  return link
+}
 
-  let booking
-  try {
-    booking = await request('booking')
-  } catch (error) {
-    body.replaceChildren(el('p', 'student-agenda-hint', error.message))
-    return
-  }
+function paintAgenda(card, booking, { request, reload }) {
   const options = { request, reload, settings: booking.settings }
-  const canBook =
-    booking.enabled &&
-    booking.services.some((service) => service.remaining === null || service.remaining > 0)
-  if (booking.enabled && booking.services.length) {
-    const button = el('button', 'button button--primary', '+ Agendar atendimento')
-    button.type = 'button'
-    button.disabled = !canBook
-    button.addEventListener('click', () => openBooking(booking, { request, reload }))
-    head.append(button)
-  }
-
-  body.replaceChildren()
-  if (booking.services.length) {
-    const quotas = el('div', 'student-agenda-quotas')
-    booking.services.forEach((service) => {
-      const chip = el('span', 'student-agenda-quota')
-      chip.append(
-        el('strong', '', service.name),
-        el(
-          'small',
-          '',
-          service.remaining === null
-            ? 'ilimitado'
-            : `${service.remaining} de ${service.perMonth} disponível`,
-        ),
-      )
-      quotas.append(chip)
-    })
-    body.append(quotas)
-  }
-
   const upcoming = booking.appointments.filter((item) => ['pending', 'scheduled'].includes(item.status))
   const past = booking.appointments
     .filter((item) => !['pending', 'scheduled'].includes(item.status))
     .reverse()
+  // Plano sem agendamento e nada marcado: o cartão nem aparece (menos poluição).
+  const useful = upcoming.length || past.length || (booking.enabled && booking.services.length)
+  card.hidden = !useful
+  if (!useful) return card.replaceChildren()
+
+  const head = el('div', 'student-agenda-head')
+  const title = el('div')
+  title.append(el('h2', '', 'Minha agenda'))
+  const bookable = booking.services.filter((service) => service.remaining === null || service.remaining > 0)
+  if (booking.services.length) {
+    title.append(
+      el(
+        'p',
+        'student-agenda-sub',
+        `Este mês: ${booking.services
+          .map((service) =>
+            service.remaining === null
+              ? `${service.name} (ilimitado)`
+              : `${service.name} ${service.remaining}/${service.perMonth}`,
+          )
+          .join(' · ')}`,
+      ),
+    )
+  }
+  head.append(title)
+  if (booking.enabled && booking.services.length) {
+    const button = el('button', 'button button--primary', bookable.length ? '+ Agendar' : 'Cota do mês usada')
+    button.type = 'button'
+    button.disabled = !bookable.length
+    button.addEventListener('click', () => openBooking(booking, { request, reload }))
+    head.append(button)
+  }
+  const body = el('div', 'student-agenda-body')
   if (upcoming.length) {
     const list = el('div', 'student-agenda-list')
-    upcoming.forEach((item) => list.append(appointmentRow(item, options)))
+    upcoming.forEach((item) => {
+      const row = appointmentRow(item, options)
+      if (item.status === 'scheduled') row.querySelector('.student-agenda-info')?.append(calendarLink(item))
+      list.append(row)
+    })
     body.append(list)
   } else {
     body.append(
       el(
         'p',
         'student-agenda-empty',
-        booking.reason === 'disabled'
-          ? 'Nenhum atendimento marcado. O personal ainda não abriu horários para agendamento pelo app — quando abrir, o botão “Agendar” aparece aqui.'
-          : !booking.services.length
-            ? 'Nenhum atendimento marcado. Seu plano não inclui agendamentos pelo app; fale com o personal para marcar.'
-            : 'Nenhum atendimento marcado. Use “Agendar atendimento” para escolher um horário livre.',
+        booking.enabled && bookable.length
+          ? 'Nenhum atendimento marcado. Toque em “+ Agendar” e escolha um horário livre.'
+          : 'Nenhum atendimento marcado.',
       ),
     )
   }
@@ -440,4 +458,34 @@ export async function renderStudentAgenda(card, { request, reload }) {
     history.append(list)
     body.append(history)
   }
+  const keepOpen = card.querySelector('.student-agenda-history')?.open
+  card.replaceChildren(head, body)
+  if (keepOpen) card.querySelector('.student-agenda-history').open = true
+}
+
+export async function renderStudentAgenda(card, { request, reload }) {
+  card.id = 'student-agenda'
+  card.classList.add('student-agenda', 'student-card--wide')
+  if (!card.children.length) card.append(el('p', 'student-agenda-hint', 'Carregando sua agenda…'))
+  let signature = ''
+  const load = async () => {
+    try {
+      const booking = await request('booking')
+      const next = JSON.stringify(booking)
+      // Redesenha só se algo mudou ou se o horário da chamada chegou.
+      const minute = Math.floor(Date.now() / 60_000)
+      if (next + minute === signature) return
+      signature = next + minute
+      paintAgenda(card, booking, { request, reload })
+    } catch (error) {
+      if (!signature) card.replaceChildren(el('p', 'student-agenda-hint', error.message))
+    }
+  }
+  await load()
+  window.clearInterval(refreshTimer)
+  refreshTimer = window.setInterval(() => {
+    if (!card.isConnected) return window.clearInterval(refreshTimer)
+    if (document.hidden || document.querySelector('dialog[open]')) return
+    void load()
+  }, 60_000)
 }

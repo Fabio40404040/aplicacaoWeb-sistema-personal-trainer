@@ -394,7 +394,8 @@ const appointmentColumns = `id, starts_at AS "startsAt", ends_at AS "endsAt", se
   modality, meeting_url AS "meetingUrl", service_id AS "serviceId", source`;
 
 export async function studentBooking(db, accountId) {
-  if (!(await bookingSchemaReady(db))) return { data: { enabled: false, reason: "schema" } };
+  if (!(await bookingSchemaReady(db)))
+    return { data: { enabled: false, reason: "schema", services: [], appointments: [], settings: {} } };
   const student = await studentContext(db, accountId);
   if (!student) return { error: "Conta não encontrada.", status: 404 };
   const active = hasAccess(student);
@@ -526,8 +527,14 @@ export async function createStudentBooking(db, accountId, body, env) {
   const status = config.settings.autoConfirm ? "scheduled" : "pending";
   const row = (
     await db.query(
+      // Só grava se ninguém ocupou o horário entre a consulta e agora
+      // (dois alunos clicando no mesmo horário ao mesmo tempo).
       `INSERT INTO appointments (trainer_id,student_id,starts_at,ends_at,service,location,notes,status,modality,meeting_url,service_id,source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'student') RETURNING ${appointmentColumns}`,
+       SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'student'
+       WHERE NOT EXISTS (
+         SELECT 1 FROM appointments WHERE trainer_id=$1 AND status IN ('pending','scheduled')
+         AND starts_at < $4 AND ends_at > $3)
+       RETURNING ${appointmentColumns}`,
       [
         student.trainerId,
         student.id,
@@ -543,6 +550,7 @@ export async function createStudentBooking(db, accountId, body, env) {
       ],
     )
   ).rows[0];
+  if (!row) return { error: "Esse horário acabou de ser ocupado. Escolha outro.", status: 409 };
   await notifyTrainer(
     env,
     student,
