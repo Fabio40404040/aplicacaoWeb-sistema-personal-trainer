@@ -1798,8 +1798,27 @@
             </button>
             <small data-agenda-summary></small>
           </div>
+          <div class="toolbar agenda-filters">
+            <label class="search-box"
+              ><svg><use href="#icon-search"></use></svg
+              ><input
+                type="search"
+                placeholder="Buscar aluno na agenda"
+                aria-label="Buscar aluno na agenda"
+                data-agenda-search
+            /></label
+            ><select
+              data-agenda-filter
+              aria-label="Filtrar atendimentos"
+            >
+              <option value="all">Todos os atendimentos</option>
+              <option value="presencial">Só presenciais</option>
+              <option value="online">Só online</option>
+              <option value="pending">Aguardando confirmação</option>
+            </select>
+          </div>
           <div
-            class="agenda-week"
+            class="agenda-board"
             data-agenda-week
           ></div>
         </section>

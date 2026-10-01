@@ -110,54 +110,67 @@ function actionButton(label, title, onClick, extra = '') {
   return button
 }
 
-function appointmentCard(item, now) {
+const weekdayShort = fmt({ weekday: 'short' })
+const longDay = fmt({ weekday: 'long', day: '2-digit', month: 'long' })
+const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
+let selectedDay = null // Date do dia aberto na lista
+
+const el = (tag, className = '', text = '') => {
+  const node = document.createElement(tag)
+  if (className) node.className = className
+  if (text) node.textContent = text
+  return node
+}
+
+// Uma linha por atendimento: horário | aluno e atendimento | situação | ações.
+function appointmentRow(item, now, { showDate = false } = {}) {
   const start = new Date(item.startsAt)
   const end = new Date(item.endsAt)
   const current = item.status === 'scheduled' && now >= start && now <= end
   const past = item.status === 'scheduled' && end < now
-  const card = document.createElement('article')
-  card.className = `agenda-item agenda-item--${item.status}${current ? ' is-now' : ''}${past ? ' is-past' : ''}`
-  const time = document.createElement('time')
-  time.textContent = `${hour.format(start)}–${hour.format(end)}`
-  const name = document.createElement('strong')
-  name.textContent = item.student
-  const detail = document.createElement('small')
-  detail.textContent = [item.service, item.modality === 'online' ? '' : item.location]
-    .filter(Boolean)
-    .join(' · ')
-  const chips = document.createElement('div')
-  chips.className = 'agenda-chips'
-  const modality = document.createElement('span')
-  modality.className = `agenda-chip agenda-chip--${item.modality === 'online' ? 'online' : 'presencial'}`
-  modality.textContent = item.modality === 'online' ? '💻 Online' : '📍 Presencial'
-  chips.append(modality)
-  if (item.source === 'student') {
-    const by = document.createElement('span')
-    by.className = 'agenda-chip agenda-chip--student'
-    by.textContent = 'Agendado pelo aluno'
-    chips.append(by)
-  }
-  const status = document.createElement('span')
-  status.className = 'agenda-status'
-  status.textContent = current ? 'Agora' : past ? 'Aguardando conclusão' : statusLabel[item.status] || 'Agendado'
-  const actions = document.createElement('div')
-  actions.className = 'agenda-actions'
+  const row = el(
+    'article',
+    `agenda-row agenda-row--${item.status}${current ? ' is-now' : ''}${past ? ' is-past' : ''}`,
+  )
+  const time = el('div', 'agenda-row-time')
+  if (showDate) time.append(el('small', 'agenda-row-date', `${capitalize(weekdayShort.format(start).replace('.', ''))} ${dayNumber.format(start)}`))
+  time.append(el('strong', '', hour.format(start)), el('small', '', `até ${hour.format(end)}`))
+
+  const main = el('div', 'agenda-row-main')
+  const name = el('strong', 'agenda-row-name', item.student)
+  const detail = el(
+    'small',
+    'agenda-row-detail',
+    [item.service, item.modality === 'online' ? '' : item.location].filter(Boolean).join(' · '),
+  )
+  const chips = el('div', 'agenda-chips')
+  chips.append(
+    el(
+      'span',
+      `agenda-chip agenda-chip--${item.modality === 'online' ? 'online' : 'presencial'}`,
+      item.modality === 'online' ? '💻 Online' : '📍 Presencial',
+    ),
+  )
+  if (item.source === 'student') chips.append(el('span', 'agenda-chip agenda-chip--student', 'Agendado pelo aluno'))
+  main.append(name, detail, chips)
+  if (item.notes) main.append(el('p', 'agenda-notes', item.notes))
+
+  const status = el(
+    'span',
+    `agenda-chip agenda-chip--status-${current ? 'now' : past ? 'late' : item.status}`,
+    current ? 'Agora' : past ? 'Concluir?' : statusLabel[item.status] || 'Confirmado',
+  )
+
+  const actions = el('div', 'agenda-actions')
   if (item.modality === 'online' && item.meetingUrl && ['scheduled', 'pending'].includes(item.status)) {
-    const join = document.createElement('a')
-    join.className = 'agenda-action agenda-action--join'
+    const join = el('a', 'agenda-action agenda-action--join', '▶')
     join.href = item.meetingUrl
     join.target = '_blank'
     join.rel = 'noopener'
-    join.textContent = '▶'
     join.title = 'Abrir a chamada de vídeo'
     join.setAttribute('aria-label', join.title)
     actions.append(join)
   }
-  actions.append(
-    actionButton('✎', 'Editar atendimento', () =>
-      window.dispatchEvent(new CustomEvent('farisa:edit-appointment', { detail: item.id })),
-    ),
-  )
   if (item.status === 'pending') {
     actions.append(
       actionButton('✓', 'Confirmar pedido', () => changeStatus(item, 'scheduled'), 'agenda-action--done'),
@@ -169,73 +182,124 @@ function appointmentCard(item, now) {
       actionButton('⊘', 'Cancelar atendimento', () => changeStatus(item, 'cancelled'), 'agenda-action--cancel'),
     )
   } else {
-    actions.append(actionButton('↺', 'Voltar para agendado', () => changeStatus(item, 'scheduled')))
+    actions.append(actionButton('↺', 'Voltar para confirmado', () => changeStatus(item, 'scheduled')))
   }
   actions.append(
+    actionButton('✎', 'Editar atendimento', () =>
+      window.dispatchEvent(new CustomEvent('farisa:edit-appointment', { detail: item.id })),
+    ),
     actionButton('×', 'Excluir atendimento', () => removeAppointment(item), 'agenda-action--delete'),
   )
-  card.append(time, name, detail, chips, status, actions)
-  if (item.notes) {
-    const notes = document.createElement('p')
-    notes.className = 'agenda-notes'
-    notes.textContent = item.notes
-    card.append(notes)
-  }
-  return card
+  const side = el('div', 'agenda-row-side')
+  side.append(status, actions)
+  row.append(time, main, side)
+  return row
+}
+
+function matchesFilter(item, filter) {
+  if (filter === 'online') return item.modality === 'online'
+  if (filter === 'presencial') return item.modality !== 'online'
+  if (filter === 'pending') return item.status === 'pending'
+  return true
 }
 
 function renderAgenda() {
-  const week = document.querySelector('[data-agenda-week]')
-  if (!week) return
+  const board = document.querySelector('[data-agenda-week]')
+  if (!board) return
   const now = new Date()
   const monday = new Date(mondayOf(now).getTime() + weekOffset * 7 * DAY)
   const days = [...Array(7)].map((_, index) => new Date(monday.getTime() + index * DAY))
   const sunday = days[6]
   document.querySelector('[data-agenda-range]').textContent =
     `${rangeLabel.format(monday)} – ${rangeLabel.format(sunday)} ${sunday.getFullYear()}`
-  const appointments = (getData().appointments || [])
+  const query = (document.querySelector('[data-agenda-search]')?.value || '')
+    .trim()
+    .toLocaleLowerCase('pt-BR')
+  const filter = document.querySelector('[data-agenda-filter]')?.value || 'all'
+  const all = (getData().appointments || [])
     .map((item) => ({ item, start: new Date(item.startsAt) }))
     .filter(({ start }) => !Number.isNaN(start.getTime()))
+    .filter(({ item }) => matchesFilter(item, filter))
     .sort((a, b) => a.start - b.start)
-  const inWeek = appointments.filter(
-    ({ start }) => start >= monday && start < new Date(sunday.getTime() + DAY),
-  )
+  const inWeek = all.filter(({ start }) => start >= monday && start < new Date(sunday.getTime() + DAY))
   const active = inWeek.filter(({ item }) => item.status !== 'cancelled')
   document.querySelector('[data-agenda-summary]').textContent = active.length
     ? `${active.length} atendimento${active.length === 1 ? '' : 's'} nesta semana`
     : 'Semana sem atendimentos'
-  week.replaceChildren(
-    ...days.map((day) => {
-      const column = document.createElement('section')
-      column.className = `agenda-day${sameDay(day, now) ? ' is-today' : ''}${startOfDay(day) < startOfDay(now) ? ' is-past' : ''}`
-      const head = document.createElement('header')
-      const title = document.createElement('div')
-      const weekday = document.createElement('strong')
-      weekday.textContent = dayName.format(day)
-      const date = document.createElement('small')
-      date.textContent = sameDay(day, now) ? `${dayNumber.format(day)} · hoje` : dayNumber.format(day)
-      title.append(weekday, date)
-      const add = document.createElement('button')
-      add.type = 'button'
-      add.className = 'agenda-add'
-      add.textContent = '+'
-      add.title = `Novo atendimento em ${dayNumber.format(day)}`
-      add.setAttribute('aria-label', add.title)
-      add.addEventListener('click', () => openNewAppointment(day))
-      head.append(title, add)
-      const list = document.createElement('div')
-      list.className = 'agenda-day-list'
-      const items = inWeek.filter(({ start }) => sameDay(start, day))
-      if (!items.length) {
-        const empty = document.createElement('p')
-        empty.className = 'agenda-empty'
-        empty.textContent = 'Livre'
-        list.append(empty)
-      } else items.forEach(({ item }) => list.append(appointmentCard(item, now)))
-      column.append(head, list)
-      return column
-    }),
+
+  // Busca por aluno: mostra todos os atendimentos dele (dos últimos 30 dias em diante).
+  if (query) {
+    const from = new Date(now.getTime() - 30 * DAY)
+    const found = all.filter(
+      ({ item, start }) => start >= from && item.student.toLocaleLowerCase('pt-BR').includes(query),
+    )
+    const panel = el('section', 'agenda-day-panel')
+    const head = el('header', 'agenda-day-panel-head')
+    head.append(
+      el('strong', '', `Resultado da busca`),
+      el('small', '', found.length ? `${found.length} atendimento${found.length === 1 ? '' : 's'}` : 'Nenhum atendimento encontrado'),
+    )
+    const list = el('div', 'agenda-day-rows')
+    found.forEach(({ item }) => list.append(appointmentRow(item, now, { showDate: true })))
+    panel.append(head, list)
+    board.replaceChildren(panel)
+    return
+  }
+
+  if (!selectedDay || !days.some((day) => sameDay(day, selectedDay))) {
+    selectedDay =
+      days.find((day) => sameDay(day, now)) ||
+      days.find((day) => inWeek.some(({ start }) => sameDay(start, day))) ||
+      days[0]
+  }
+
+  // Faixa com os 7 dias: toque no dia para ver os horários dele, em ordem.
+  const strip = el('div', 'agenda-strip')
+  days.forEach((day) => {
+    const items = inWeek.filter(({ start }) => sameDay(start, day))
+    const count = items.filter(({ item }) => item.status !== 'cancelled').length
+    const pending = items.some(({ item }) => item.status === 'pending')
+    const button = el(
+      'button',
+      `agenda-strip-day${sameDay(day, now) ? ' is-today' : ''}${sameDay(day, selectedDay) ? ' is-selected' : ''}${startOfDay(day) < startOfDay(now) ? ' is-past' : ''}`,
+    )
+    button.type = 'button'
+    button.append(
+      el('small', '', capitalize(weekdayShort.format(day).replace('.', ''))),
+      el('strong', '', dayNumber.format(day)),
+      el('span', `agenda-strip-count${count ? ' has-items' : ''}${pending ? ' has-pending' : ''}`, count ? `${count} ${count === 1 ? 'aluno' : 'alunos'}` : 'Livre'),
+    )
+    button.setAttribute('aria-pressed', String(sameDay(day, selectedDay)))
+    button.addEventListener('click', () => {
+      selectedDay = day
+      renderAgenda()
+    })
+    strip.append(button)
+  })
+
+  const items = inWeek.filter(({ start }) => sameDay(start, selectedDay))
+  const panel = el('section', 'agenda-day-panel')
+  const head = el('header', 'agenda-day-panel-head')
+  const title = el('div')
+  const dayCount = items.filter(({ item }) => item.status !== 'cancelled').length
+  title.append(
+    el('strong', '', `${capitalize(longDay.format(selectedDay))}${sameDay(selectedDay, now) ? ' · hoje' : ''}`),
+    el('small', '', dayCount ? `${dayCount} atendimento${dayCount === 1 ? '' : 's'} em ordem de horário` : 'Nenhum atendimento neste dia'),
   )
+  const add = el('button', 'button button--secondary', '+ Atendimento neste dia')
+  add.type = 'button'
+  const day = selectedDay
+  add.addEventListener('click', () => openNewAppointment(day))
+  head.append(title, add)
+  const list = el('div', 'agenda-day-rows')
+  if (!items.length) list.append(el('p', 'agenda-empty', 'Dia livre.'))
+  else items.forEach(({ item }) => list.append(appointmentRow(item, now)))
+  panel.append(head, list)
+  board.replaceChildren(strip, panel)
+  // No celular a faixa rola de lado: deixa o dia escolhido à vista.
+  const chosen = strip.querySelector('.is-selected')
+  if (chosen && strip.scrollWidth > strip.clientWidth)
+    strip.scrollLeft = chosen.offsetLeft - strip.clientWidth / 2 + chosen.clientWidth / 2
 }
 
 // Pedidos de agendamento esperando sua resposta (no topo da Agenda).
@@ -327,8 +391,11 @@ export function initAgenda() {
   })
   document.querySelector('[data-agenda-today]')?.addEventListener('click', () => {
     weekOffset = 0
+    selectedDay = new Date()
     renderAgenda()
   })
+  document.querySelector('[data-agenda-search]')?.addEventListener('input', renderAgenda)
+  document.querySelector('[data-agenda-filter]')?.addEventListener('change', renderAgenda)
   document.querySelector('[data-agenda-new]')?.addEventListener('click', () => {
     const now = new Date()
     const target = weekOffset === 0 ? now : new Date(mondayOf(now).getTime() + weekOffset * 7 * DAY)

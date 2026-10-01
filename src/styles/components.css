@@ -3710,3 +3710,219 @@ video.gif-lightbox-image {
 .agenda-day-list {
   min-width: 0;
 }
+
+/* ---------- Agenda organizada: faixa da semana + lista do dia ---------- */
+.agenda-filters {
+  margin-bottom: 14px;
+}
+.agenda-filters .search-box {
+  flex: 1;
+  max-width: 420px;
+}
+.agenda-filters select {
+  width: auto;
+}
+.agenda-board {
+  display: grid;
+  gap: 14px;
+}
+.agenda-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.agenda-strip-day {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white, #fff);
+  color: var(--ink-900, #0f172a);
+  font: inherit;
+  cursor: pointer;
+}
+.agenda-strip-day small {
+  color: var(--ink-500);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.agenda-strip-day strong {
+  font-size: 1.05rem;
+}
+.agenda-strip-day.is-past {
+  opacity: 0.7;
+}
+.agenda-strip-day.is-today {
+  border-color: var(--blue-600);
+}
+.agenda-strip-day.is-today small {
+  color: var(--blue-700);
+  font-weight: 700;
+}
+.agenda-strip-day.is-selected {
+  border-color: var(--blue-700);
+  background: var(--blue-700);
+  color: #fff;
+  opacity: 1;
+}
+.agenda-strip-day.is-selected small,
+.agenda-strip-day.is-selected .agenda-strip-count {
+  color: rgba(255, 255, 255, 0.85);
+}
+.agenda-strip-count {
+  color: var(--ink-300, #94a3b8);
+  font-size: 0.72rem;
+}
+.agenda-strip-count.has-items {
+  color: var(--blue-700);
+  font-weight: 700;
+}
+.agenda-strip-count.has-pending::after {
+  content: ' •';
+  color: #d97706;
+}
+.agenda-day-panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white, #fff);
+  overflow: hidden;
+}
+.agenda-day-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--canvas, #f8fafc);
+}
+.agenda-day-panel-head div,
+.agenda-day-panel-head {
+  min-width: 0;
+}
+.agenda-day-panel-head strong {
+  display: block;
+  font-size: 1.05rem;
+}
+.agenda-day-panel-head small {
+  color: var(--ink-500);
+}
+.agenda-day-rows {
+  display: grid;
+}
+.agenda-day-rows .agenda-empty {
+  padding: 26px 18px;
+  text-align: center;
+}
+.agenda-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid var(--blue-600);
+}
+.agenda-row:last-child {
+  border-bottom: 0;
+}
+.agenda-row-time {
+  display: grid;
+  gap: 1px;
+}
+.agenda-row-time strong {
+  color: var(--blue-700);
+  font-size: 1.15rem;
+}
+.agenda-row-time small {
+  color: var(--ink-500);
+  font-size: 0.78rem;
+}
+.agenda-row-time .agenda-row-date {
+  color: var(--ink-700);
+  font-weight: 700;
+}
+.agenda-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.agenda-row-name {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.agenda-row-detail {
+  color: var(--ink-500);
+}
+.agenda-row-side {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+.agenda-row .agenda-actions {
+  margin-top: 0;
+  justify-content: flex-end;
+}
+.agenda-row .agenda-action {
+  width: 32px;
+  height: 32px;
+}
+.agenda-row--pending {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+.agenda-row--completed {
+  border-left-color: var(--green-600);
+}
+.agenda-row--cancelled {
+  border-left-color: var(--ink-300);
+  opacity: 0.6;
+}
+.agenda-row--cancelled .agenda-row-name {
+  text-decoration: line-through;
+}
+.agenda-row.is-now {
+  border-left-color: var(--amber-600);
+  background: #fff6e5;
+}
+.agenda-chip--status-now {
+  background: #fde68a;
+  color: #92400e;
+}
+.agenda-chip--status-late {
+  background: #ffedd5;
+  color: #9a3412;
+}
+@media (max-width: 720px) {
+  .agenda-strip {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+  .agenda-strip-day {
+    flex: 0 0 74px;
+    scroll-snap-align: start;
+  }
+  .agenda-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+    padding: 12px 14px;
+  }
+  .agenda-row-side {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .agenda-filters select {
+    width: 100%;
+  }
+  .agenda-day-panel-head .button {
+    width: 100%;
+  }
+}
