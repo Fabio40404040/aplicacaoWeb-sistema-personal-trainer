@@ -177,7 +177,7 @@ export async function adminTrainerExtras(db) {
     return (
       await db.query(
         `SELECT t.id, t.status, t.blocked_reason AS "blockedReason", t.admin_notes AS "adminNotes",
-           t.phone, t.cref,
+           t.phone, t.cref, t.saas_plan_code AS "saasPlan", t.saas_expires_at AS "saasExpiresAt",
            (SELECT COUNT(*) FROM support_tickets k WHERE k.trainer_id=t.id AND k.admin_unread=1 AND k.status<>'closed') AS "openTickets",
            (SELECT COALESCE(SUM(p.amount_cents),0) FROM payments p WHERE p.trainer_id=t.id AND p.status='paid'
               AND p.paid_at >= datetime('now','-30 day')) AS "revenue30Cents"

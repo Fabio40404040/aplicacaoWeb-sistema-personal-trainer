@@ -54,13 +54,11 @@ export async function updateTrainerProfile(db, trainerId, body) {
   const name = text(body?.name, 120);
   if (!name || name.length < 2)
     return { error: "Informe seu nome (mínimo de 2 letras).", status: 400 };
-  const limit = Number(body?.studentLimit);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 10000)
-    return { error: "O limite de alunos precisa ser um número entre 1 e 10000.", status: 400 };
   const avatar = avatarValue(body?.avatar);
   if (avatar.error) return { error: avatar.error, status: 400 };
   await db.query(
-    `UPDATE trainers SET name=$2, phone=$3, cref=$4, bio=$5, plan_name=$6, student_limit=$7
+    // Plano e limite de alunos vêm da assinatura (admin/planos), não do perfil.
+    `UPDATE trainers SET name=$2, phone=$3, cref=$4, bio=$5
        ${avatar.keep ? "" : ", avatar=$8"}
      WHERE id=$1`,
     [

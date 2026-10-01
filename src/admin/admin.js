@@ -80,6 +80,8 @@ function formatLastLogin(value) {
 const money = (cents) =>
   (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 let overview = {}
+let saasPlansList = []
+const PLAN_NAMES = { trial: 'Teste grátis', start: 'Start', pro: 'Pro', elite: 'Elite' }
 let tickets = []
 let openTicket = null
 
@@ -131,6 +133,17 @@ function render() {
         ),
       )
       if (trainer.blockedReason) status.append(el('small', 'admin-muted', trainer.blockedReason))
+      if (trainer.saasPlan) {
+        const expires = toDate(trainer.saasExpiresAt)
+        const expired = expires && expires < new Date()
+        status.append(
+          el(
+            'small',
+            expired ? 'admin-alert' : 'admin-muted',
+            `${PLAN_NAMES[trainer.saasPlan] || trainer.saasPlan}${expires ? ` · ${expired ? 'venceu' : 'até'} ${formatDay(trainer.saasExpiresAt)}` : ' · sem vencimento'}`,
+          ),
+        )
+      }
       if (trainer.openTickets)
         status.append(el('small', 'admin-alert', `${trainer.openTickets} chamado(s) aberto(s)`))
       const students = el('td')
@@ -154,6 +167,7 @@ function render() {
       }
       action('Editar dados', openTrainerForm)
       action('Acessar painel (suporte)', impersonate)
+      action('Definir plano / vencimento', setPlan)
       action('Gerar nova senha', resetPassword)
       action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
       action('Excluir personal…', deleteTrainer, 'is-danger')
@@ -268,6 +282,8 @@ async function reload() {
   ])
   trainers = list || []
   overview = stats || {}
+  if (!saasPlansList.length) saasPlansList = (await api('/admin/saas-plans').catch(() => [])) || []
+  saasPlansList.forEach((plan) => (PLAN_NAMES[plan.code] = plan.name))
   render()
   await loadTickets()
 }
@@ -391,6 +407,92 @@ function deleteTrainer(trainer) {
   box.showModal()
 }
 
+function setPlan(trainer) {
+  const select = el('select')
+  select.name = 'planCode'
+  ;(saasPlansList.length ? saasPlansList : Object.entries(PLAN_NAMES).map(([code, name]) => ({ code, name }))).forEach((plan) => {
+    const option = el('option', '', `${plan.name}${plan.studentLimit ? ` · até ${plan.studentLimit} alunos` : ''}`)
+    option.value = plan.code
+    select.append(option)
+  })
+  select.value = trainer.saasPlan || 'trial'
+  const planField = el('label', 'field')
+  planField.append(el('span', '', 'Plano'), select)
+  const expires = trainer.saasExpiresAt ? toDate(trainer.saasExpiresAt) : null
+  const dateValue = expires
+    ? `${expires.getFullYear()}-${String(expires.getMonth() + 1).padStart(2, '0')}-${String(expires.getDate()).padStart(2, '0')}`
+    : ''
+  const { box, form, status, ok } = dialog({
+    title: `Plano de ${trainer.name}`,
+    body: [
+      el('p', '', 'Use para dar cortesia, estender o teste ou corrigir um pagamento feito fora do sistema.'),
+      planField,
+      field('Válido até (vazio = sem vencimento)', 'expiresAt', { type: 'date', value: dateValue }),
+    ],
+    confirmLabel: 'Salvar plano',
+  })
+  run(form, ok, status, async (values) => {
+    await api(`/admin/trainers/${trainer.id}/plan`, { method: 'POST', body: JSON.stringify(values) })
+    box.close()
+    await reload()
+  })
+  box.showModal()
+}
+
+async function renderPlans() {
+  saasPlansList = (await api('/admin/saas-plans').catch(() => [])) || []
+  $('[data-admin-plans]').replaceChildren(
+    ...saasPlansList.map((plan) => {
+      const tr = document.createElement('tr')
+      tr.dataset.code = plan.code
+      const input = (name, value, type = 'text') => {
+        const node = el('input')
+        node.name = name
+        node.type = type
+        node.value = value ?? ''
+        if (type === 'number') node.min = '0'
+        if (name === 'price') node.step = '0.01'
+        return node
+      }
+      const name = el('td')
+      name.append(input('name', plan.name))
+      const price = el('td')
+      if (plan.isTrial) price.append(el('small', 'admin-muted', 'Grátis (14 dias)'))
+      else price.append(input('price', (plan.priceCents / 100).toFixed(2), 'number'))
+      const limit = el('td')
+      limit.append(input('studentLimit', plan.studentLimit, 'number'))
+      const desc = el('td')
+      desc.append(input('description', plan.description))
+      const active = el('td')
+      const box = input('active', '', 'checkbox')
+      box.checked = plan.active
+      active.append(box)
+      tr.append(name, price, limit, desc, active)
+      return tr
+    }),
+  )
+}
+
+async function savePlans() {
+  const status = $('[data-admin-plans-status]')
+  const plans = [...document.querySelectorAll('[data-admin-plans] tr')].map((tr) => ({
+    code: tr.dataset.code,
+    name: tr.querySelector('[name="name"]').value,
+    priceCents: Math.round(Number(tr.querySelector('[name="price"]')?.value || 0) * 100),
+    studentLimit: Number(tr.querySelector('[name="studentLimit"]').value),
+    description: tr.querySelector('[name="description"]').value,
+    active: tr.querySelector('[name="active"]').checked,
+  }))
+  status.textContent = 'Salvando…'
+  try {
+    await api('/admin/saas-plans', { method: 'PUT', body: JSON.stringify({ plans }) })
+    status.textContent = 'Planos salvos. Os novos valores já aparecem para os personais.'
+    await renderPlans()
+  } catch (error) {
+    status.textContent = error.message
+  }
+}
+
 // ---------- suporte
 const SUPPORT_STATUS = { open: 'Aguardando você', answered: 'Respondido', closed: 'Encerrado' }
 const CATEGORY = { duvida: 'Dúvida', problema: 'Problema', pagamento: 'Pagamentos', conta: 'Conta', sugestao: 'Sugestão' }
@@ -492,6 +594,8 @@ const ACTIONS = {
   trainer_password_reset: 'Nova senha gerada',
   trainer_deleted: 'Personal excluído',
   trainer_impersonated: 'Acesso de suporte ao painel',
+  trainer_plan_set: 'Plano definido',
+  saas_plans_updated: 'Planos editados',
   support_replied: 'Resposta de suporte',
   support_closed: 'Chamado encerrado',
   support_open: 'Chamado reaberto',
@@ -532,6 +636,7 @@ function showTab(name) {
   })
   if (name === 'suporte') void loadTickets()
   if (name === 'registro') void renderAudit()
+  if (name === 'planos') void renderPlans()
 }
 
 // Telas da entrada: login, "esqueci a senha" e "nova senha" (link do e-mail).
@@ -570,6 +675,7 @@ function init() {
   $('[data-admin-search]').addEventListener('input', render)
   $('[data-admin-filter]').addEventListener('change', render)
   $('[data-admin-new-trainer]').addEventListener('click', () => openTrainerForm())
+  $('[data-admin-save-plans]').addEventListener('click', savePlans)
   document.querySelectorAll('[data-admin-tab]').forEach((tab) =>
     tab.addEventListener('click', () => showTab(tab.dataset.adminTab)),
   )

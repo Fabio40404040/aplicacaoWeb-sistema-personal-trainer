@@ -1545,3 +1545,29 @@
   background: #fef2f2;
   color: #7f1d1d;
 }
+
+/* Cadastro do personal: planos depois do teste */
+.signup-plans {
+  display: grid;
+  gap: 8px;
+}
+.saas-plans-title {
+  color: #b8c7d9;
+}
+.signup-plans .saas-plan-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
+}
+.signup-plans .saas-plan {
+  border-color: #40546e;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e6edf6;
+}
+.signup-plans .saas-plan-price {
+  color: #7ee2b8;
+}
+.signup-plans .saas-plan small {
+  color: #8ea3bd;
+}
+.signup-plans .saas-plan-desc {
+  display: none;
+}

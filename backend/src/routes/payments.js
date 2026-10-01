@@ -28,7 +28,7 @@ function mercadoPagoErrorDetail(data) {
   return causeDetail || data?.message || data?.error || ''
 }
 
-async function mercadoPago(path, env, options = {}) {
+export async function mercadoPago(path, env, options = {}) {
   if (!env.MERCADO_PAGO_ACCESS_TOKEN)
     throw new Error('O Mercado Pago ainda não foi configurado pelo personal.')
   const response = await fetch(`https://api.mercadopago.com${path}`, {
@@ -422,7 +422,7 @@ async function approvePayment(db, intent, payment, paymentId) {
   }
 }
 
-async function officialPaymentForIntent(intent, env) {
+export async function officialPaymentForIntent(intent, env) {
   const reference = String(intent.provider_reference || '')
   if (/^\d{1,30}$/u.test(reference)) {
     const payment = await mercadoPago(`/v1/payments/${reference}`, env)
@@ -492,7 +492,12 @@ export async function mercadoPagoWebhook(request, env, db) {
       [String(payment.external_reference || '')],
     )
   ).rows[0]
-  if (!intent) return { error: 'Cobrança não encontrada.', status: 404 }
+  if (!intent) {
+    // Cobrança da assinatura de um personal (planos da plataforma).
+    const { saasWebhook } = await import('./saas.js')
+    if (await saasWebhook(db, payment)) return { data: { accepted: true } }
+    return { error: 'Cobrança não encontrada.', status: 404 }
+  }
   if (payment.status !== 'approved') {
     await db.query(
       `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,

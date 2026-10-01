@@ -280,3 +280,19 @@ export function createSupportTicket(data) {
 export function replySupportTicket(id, body) {
   return request(`/support/tickets/${id}`, { method: "POST", body: JSON.stringify({ body }) });
 }
+// Assinatura da plataforma (planos dos personais).
+export function fetchBilling() {
+  return request("/billing", { timeoutMs: 20000 });
+}
+export function startBillingCheckout(data) {
+  return request("/billing/checkout", { method: "POST", body: JSON.stringify(data), timeoutMs: 20000 });
+}
+export async function registerTrainerAccount(data) {
+  const result = await request("/auth/register", { method: "POST", body: JSON.stringify(data) });
+  if (!result?.token) throw new Error("Não foi possível criar a conta.");
+  sessionStorage.setItem(TOKEN_KEY, result.token);
+  return result;
+}
+export function fetchSaasPlans() {
+  return request("/public/saas-plans");
+}

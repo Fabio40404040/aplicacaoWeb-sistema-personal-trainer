@@ -389,3 +389,19 @@
 .admin-main .table-wrap {
   position: relative;
 }
+.admin-plans-table input[type='text'],
+.admin-plans-table input[type='number'] {
+  width: 100%;
+  min-width: 90px;
+}
+.admin-plans-table input[name='description'] {
+  min-width: 220px;
+}
+.admin-plans-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+}

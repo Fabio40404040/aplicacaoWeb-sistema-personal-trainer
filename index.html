@@ -1134,52 +1134,91 @@
         href="#inicio"
         ><span class="brand-mark">FARISA</span><span>Voltar ao site</span></a
       >
-      <form class="student-access-card">
-        <span class="eyebrow">Conta profissional</span>
-        <h1>Ativar conta do personal</h1>
-        <p>Esta página já está preparada, mas a ativação de novas contas ainda não foi liberada.</p>
-        <fieldset disabled>
+      <form
+        class="student-access-card"
+        data-trainer-signup
+      >
+        <span class="eyebrow">Conta profissional · 14 dias grátis</span>
+        <h1>Crie sua conta de personal</h1>
+        <p>Teste todas as funções por 14 dias, sem cartão. Depois, escolha o plano conforme o número de alunos.</p>
+        <label class="field"
+          ><span>Nome completo</span
+          ><input
+            name="name"
+            autocomplete="name"
+            required
+            minlength="3"
+            maxlength="120"
+        /></label>
+        <label class="field"
+          ><span>E-mail profissional</span
+          ><input
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            maxlength="180"
+        /></label>
+        <div class="field-grid">
           <label class="field"
-            ><span>Nome completo</span
+            ><span>Telefone / WhatsApp</span
             ><input
-              name="name"
-              autocomplete="name"
-          /></label>
-          <label class="field"
-            ><span>E-mail profissional</span
-            ><input
-              name="email"
-              type="email"
-              autocomplete="email"
+              name="phone"
+              type="tel"
+              autocomplete="tel"
+              maxlength="30"
           /></label>
           <label class="field"
             ><span>CREF</span
             ><input
               name="cref"
               autocomplete="off"
+              maxlength="30"
+              placeholder="000000-G/UF"
           /></label>
-          <label class="field"
-            ><span>Telefone</span
-            ><input
-              name="phone"
-              type="tel"
-              autocomplete="tel"
-          /></label>
-        </fieldset>
+        </div>
+        <label class="field"
+          ><span>Senha</span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength="8"
+            maxlength="128"
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\s])\S{8,128}"
+            title="Use no mínimo 8 caracteres, com letra maiúscula, letra minúscula, número e caractere especial."
+        /></label>
+        <p class="password-requirements">
+          Mínimo de 8 caracteres, com letra maiúscula, minúscula, número e caractere especial.
+        </p>
+        <div
+          class="signup-plans"
+          data-signup-plans
+        ></div>
+        <label class="consent-check">
+          <input
+            type="checkbox"
+            name="acceptTerms"
+            required
+          />
+          <span
+            >Li e concordo com os <a href="/termos.html" target="_blank" rel="noopener">Termos de Uso</a> e a
+            <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Entendo que sou o
+            controlador dos dados dos meus alunos (LGPD) e que a FARISA atua como operadora.</span
+          >
+        </label>
         <p
           role="status"
           aria-live="polite"
-        >
-          Ativação indisponível no momento.
-        </p>
+        ></p>
         <button
           class="button button--primary"
           type="submit"
-          disabled
         >
-          Ativar minha conta
+          Criar conta e começar o teste
         </button>
-        <a href="#login">Voltar ao login do personal</a>
+        <a href="#acesso-farisa">Já tenho conta. Entrar</a>
       </form>
     </section>
     <template id="password-toggle-template"
@@ -1339,7 +1378,7 @@
             class="button button--secondary button--large"
             href="#ativar-personal"
           >
-            Ativar conta do personal
+            Criar conta grátis · 14 dias
           </a>
           <button
             class="button button--secondary button--large painel-install-button"
@@ -1488,6 +1527,17 @@
             href="#evolucao"
             data-route-link="evolucao"
             ><svg><use href="#icon-chart"></use></svg><span>Evolução</span></a
+          >
+          <a
+            class="nav-link"
+            href="#assinatura"
+            data-route-link="assinatura"
+            ><svg><use href="#icon-check"></use></svg><span>Minha assinatura</span
+            ><small
+              class="nav-count--alert"
+              data-billing-alert
+              hidden
+            >!</small></a
           >
           <a
             class="nav-link"
@@ -2212,6 +2262,20 @@
               <span>Aderência ao treino</span><strong>—</strong><small>Aguardando registros</small>
             </article>
           </div>
+        </section>
+
+        <section
+          class="page"
+          data-route="assinatura"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Plataforma FARISA</span>
+              <h1>Minha assinatura</h1>
+              <p>Seu plano na plataforma, o limite de alunos e o pagamento.</p>
+            </div>
+          </div>
+          <div data-billing-root></div>
         </section>
 
         <section

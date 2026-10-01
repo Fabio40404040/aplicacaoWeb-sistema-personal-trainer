@@ -92,14 +92,11 @@ function openProfileDialog(focusField) {
         <label class="field"><span>CREF</span><input name="cref" maxlength="30" placeholder="000000-G/UF"></label>
       </div>
       <label class="field"><span>Sobre você</span><textarea name="bio" rows="3" maxlength="500" placeholder="Formação, especialidades…"></textarea></label>
-      <fieldset class="profile-plan-fields">
-        <legend>Plano e vagas</legend>
-        <div class="field-grid">
-          <label class="field"><span>Nome do plano</span><input name="planName" maxlength="60"></label>
-          <label class="field"><span>Limite de alunos</span><input name="studentLimit" type="number" min="1" max="10000" required></label>
-        </div>
+      <div class="profile-plan-fields">
+        <strong>Plano e vagas</strong>
         <small data-capacity-hint></small>
-      </fieldset>
+        <a href="#assinatura" data-plan-link>Ver minha assinatura e mudar de plano →</a>
+      </div>
       <p role="status" data-profile-status></p>
     </div>
     <footer><button class="button button--secondary" type="submit" value="cancel">Cancelar</button>
@@ -112,14 +109,13 @@ function openProfileDialog(focusField) {
   form.elements.phone.value = profile.phone || ''
   form.elements.cref.value = profile.cref || ''
   form.elements.bio.value = profile.bio || ''
-  form.elements.planName.value = profile.planName || 'Plano profissional'
-  form.elements.studentLimit.value = profile.studentLimit || DEFAULT_LIMIT
   const hint = form.querySelector('[data-capacity-hint]')
   const paintHint = () => {
     const total = countedStudents().length
-    hint.textContent = `Você tem ${total} aluno(s) ocupando vaga (cancelados não contam).`
+    hint.textContent = `${profile.planName || 'Plano'}: ${total} de ${profile.studentLimit || DEFAULT_LIMIT} alunos.`
   }
   paintHint()
+  form.querySelector('[data-plan-link]').addEventListener('click', () => profileDialog.close())
   form.elements.name.addEventListener('input', () => photo.setName(form.elements.name.value))
   form.addEventListener('submit', async (event) => {
     if (event.submitter?.value !== 'save') return
@@ -136,8 +132,6 @@ function openProfileDialog(focusField) {
         phone: form.elements.phone.value,
         cref: form.elements.cref.value,
         bio: form.elements.bio.value,
-        planName: form.elements.planName.value,
-        studentLimit: Number(form.elements.studentLimit.value),
         ...(avatar === undefined ? {} : { avatar }),
       })
       await syncRemoteData()
@@ -331,8 +325,8 @@ function trainerNotifications() {
       tone: total >= limit ? 'danger' : 'warn',
       icon: '👥',
       title: total >= limit ? 'Seu plano está completo' : `Restam ${limit - total} vaga(s) no seu plano`,
-      detail: `${total} de ${limit} alunos. Você pode mudar o limite no seu perfil.`,
-      onClick: () => openProfileDialog('studentLimit'),
+      detail: `${total} de ${limit} alunos. Faça upgrade em Minha assinatura.`,
+      onClick: () => { location.hash = '#assinatura' },
     })
 
   const weight = { danger: 0, warn: 1, info: 2, neutral: 3 }
@@ -365,13 +359,13 @@ export function initPersonalExtras() {
   if (capacity) {
     capacity.setAttribute('role', 'button')
     capacity.tabIndex = 0
-    capacity.title = 'Mudar o limite de alunos do plano'
+    capacity.title = 'Ver minha assinatura'
     capacity.classList.add('capacity--clickable')
-    capacity.addEventListener('click', () => openProfileDialog('studentLimit'))
+    capacity.addEventListener('click', () => { location.hash = '#assinatura' })
     capacity.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault()
-        openProfileDialog('studentLimit')
+        location.hash = '#assinatura'
       }
     })
   }

@@ -16,10 +16,20 @@ import {
   adminTickets,
   adminTrainers,
   adminUpdateTrainer,
+  audit,
   currentAdmin,
 } from "./routes/admin.js";
 import { createTicket, replyTicket, trainerTicket, trainerTickets } from "./routes/support.js";
 import { deleteStudentAccount } from "./routes/student-account.js";
+import {
+  adminSavePlans,
+  adminSetTrainerPlan,
+  billingInfo,
+  registerTrainer,
+  saasPlans,
+  saasState,
+  startSaasCheckout,
+} from "./routes/saas.js";
 import { adminRecovery } from "./routes/admin-recovery.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
@@ -107,6 +117,7 @@ const LIMITED_ROUTES = {
   "auth/forgot": "forgot",
   "student/auth/forgot": "forgot",
   "admin/auth/forgot": "forgot",
+  "auth/register": "forgot",
 };
 async function handle(request, env) {
   const route = new URL(request.url).pathname.replace(/^\/api\/?/u, "").replace(/\/+$/u, "");
@@ -182,6 +193,11 @@ async function handleRoutes(request, env) {
     ["auth/forgot", "auth/reset"].includes(route)
   )
     return withDb(env, (db) => personalRecovery(request, env, db, segments[1]));
+  // Cadastro do personal (teste grátis) e planos da plataforma.
+  if (request.method === "POST" && route === "auth/register")
+    return withDb(env, async (db) => registerTrainer(env, db, await readJson(request)));
+  if (request.method === "GET" && route === "public/saas-plans")
+    return withDb(env, async (db) => ({ data: await saasPlans(db) }));
   if (request.method === "POST" && route === "auth/login")
     return withDb(env, (db) => login(request, env, db));
   if (
@@ -230,6 +246,21 @@ async function handleRoutes(request, env) {
           return adminImpersonate(env, db, admin, id, await readJson(request));
         if (request.method === "POST" && segments[3] === "delete")
           return adminDeleteTrainer(env, db, admin, id, await readJson(request));
+      }
+      if (request.method === "GET" && route === "admin/saas-plans")
+        return { data: await saasPlans(db, { includeInactive: true }) };
+      if (request.method === "PUT" && route === "admin/saas-plans") {
+        const result = await adminSavePlans(db, await readJson(request));
+        if (!result.error) await audit(db, admin, "saas_plans_updated", { type: "plans", label: "Planos da plataforma" });
+        return result;
+      }
+      if (request.method === "POST" && segments[1] === "trainers" && segments[2] && segments[3] === "plan") {
+        const body = await readJson(request);
+        const result = await adminSetTrainerPlan(db, segments[2], body);
+        if (!result.error)
+          await audit(db, admin, "trainer_plan_set", { type: "trainer", id: segments[2], label: segments[2] },
+            `${body.planCode} até ${body.expiresAt || "sem vencimento"}`);
+        return result;
       }
       if (request.method === "GET" && route === "admin/audit")
         return { data: await adminAuditLog(db) };
@@ -348,6 +379,24 @@ async function handleRoutes(request, env) {
     }
     if (request.method === "GET" && route === "session")
       return { data: { support: session.support || null } };
+    // Assinatura da plataforma (planos dos personais).
+    if (request.method === "GET" && route === "billing")
+      return billingInfo(env, db, session.sub);
+    if (request.method === "POST" && route === "billing/checkout")
+      return startSaasCheckout(env, db, session.sub, await readJson(request));
+    const saas = await saasState(db, session.sub);
+    // Assinatura vencida: o painel fica só para consulta (os alunos continuam
+    // com acesso). Suporte, perfil e pagamento seguem liberados.
+    if (
+      saas?.status === "expired" &&
+      !session.support &&
+      request.method !== "GET" &&
+      !["support", "profile", "billing"].includes(segments[0])
+    )
+      return {
+        error: "Sua assinatura da plataforma venceu. Renove em Minha assinatura para voltar a editar.",
+        status: 402,
+      };
     if (request.method === "GET" && route === "support/tickets")
       return trainerTickets(db, session.sub);
     if (request.method === "POST" && route === "support/tickets")
@@ -539,6 +588,11 @@ async function handleRoutes(request, env) {
     const [resource, id] = segments;
     if (request.method === "GET" && !id)
       return { data: await listResource(db, resource, session.sub) };
+    if (request.method === "POST" && !id && resource === "students" && saas?.studentLimit && saas.students >= saas.studentLimit)
+      return {
+        error: `Seu plano ${saas.planName} permite até ${saas.studentLimit} alunos. Faça upgrade em Minha assinatura para cadastrar mais.`,
+        status: 403,
+      };
     if (request.method === "POST" && !id) {
       const created = await createResource(
         db,

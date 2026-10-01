@@ -131,6 +131,7 @@
         <nav class="admin-tabs" role="tablist" aria-label="Seções da administração">
           <button type="button" role="tab" class="is-active" data-admin-tab="personais" aria-selected="true">Personais</button>
           <button type="button" role="tab" data-admin-tab="suporte" aria-selected="false">Suporte <span class="admin-tab-count" data-admin-support-count hidden></span></button>
+          <button type="button" role="tab" data-admin-tab="planos" aria-selected="false">Planos</button>
           <button type="button" role="tab" data-admin-tab="registro" aria-selected="false">Registro de ações</button>
         </nav>
 
@@ -188,6 +189,28 @@
             </div>
           </div>
           <div class="support-layout" data-admin-support></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="planos" hidden>
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">SaaS</span>
+              <h1>Planos dos personais</h1>
+              <p>Valores mensais e limite de alunos de cada plano. Trimestral tem 5% de desconto e anual tem 2 meses grátis (calculados sozinhos).</p>
+            </div>
+          </div>
+          <article class="panel content-panel">
+            <div class="table-wrap">
+              <table class="admin-table admin-plans-table">
+                <thead><tr><th>Plano</th><th>Preço mensal (R$)</th><th>Limite de alunos</th><th>Descrição</th><th>Ativo</th></tr></thead>
+                <tbody data-admin-plans></tbody>
+              </table>
+            </div>
+            <div class="admin-plans-actions">
+              <p class="admin-muted" data-admin-plans-status></p>
+              <button class="button button--primary" type="button" data-admin-save-plans>Salvar planos</button>
+            </div>
+          </article>
         </section>
 
         <section class="admin-section" data-admin-section="registro" hidden>
