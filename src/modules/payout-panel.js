@@ -132,7 +132,23 @@ function mercadoPagoCard() {
       const { url } = await payoutAction('mp/connect')
       location.href = url
     }))
-    card.append(el('small', 'support-muted', 'Você entra no site do Mercado Pago e autoriza. A FARISA nunca vê a sua senha.'))
+    const steps = el('ol', 'payout-steps')
+    const first = el('li', '', 'Tenha uma conta no Mercado Pago (é grátis). ')
+    const create = el('a', '', 'Ainda não tem conta? Crie grátis no Mercado Pago')
+    create.href = 'https://www.mercadopago.com.br/'
+    create.target = '_blank'
+    create.rel = 'noopener noreferrer'
+    first.append(create)
+    steps.append(
+      first,
+      el('li', '', 'Toque em “Conectar minha conta Mercado Pago”, entre na sua conta e autorize. É uma vez só.'),
+      el('li', '', 'Pronto: seus alunos pagam por Pix ou cartão e o acesso deles é liberado sozinho.'),
+    )
+    card.append(
+      el('strong', 'payout-steps-title', 'Como ativar'),
+      steps,
+      el('small', 'support-muted', 'Usa outro banco? Sem problema: receba pelo Mercado Pago e transfira por Pix para o seu banco. A FARISA nunca vê a sua senha. As taxas do Mercado Pago são cobradas por ele, na sua conta.'),
+    )
   } else {
     card.append(el('p', 'support-muted', 'A conexão com o Mercado Pago será liberada em breve pela plataforma. Enquanto isso, use a chave Pix.'))
   }

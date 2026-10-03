@@ -4389,3 +4389,15 @@ dialog.confirm-dialog::backdrop {
 .payout-confirm .payout-actions {
   justify-content: flex-end;
 }
+
+.payout-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink-700);
+}
+.payout-steps a {
+  font-weight: 700;
+  text-decoration: underline;
+}
