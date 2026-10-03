@@ -1,3 +1,5 @@
+import { NOT_CONFIGURED, pixBrCode, resolvePay } from './payout.js'
+
 export const BILLING_CYCLES = {
   monthly: { days: 30, months: 1, discount: 1 },
   quarterly: { days: 90, months: 3, discount: 0.95 },
@@ -66,14 +68,15 @@ function checkoutSettings(method) {
   }
 }
 
-export async function createCheckout(db, accountId, env, body) {
-  if (!env.MERCADO_PAGO_ACCESS_TOKEN)
-    return { error: 'Pagamento online aguardando configuração do Mercado Pago.', status: 503 }
+export async function createCheckout(db, accountId, platformEnv, body) {
   const method =
     body?.method === 'pix' ? 'pix' : body?.method === 'credit_card' ? 'credit_card' : null
   if (!method) return { error: 'Escolha PIX ou cartão de crédito.', status: 400 }
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
+  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const env = pay.env
+  if (!env?.MERCADO_PAGO_ACCESS_TOKEN) return { error: NOT_CONFIGURED, status: 503 }
   if (row.accessType !== 'permanent' && !BILLING_CYCLES[row.billingCycle])
     row.billingCycle = 'quarterly'
   const amountCents = amountFor(row, row.billingCycle)
@@ -107,7 +110,7 @@ export async function createCheckout(db, accountId, env, body) {
         payment_methods: checkoutSettings(method),
         external_reference: intentId,
         ...(env.MERCADO_PAGO_WEBHOOK_SECRET
-          ? { notification_url: `${apiUrl}/api/payments/mercadopago/webhook` }
+          ? { notification_url: `${apiUrl}/api/payments/mercadopago/webhook${pay.trainerId ? `?trainer=${pay.trainerId}` : ''}` }
           : {}),
         back_urls: {
           success: `${siteUrl}/?payment=success#painel-aluno`,
@@ -160,11 +163,31 @@ async function paymentAccount(db, accountId) {
   }
 }
 
-export async function cardPaymentConfig(db, accountId, env) {
-  if (!env.MERCADO_PAGO_PUBLIC_KEY || !env.MERCADO_PAGO_ACCESS_TOKEN)
-    return { error: 'O formulário de cartão aguarda as credenciais do Mercado Pago.', status: 503 }
+// Formas de pagamento que o personal deste aluno aceita.
+export async function paymentOptions(db, accountId, platformEnv) {
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
+  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const online = Boolean(pay.env?.MERCADO_PAGO_ACCESS_TOKEN)
+  return {
+    data: {
+      pix: online || pay.mode === 'pix',
+      card: online && Boolean(pay.env?.MERCADO_PAGO_PUBLIC_KEY),
+      manual: pay.mode === 'pix',
+    },
+  }
+}
+
+export async function cardPaymentConfig(db, accountId, platformEnv) {
+  const row = await paymentAccount(db, accountId)
+  if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
+  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const env = pay.env
+  if (!env?.MERCADO_PAGO_PUBLIC_KEY || !env?.MERCADO_PAGO_ACCESS_TOKEN)
+    return {
+      error: pay.mode === 'pix' ? 'Seu personal recebe apenas por Pix.' : NOT_CONFIGURED,
+      status: 503,
+    }
   if (row.accessType !== 'permanent' && !BILLING_CYCLES[row.billingCycle])
     row.billingCycle = 'quarterly'
   return {
@@ -177,15 +200,17 @@ export async function cardPaymentConfig(db, accountId, env) {
   }
 }
 
-export async function createPixPayment(db, accountId, env) {
-  if (!env.MERCADO_PAGO_ACCESS_TOKEN)
-    return { error: 'O pagamento por PIX aguarda configuração do Mercado Pago.', status: 503 }
+export async function createPixPayment(db, accountId, platformEnv) {
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou pré-cadastro não encontrado.', status: 404 }
   if (row.accessType !== 'permanent' && !BILLING_CYCLES[row.billingCycle])
     row.billingCycle = 'quarterly'
   const amountCents = amountFor(row, row.billingCycle)
   const intentId = crypto.randomUUID().replaceAll('-', '')
+  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  if (pay.mode === 'pix') return manualPix(db, row, pay.pix, amountCents, intentId)
+  const env = pay.env
+  if (!env?.MERCADO_PAGO_ACCESS_TOKEN) return { error: NOT_CONFIGURED, status: 503 }
   await db.query(
     `INSERT INTO payment_intents (id,trainer_id,student_id,plan_code,billing_cycle,amount_cents,method)
      VALUES ($1,$2,$3,$4,$5,$6,'pix')`,
@@ -210,7 +235,7 @@ export async function createPixPayment(db, accountId, env) {
           : { email: row.email, first_name: row.name },
         external_reference: intentId,
         ...(env.MERCADO_PAGO_WEBHOOK_SECRET
-          ? { notification_url: `${apiUrl}/api/payments/mercadopago/webhook` }
+          ? { notification_url: `${apiUrl}/api/payments/mercadopago/webhook${pay.trainerId ? `?trainer=${pay.trainerId}` : ''}` }
           : {}),
         metadata: { intent_id: intentId, student_id: row.studentId, plan_code: row.planCode },
       }),
@@ -241,9 +266,78 @@ export async function createPixPayment(db, accountId, env) {
   }
 }
 
-export async function createCardPayment(db, accountId, env, body) {
-  if (!env.MERCADO_PAGO_ACCESS_TOKEN)
-    return { error: 'O pagamento por cartão aguarda configuração do Mercado Pago.', status: 503 }
+// Pix direto na chave do personal (qualquer banco): gera o "copia e cola" com
+// o valor; o aluno paga, avisa, e o personal confere e confirma.
+async function manualPix(db, row, pix, amountCents, intentId) {
+  await db.batch([
+    {
+      sql: `UPDATE payment_intents SET status='cancelled', updated_at=CURRENT_TIMESTAMP
+            WHERE student_id=$1 AND provider='manual' AND status='pending'`,
+      values: [row.studentId],
+    },
+    {
+      sql: `INSERT INTO payment_intents (id,trainer_id,student_id,plan_code,billing_cycle,amount_cents,method,provider,provider_reference)
+            VALUES ($1,$2,$3,$4,$5,$6,'pix','manual',$7)`,
+      values: [intentId, row.trainerId, row.studentId, row.planCode, row.billingCycle, amountCents, `manual:${intentId}`],
+    },
+  ])
+  return {
+    data: {
+      manual: true,
+      intentId,
+      status: 'pending',
+      amount: (amountCents / 100).toFixed(2),
+      holder: pix.pix_holder,
+      qrCode: pixBrCode({
+        key: pix.pix_key,
+        holder: pix.pix_holder,
+        city: pix.pix_city,
+        amountCents,
+        txid: `FARISA${intentId.slice(0, 19)}`,
+      }),
+      qrCodeBase64: '',
+    },
+  }
+}
+
+// Aluno avisa que pagou o Pix direto: vai para a conferência do personal.
+export async function manualPixPaid(db, accountId, body) {
+  const result = await db.query(
+    `UPDATE payment_intents SET status='in_review', updated_at=CURRENT_TIMESTAMP
+     WHERE id=$1 AND provider='manual' AND status IN ('pending','in_review')
+       AND student_id=(SELECT student_id FROM student_accounts WHERE id=$2) RETURNING id`,
+    [String(body?.intentId || ''), accountId],
+  )
+  if (!result.rows[0]) return { error: 'Cobrança não encontrada. Gere o Pix de novo.', status: 404 }
+  return { data: { status: 'in_review' } }
+}
+
+// Personal confere o extrato e confirma (libera o aluno) ou recusa.
+export async function manualPixDecision(db, trainerId, intentId, action) {
+  const intent = (
+    await db.query(
+      `SELECT i.*, p.access_type AS "accessType" FROM payment_intents i JOIN plans p ON p.code=i.plan_code
+       WHERE i.id=$1 AND i.trainer_id=$2 AND i.provider='manual' LIMIT 1`,
+      [intentId, trainerId],
+    )
+  ).rows[0]
+  if (!intent || !['pending', 'in_review'].includes(intent.status))
+    return { error: 'Este aviso de pagamento já foi resolvido.', status: 404 }
+  if (action === 'reject') {
+    await db.query(`UPDATE payment_intents SET status='rejected', updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [intent.id])
+    return { data: { status: 'rejected' } }
+  }
+  await approvePayment(
+    db,
+    intent,
+    { currency_id: 'BRL', transaction_amount: Number(intent.amount_cents) / 100, payment_type_id: 'bank_transfer' },
+    `manual:${intent.id}`,
+    'pix_manual',
+  )
+  return { data: { status: 'approved' } }
+}
+
+export async function createCardPayment(db, accountId, platformEnv, body) {
   const token = String(body?.token || '')
   const paymentMethodId = String(body?.paymentMethodId || '')
   const issuerId = String(body?.issuerId || '')
@@ -264,6 +358,10 @@ export async function createCardPayment(db, accountId, env, body) {
 
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
+  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const env = pay.env
+  if (!env?.MERCADO_PAGO_ACCESS_TOKEN)
+    return { error: pay.mode === 'pix' ? 'Seu personal recebe apenas por Pix.' : NOT_CONFIGURED, status: 503 }
   if (row.accessType !== 'permanent' && !BILLING_CYCLES[row.billingCycle])
     row.billingCycle = 'quarterly'
   const amountCents = amountFor(row, row.billingCycle)
@@ -293,7 +391,7 @@ export async function createCardPayment(db, accountId, env, body) {
         },
         external_reference: intentId,
         ...(env.MERCADO_PAGO_WEBHOOK_SECRET
-          ? { notification_url: `${apiUrl}/api/payments/mercadopago/webhook` }
+          ? { notification_url: `${apiUrl}/api/payments/mercadopago/webhook${pay.trainerId ? `?trainer=${pay.trainerId}` : ''}` }
           : {}),
         statement_descriptor: 'FARISA PERSONAL',
         metadata: { intent_id: intentId, student_id: row.studentId, plan_code: row.planCode },
@@ -364,7 +462,7 @@ async function validSignature(request, env, dataId) {
   return difference === 0
 }
 
-async function approvePayment(db, intent, payment, paymentId) {
+async function approvePayment(db, intent, payment, paymentId, provider = 'mercadopago') {
   if (intent.status === 'approved') return
   const method = payment.payment_type_id === 'credit_card' ? 'credit_card' : 'pix'
   if (
@@ -393,7 +491,7 @@ async function approvePayment(db, intent, payment, paymentId) {
     },
     {
       sql: `INSERT INTO payments (trainer_id,student_id,plan_code,amount_cents,status,method,provider,provider_reference,paid_at,billing_cycle)
-       VALUES ($1,$2,$3,$4,'paid',$5,'mercadopago',$6,CURRENT_TIMESTAMP,$7)
+       VALUES ($1,$2,$3,$4,'paid',$5,$8,$6,CURRENT_TIMESTAMP,$7)
        ON CONFLICT(provider_reference) WHERE provider_reference IS NOT NULL DO NOTHING`,
       values: [
         intent.trainer_id,
@@ -403,12 +501,13 @@ async function approvePayment(db, intent, payment, paymentId) {
         method,
         paymentId,
         intent.billing_cycle,
+        provider,
       ],
     },
     {
       sql: `INSERT INTO access_history (trainer_id,student_id,action,plan_code,details)
        VALUES ($1,$2,'payment_confirmed',$3,$4)`,
-      values: [intent.trainer_id, intent.student_id, intent.plan_code, `mercadopago:${paymentId}`],
+      values: [intent.trainer_id, intent.student_id, intent.plan_code, `${provider}:${paymentId}`],
     },
   ])
   // Pagou: a mudança de plano foi concluída.
@@ -439,18 +538,20 @@ export async function officialPaymentForIntent(intent, env) {
   )
 }
 
-export async function reconcileStudentPayments(db, accountId, env) {
-  if (!env.MERCADO_PAGO_ACCESS_TOKEN) return { checked: false, updated: false }
+export async function reconcileStudentPayments(db, accountId, platformEnv) {
   const intents = (
     await db.query(
       `SELECT i.*, p.access_type AS "accessType" FROM payment_intents i
        JOIN student_accounts a ON a.student_id=i.student_id
        JOIN plans p ON p.code=i.plan_code
-       WHERE a.id=$1 AND i.status IN ('pending','in_process','authorized')
+       WHERE a.id=$1 AND i.status IN ('pending','in_process','authorized') AND i.provider<>'manual'
        ORDER BY i.created_at DESC LIMIT 5`,
       [accountId],
     )
   ).rows
+  if (!intents.length) return { checked: true, updated: false }
+  const env = (await resolvePay(db, platformEnv, intents[0].trainer_id)).env
+  if (!env?.MERCADO_PAGO_ACCESS_TOKEN) return { checked: false, updated: false }
   let updated = false
   for (const intent of intents) {
     try {
@@ -484,7 +585,10 @@ export async function mercadoPagoWebhook(request, env, db) {
   if (!/^\d{1,30}$/u.test(paymentId)) return { error: 'Notificação inválida.', status: 400 }
   if (!(await validSignature(request, env, paymentId)))
     return { error: 'Assinatura do pagamento inválida.', status: 401 }
-  const payment = await mercadoPago(`/v1/payments/${paymentId}`, env)
+  // Cobrança feita na conta conectada de um personal: consulta com a conta dele.
+  const trainerId = String(url.searchParams.get('trainer') || '')
+  const payEnv = /^[\w-]{1,64}$/u.test(trainerId) ? (await resolvePay(db, env, trainerId)).env || env : env
+  const payment = await mercadoPago(`/v1/payments/${paymentId}`, payEnv)
   const intent = (
     await db.query(
       `SELECT i.*, p.access_type AS "accessType" FROM payment_intents i

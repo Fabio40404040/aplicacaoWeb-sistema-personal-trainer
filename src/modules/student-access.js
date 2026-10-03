@@ -187,6 +187,59 @@ function billingCycleLabel(access) {
 }
 // Botões "Gerar QR Code PIX" e "Pagar com cartão" (cadastro novo ou
 // mudança de plano). O valor vem do servidor conforme o plano escolhido.
+// PIX direto na chave do personal: mostra o QR Code com o valor, e o aluno
+// avisa quando pagar. O personal confere e libera o acesso.
+async function manualPixCheckout(checkout, box, status) {
+  const value = Number(checkout.amount).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+  const image = element("img", "pix-qr-code");
+  image.src = await createQrCodeImage(checkout.qrCode);
+  image.alt = "QR Code PIX";
+  const copy = element("button", "button button--secondary", "Copiar código PIX");
+  const paid = element("button", "button button--primary", "Já paguei");
+  copy.type = paid.type = "button";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(checkout.qrCode);
+      copy.textContent = "Código PIX copiado";
+    } catch {
+      copy.textContent = "Não foi possível copiar";
+    }
+  });
+  paid.addEventListener("click", async () => {
+    paid.disabled = true;
+    try {
+      await studentRequest("payments/manual-paid", { intentId: checkout.intentId });
+      box.replaceChildren(
+        element("strong", "", "Aviso enviado ao seu personal"),
+        element(
+          "p",
+          "",
+          "Assim que ele conferir o pagamento, seu acesso é liberado. Você não precisa pagar de novo.",
+        ),
+      );
+      status.textContent = "Aguardando a confirmação do personal.";
+    } catch (error) {
+      status.textContent = error.message;
+      paid.disabled = false;
+    }
+  });
+  box.replaceChildren(
+    element("strong", "", `PIX — ${value}`),
+    element(
+      "p",
+      "",
+      `Pague para ${checkout.holder} pelo QR Code ou pelo código. Depois toque em “Já paguei”: seu personal confere e libera o acesso.`,
+    ),
+    image,
+    copy,
+    paid,
+  );
+  status.textContent = "Depois de pagar, toque em “Já paguei”.";
+}
+
 function paymentControls(onRefresh) {
   const actions = element("div", "student-payment-actions");
   const pix = element(
@@ -202,11 +255,28 @@ function paymentControls(onRefresh) {
   const paymentStatus = element("p", "student-payment-status");
   const pixCheckout = element("div", "student-pix-checkout");
   pix.type = card.type = "button";
+  // O que o personal deste aluno aceita: Mercado Pago (Pix e cartão) ou só a
+  // chave Pix dele, com confirmação manual.
+  studentRequest("payments/options")
+    .then((options) => {
+      if (!options) return;
+      card.hidden = !options.card;
+      pix.hidden = !options.pix;
+      if (options.manual) pix.textContent = "Pagar com PIX";
+      if (!options.pix && !options.card)
+        paymentStatus.textContent =
+          "O pagamento pelo site ainda não foi ativado pelo seu personal. Fale com ele para combinar o pagamento.";
+    })
+    .catch(() => {});
   pix.addEventListener("click", async () => {
     pix.disabled = true;
-    paymentStatus.textContent = "Preparando o PIX seguro do Mercado Pago…";
+    paymentStatus.textContent = "Preparando o PIX…";
     try {
       const checkout = await studentRequest("payments/pix", {});
+      if (checkout.manual) {
+        await manualPixCheckout(checkout, pixCheckout, paymentStatus);
+        return;
+      }
       const image = element("img", "pix-qr-code");
       image.src = checkout.qrCodeBase64
         ? `data:image/png;base64,${checkout.qrCodeBase64}`

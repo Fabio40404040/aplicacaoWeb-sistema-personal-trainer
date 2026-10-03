@@ -296,3 +296,15 @@ export async function registerTrainerAccount(data) {
 export function fetchSaasPlans() {
   return request("/public/saas-plans");
 }
+
+// Recebimento do personal (conta Mercado Pago conectada ou chave Pix).
+export function fetchPayout() {
+  return request("/payout", { timeoutMs: 20000 });
+}
+export function payoutAction(path, method = "POST", data) {
+  return request(`/payout/${path}`, {
+    method,
+    ...(data ? { body: JSON.stringify(data) } : {}),
+    timeoutMs: 20000,
+  });
+}

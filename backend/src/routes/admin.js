@@ -1,4 +1,5 @@
 // Área do administrador da plataforma (o dono do SaaS), em /admin.
+import { payoutModes } from './payout.js'
 // A conta de administrador fica na tabela platform_admins, separada das
 // contas de personal. As rotas /api/admin/* só aceitam sessão com papel
 // "admin" (criada por adminLogin) — sessão de personal ou aluno é recusada.
@@ -76,6 +77,7 @@ export async function adminTrainers(db) {
      FROM trainers t ORDER BY t.created_at`,
   ]
   const extras = new Map((await adminTrainerExtras(db)).map((row) => [row.id, row]))
+  const payout = await payoutModes(db)
   for (const sql of queries) {
     try {
       const rows = (await db.query(sql)).rows
@@ -91,6 +93,7 @@ export async function adminTrainers(db) {
         activeStudents: Number(row.activeStudents || 0),
         workouts: Number(row.workouts || 0),
         isOwner: index === 0,
+        payoutMode: payout.get(row.id) || 'none',
       }))
     } catch {
       /* tenta a próxima versão da consulta */

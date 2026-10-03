@@ -17,6 +17,7 @@ import { initPwa } from './modules/pwa.js'
 import { initLogoSecret } from './modules/logo-secret.js'
 import { initProgressPicker } from './modules/progress-picker.js'
 import { initSupportPanel } from './modules/support-panel.js'
+import { initPayoutPanel } from './modules/payout-panel.js'
 import { initSaasBilling } from './modules/saas-billing.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
@@ -63,5 +64,6 @@ initialize('atalho da logo', initLogoSecret)
 initialize('escolha do aluno na evolução', initProgressPicker)
 initialize('suporte', initSupportPanel)
 initialize('assinatura', initSaasBilling)
+initialize('recebimentos', initPayoutPanel)
 initialize('WhatsApp flutuante', initWhatsappFloat)
 initialize('prévia dos treinos prontos', initPlanPreview)

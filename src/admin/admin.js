@@ -144,6 +144,19 @@ function render() {
           ),
         )
       }
+      if (trainer.payoutMode)
+        status.append(
+          el(
+            'small',
+            trainer.payoutMode === 'none' ? 'admin-alert' : 'admin-muted',
+            {
+              platform: 'Recebe: conta da plataforma',
+              mercadopago: 'Recebe: Mercado Pago próprio',
+              pix: 'Recebe: chave Pix própria',
+              none: 'Recebimento não configurado',
+            }[trainer.payoutMode],
+          ),
+        )
       if (trainer.openTickets)
         status.append(el('small', 'admin-alert', `${trainer.openTickets} chamado(s) aberto(s)`))
       const students = el('td')

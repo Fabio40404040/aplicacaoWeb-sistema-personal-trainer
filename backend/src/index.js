@@ -71,7 +71,19 @@ import {
   createPixPayment,
   mercadoPagoWebhook,
   reconcileStudentPayments,
+  manualPixDecision,
+  manualPixPaid,
+  paymentOptions,
 } from "./routes/payments.js";
+import {
+  payoutConnectUrl,
+  payoutDisconnect,
+  payoutInfo,
+  payoutOAuthCallback,
+  payoutRemovePix,
+  payoutSavePix,
+  payoutSetMode,
+} from "./routes/payout.js";
 import {
   deleteReadyWorkout,
   studentReadyWorkoutFile,
@@ -179,6 +191,8 @@ async function handleRoutes(request, env) {
     segments[3]
   )
     return withDb(env, (db) => publicReadyPreviewFrame(env, db, segments[3]));
+  if (request.method === "GET" && route === "payments/mercadopago/oauth")
+    return withDb(env, (db) => payoutOAuthCallback(request, env, db));
   if (request.method === "POST" && route === "payments/mercadopago/webhook")
     return withDb(env, (db) => mercadoPagoWebhook(request, env, db));
   if (request.method === "POST" && route === "payments/webhook")
@@ -322,6 +336,10 @@ async function handleRoutes(request, env) {
         return requestPlan(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/payments/checkout")
         return createCheckout(db, session.sub, env, await readJson(request));
+      if (request.method === "GET" && route === "student/payments/options")
+        return paymentOptions(db, session.sub, env);
+      if (request.method === "POST" && route === "student/payments/manual-paid")
+        return manualPixPaid(db, session.sub, await readJson(request));
       if (request.method === "GET" && route === "student/payments/card-config")
         return cardPaymentConfig(db, session.sub, env);
       if (request.method === "POST" && route === "student/payments/pix")
@@ -384,6 +402,20 @@ async function handleRoutes(request, env) {
       return billingInfo(env, db, session.sub);
     if (request.method === "POST" && route === "billing/checkout")
       return startSaasCheckout(env, db, session.sub, await readJson(request));
+    // Recebimento do personal: conta Mercado Pago conectada ou chave Pix.
+    if (segments[0] === "payout") {
+      if (request.method === "GET" && route === "payout") return payoutInfo(db, env, session.sub);
+      if (request.method === "POST" && route === "payout/mp/connect") return payoutConnectUrl(env, session.sub);
+      if (request.method === "POST" && route === "payout/mp/disconnect") return payoutDisconnect(db, session.sub);
+      if (request.method === "PUT" && route === "payout/pix")
+        return payoutSavePix(db, session.sub, await readJson(request));
+      if (request.method === "DELETE" && route === "payout/pix") return payoutRemovePix(db, session.sub);
+      if (request.method === "PUT" && route === "payout/mode")
+        return payoutSetMode(db, session.sub, await readJson(request));
+      if (request.method === "POST" && segments[1] === "manual" && ["confirm", "reject"].includes(segments[3]))
+        return manualPixDecision(db, session.sub, segments[2], segments[3]);
+      return { error: "Rota não encontrada.", status: 404 };
+    }
     const saas = await saasState(db, session.sub);
     // Assinatura vencida: o painel fica só para consulta (os alunos continuam
     // com acesso). Suporte, perfil e pagamento seguem liberados.

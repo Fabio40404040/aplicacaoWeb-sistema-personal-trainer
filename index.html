@@ -1541,6 +1541,17 @@
           >
           <a
             class="nav-link"
+            href="#recebimentos"
+            data-route-link="recebimentos"
+            ><svg><use href="#icon-check"></use></svg><span>Recebimentos</span
+            ><small
+              class="nav-count--alert"
+              data-payout-count
+              hidden
+            ></small></a
+          >
+          <a
+            class="nav-link"
             href="#suporte"
             data-route-link="suporte"
             ><svg><use href="#icon-mail"></use></svg><span>Falar com o suporte</span
@@ -2276,6 +2287,23 @@
             </div>
           </div>
           <div data-billing-root></div>
+        </section>
+
+        <section
+          class="page"
+          data-route="recebimentos"
+        >
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Pagamentos dos alunos</span>
+              <h1>Recebimentos</h1>
+              <p>Escolha por onde você recebe dos seus alunos. O dinheiro cai direto na sua conta.</p>
+            </div>
+          </div>
+          <div
+            class="payout-root"
+            data-payout-root
+          ></div>
         </section>
 
         <section
