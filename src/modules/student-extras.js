@@ -238,7 +238,7 @@ function openDeleteAccount() {
   }
   deleteDialog.innerHTML = `<form method="dialog">
     <header><div><span class="eyebrow eyebrow--blue">Privacidade</span><h2>Excluir minha conta</h2></div>
-      <button class="icon-button" type="submit" value="cancel" aria-label="Fechar">×</button></header>
+      <button class="icon-button" type="submit" value="cancel" formnovalidate aria-label="Fechar">×</button></header>
     <div class="modal-body">
       <p class="delete-warning">Isto apaga <b>definitivamente</b> sua conta e todos os seus dados: fichas, avaliações físicas,
         check-ins, agenda e histórico de pagamentos da plataforma. Seu acesso ao plano termina na hora e
@@ -247,7 +247,7 @@ function openDeleteAccount() {
       <label class="field"><span>Digite EXCLUIR para confirmar</span><input name="confirm" autocomplete="off" required pattern="EXCLUIR"></label>
       <p role="status" data-delete-status></p>
     </div>
-    <footer><button class="button button--secondary" type="submit" value="cancel">Manter minha conta</button>
+    <footer><button class="button button--secondary" type="submit" value="cancel" formnovalidate>Manter minha conta</button>
       <button class="button button--danger" type="submit" value="delete">Excluir definitivamente</button></footer>
   </form>`
   const form = deleteDialog.querySelector('form')
@@ -299,7 +299,7 @@ function openProfileDialog() {
   const hasCheckins = (data.access?.features || []).includes('checkins')
   dialog.innerHTML = `<form method="dialog">
     <header><div><span class="eyebrow eyebrow--blue">Meu perfil</span><h2>Perfil do aluno</h2></div>
-      <button class="icon-button" type="submit" value="cancel" aria-label="Fechar">×</button></header>
+      <button class="icon-button" type="submit" value="cancel" formnovalidate aria-label="Fechar">×</button></header>
     <div class="modal-body">
       <div data-avatar-slot></div>
       <label class="field"><span>Nome</span><input name="name" required maxlength="140"></label>
@@ -320,7 +320,7 @@ function openProfileDialog() {
         <button class="button button--danger-outline" type="button" data-delete-account>Excluir minha conta e meus dados</button>
       </section>
     </div>
-    <footer><button class="button button--secondary" type="submit" value="cancel">Cancelar</button>
+    <footer><button class="button button--secondary" type="submit" value="cancel" formnovalidate>Cancelar</button>
       <button class="button button--primary" type="submit" value="save">Salvar perfil</button></footer>
   </form>`
   const form = dialog.querySelector('form')

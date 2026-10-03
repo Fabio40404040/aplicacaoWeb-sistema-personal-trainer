@@ -82,7 +82,7 @@ function openProfileDialog(focusField) {
   }
   profileDialog.innerHTML = `<form method="dialog" data-trainer-profile>
     <header><div><span class="eyebrow eyebrow--blue">Meu perfil</span><h2>Perfil do personal</h2></div>
-      <button class="icon-button" type="submit" value="cancel" aria-label="Fechar">×</button></header>
+      <button class="icon-button" type="submit" value="cancel" formnovalidate aria-label="Fechar">×</button></header>
     <div class="modal-body">
       <div data-avatar-slot></div>
       <label class="field"><span>Nome</span><input name="name" required maxlength="120"></label>
@@ -99,7 +99,7 @@ function openProfileDialog(focusField) {
       </div>
       <p role="status" data-profile-status></p>
     </div>
-    <footer><button class="button button--secondary" type="submit" value="cancel">Cancelar</button>
+    <footer><button class="button button--secondary" type="submit" value="cancel" formnovalidate>Cancelar</button>
       <button class="button button--primary" type="submit" value="save">Salvar perfil</button></footer>
   </form>`
   const form = profileDialog.querySelector('form')

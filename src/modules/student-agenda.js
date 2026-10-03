@@ -36,7 +36,7 @@ function noticeCard({ tone = 'success', icon = '✓', title, message = '', lines
       <p data-notice-message></p>
       <ul class="student-notice-lines" data-notice-lines></ul>
       <div class="student-notice-actions">
-        <button class="button button--secondary" type="submit" value="cancel" data-notice-cancel></button>
+        <button class="button button--secondary" type="submit" value="cancel" formnovalidate data-notice-cancel></button>
         <button class="button button--primary" type="submit" value="confirm" data-notice-confirm></button>
       </div>
     </form>`

@@ -156,12 +156,16 @@ function render() {
       const menu = el('details', 'admin-menu')
       const summary = el('summary', 'button button--secondary', 'Ações ▾')
       const items = el('div', 'admin-menu-list')
+      summary.addEventListener('click', () => {
+        menu.dataset.openedAt = String(Date.now())
+      })
       // Abre o menu por cima da página, alinhado ao botão (não é cortado pela tabela).
       menu.addEventListener('toggle', () => {
         if (!menu.open) return
         document.querySelectorAll('.admin-menu[open]').forEach((other) => {
           if (other !== menu) other.open = false
         })
+        menu.dataset.openedAt = String(Date.now())
         const rect = summary.getBoundingClientRect()
         const height = items.offsetHeight || 230
         const below = rect.bottom + 6 + height <= window.innerHeight
@@ -209,8 +213,9 @@ function dialog({ eyebrow = 'Administração', title, body, confirmLabel = 'Conf
   const titles = el('div')
   titles.append(el('span', 'eyebrow eyebrow--blue', eyebrow), el('h2', '', title))
   const close = el('button', 'icon-button', '×')
-  close.type = 'submit'
-  close.value = 'cancel'
+  // type="button": fecha sem passar pela validação dos campos obrigatórios.
+  close.type = 'button'
+  close.addEventListener('click', () => box.close())
   close.setAttribute('aria-label', 'Fechar')
   header.append(titles, close)
   const content = el('div', 'modal-body')
@@ -221,8 +226,8 @@ function dialog({ eyebrow = 'Administração', title, body, confirmLabel = 'Conf
   const footer = el('footer')
   if (cancelLabel) {
     const cancel = el('button', 'button button--secondary', cancelLabel)
-    cancel.type = 'submit'
-    cancel.value = 'cancel'
+    cancel.type = 'button'
+    cancel.addEventListener('click', () => box.close())
     footer.append(cancel)
   }
   const ok = el('button', `button ${danger ? 'button--danger' : 'button--primary'}`, confirmLabel)
@@ -695,6 +700,8 @@ function init() {
   // Fecha o menu "Ações" ao clicar fora, rolar ou redimensionar.
   const closeMenus = (event) => {
     document.querySelectorAll('.admin-menu[open]').forEach((menu) => {
+      // Rolagem logo após abrir (o navegador ajeitando a tela) não fecha.
+      if (!event?.target && Date.now() - Number(menu.dataset.openedAt || 0) < 400) return
       if (!event?.target || !menu.contains(event.target)) menu.open = false
     })
   }

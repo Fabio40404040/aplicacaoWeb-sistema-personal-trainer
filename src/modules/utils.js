@@ -45,7 +45,7 @@ function appDialog() {
         <span class="eyebrow eyebrow--blue" data-dialog-eyebrow></span>
         <h2 data-dialog-title></h2>
       </div>
-      <button class="icon-button" type="submit" value="cancel" aria-label="Fechar">×</button>
+      <button class="icon-button" type="submit" value="cancel" formnovalidate aria-label="Fechar">×</button>
     </header>
     <div class="modal-body">
       <p data-dialog-message></p>
@@ -56,7 +56,7 @@ function appDialog() {
       <p class="password-requirements" data-dialog-note hidden></p>
     </div>
     <footer>
-      <button class="button button--secondary" type="submit" value="cancel">Cancelar</button>
+      <button class="button button--secondary" type="submit" value="cancel" formnovalidate>Cancelar</button>
       <button class="button button--primary" type="submit" value="confirm" data-dialog-confirm></button>
     </footer>
   </form>`

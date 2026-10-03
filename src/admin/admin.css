@@ -408,3 +408,25 @@
   padding-right: 18px;
   white-space: nowrap;
 }
+/* A coluna "Ações" fica sempre à vista: gruda na borda direita enquanto o
+   resto da tabela rola de lado em telas estreitas. */
+.admin-table td.admin-actions,
+.admin-table thead th.admin-actions-head {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: #fff;
+}
+.admin-table thead th.admin-actions-head {
+  background: var(--canvas, #f8fafc);
+}
+.admin-table tr.is-blocked td.admin-actions {
+  background: #fff7f7;
+}
+.admin-table td.admin-actions {
+  padding-left: 10px;
+  box-shadow: -10px 0 12px -10px rgba(15, 23, 42, 0.18);
+}
+.admin-table td.admin-actions:has(.admin-menu[open]) {
+  z-index: 6;
+}

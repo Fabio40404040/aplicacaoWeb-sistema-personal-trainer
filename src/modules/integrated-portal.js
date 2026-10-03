@@ -1501,7 +1501,7 @@ function confirmExerciseVideoDeletion(exercise) {
     dialog = document.createElement('dialog')
     dialog.className = 'modal'
     dialog.dataset.deleteExerciseVideo = ''
-    dialog.innerHTML = `<form method="dialog"><header><div><span class="eyebrow eyebrow--blue">Biblioteca de MP4</span><h2>Excluir vídeo?</h2></div><button class="icon-button" type="submit" value="cancel" aria-label="Fechar">×</button></header><div class="modal-body"><p>O vídeo <strong data-exercise-video-name></strong> será removido da biblioteca e deixará de aparecer para os alunos.</p><p class="password-requirements">Esta ação não pode ser desfeita.</p></div><footer><button class="button button--secondary" type="submit" value="cancel">Cancelar</button><button class="button button--primary" type="submit" value="confirm">Excluir vídeo</button></footer></form>`
+    dialog.innerHTML = `<form method="dialog"><header><div><span class="eyebrow eyebrow--blue">Biblioteca de MP4</span><h2>Excluir vídeo?</h2></div><button class="icon-button" type="submit" value="cancel" formnovalidate aria-label="Fechar">×</button></header><div class="modal-body"><p>O vídeo <strong data-exercise-video-name></strong> será removido da biblioteca e deixará de aparecer para os alunos.</p><p class="password-requirements">Esta ação não pode ser desfeita.</p></div><footer><button class="button button--secondary" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="button button--primary" type="submit" value="confirm">Excluir vídeo</button></footer></form>`
     document.body.append(dialog)
   }
   dialog.querySelector('[data-exercise-video-name]').textContent = exercise.name
