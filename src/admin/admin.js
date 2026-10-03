@@ -81,7 +81,7 @@ const money = (cents) =>
   (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 let overview = {}
 let saasPlansList = []
-const PLAN_NAMES = { trial: 'Teste grátis', start: 'Start', pro: 'Pro', elite: 'Elite' }
+const PLAN_NAMES = { free: 'Grátis', unlimited: 'Ilimitado' }
 let tickets = []
 let openTicket = null
 
@@ -148,7 +148,7 @@ function render() {
         status.append(el('small', 'admin-alert', `${trainer.openTickets} chamado(s) aberto(s)`))
       const students = el('td')
       students.append(el('strong', '', String(trainer.students)))
-      const limit = trainer.studentLimit ? ` · limite ${trainer.studentLimit}` : ''
+      const limit = trainer.studentLimit ? ` · limite ${trainer.studentLimit}` : ' · sem limite'
       students.append(el('small', 'admin-muted', `${trainer.activeStudents} com acesso${limit}`))
       if (trainer.revenue30Cents)
         students.append(el('small', 'admin-muted', `${money(trainer.revenue30Cents)} em 30 dias`))
@@ -184,7 +184,7 @@ function render() {
       }
       action('Editar dados', openTrainerForm)
       action('Acessar painel (suporte)', impersonate)
-      action('Definir plano / vencimento', setPlan)
+      action('Plano e limite de alunos', setPlan)
       action('Gerar nova senha', resetPassword)
       action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
       action('Excluir personal…', deleteTrainer, 'is-danger')
@@ -317,12 +317,16 @@ function openTrainerForm(trainer = null) {
     field('Telefone / WhatsApp', 'phone', { value: trainer?.phone }),
     field('CREF', 'cref', { value: trainer?.cref }),
   )
-  const grid2 = el('div', 'field-grid')
-  grid2.append(
-    field('Plano na plataforma', 'planName', { value: trainer?.planName || 'Plano profissional' }),
-    field('Limite de alunos', 'studentLimit', { type: 'number', value: trainer?.studentLimit || 60 }),
+  body.push(grid)
+  body.push(
+    el(
+      'p',
+      'admin-muted',
+      editing
+        ? 'Plano e limite de alunos: use “Plano e limite de alunos” no menu Ações.'
+        : 'A conta começa no plano Grátis. Depois, use “Plano e limite de alunos” no menu Ações para mudar.',
+    ),
   )
-  body.push(grid, grid2)
   if (editing) body.push(field('Anotações internas (só o admin vê)', 'adminNotes', { value: trainer?.adminNotes, textarea: true }))
   else body.push(el('p', 'admin-muted', 'Uma senha provisória será criada e mostrada uma única vez.'))
   const { box, form, status, ok } = dialog({
@@ -429,26 +433,44 @@ function setPlan(trainer) {
   const select = el('select')
   select.name = 'planCode'
   ;(saasPlansList.length ? saasPlansList : Object.entries(PLAN_NAMES).map(([code, name]) => ({ code, name }))).forEach((plan) => {
-    const option = el('option', '', `${plan.name}${plan.studentLimit ? ` · até ${plan.studentLimit} alunos` : ''}`)
+    const option = el('option', '', `${plan.name} · ${plan.studentLimit ? `até ${plan.studentLimit} alunos` : 'sem limite de alunos'}`)
     option.value = plan.code
     select.append(option)
   })
-  select.value = trainer.saasPlan || 'trial'
+  select.value = trainer.saasPlan || 'free'
   const planField = el('label', 'field')
   planField.append(el('span', '', 'Plano'), select)
   const expires = trainer.saasExpiresAt ? toDate(trainer.saasExpiresAt) : null
   const dateValue = expires
     ? `${expires.getFullYear()}-${String(expires.getMonth() + 1).padStart(2, '0')}-${String(expires.getDate()).padStart(2, '0')}`
     : ''
+  const limitField = field('Limite de alunos deste personal', 'studentLimit', {
+    type: 'number',
+    value: trainer.customLimit ?? '',
+  })
+  limitField.querySelector('input').min = '0'
+  limitField.querySelector('input').placeholder = 'Limite do plano'
+  const dateField = field('Ilimitado válido até', 'expiresAt', { type: 'date', value: dateValue })
+  const syncDate = () => {
+    const free = select.value === 'free'
+    dateField.style.display = free ? 'none' : ''
+    if (dateField.nextElementSibling) dateField.nextElementSibling.style.display = free ? 'none' : ''
+    if (free) dateField.querySelector('input').value = ''
+  }
+  select.addEventListener('change', syncDate)
   const { box, form, status, ok } = dialog({
     title: `Plano de ${trainer.name}`,
     body: [
-      el('p', '', 'Use para dar cortesia, estender o teste ou corrigir um pagamento feito fora do sistema.'),
+      el('p', '', 'Escolha o plano deste personal e, se quiser, um limite de alunos só para ele.'),
       planField,
-      field('Válido até (vazio = sem vencimento)', 'expiresAt', { type: 'date', value: dateValue }),
+      limitField,
+      el('small', 'admin-muted', 'Vazio = usa o limite do plano · 0 = sem limite · ou digite o número de alunos.'),
+      dateField,
+      el('small', 'admin-muted', 'Só para o Ilimitado. Vazio = sem vencimento (cortesia). O Grátis é permanente.'),
     ],
     confirmLabel: 'Salvar plano',
   })
+  syncDate()
   run(form, ok, status, async (values) => {
     await api(`/admin/trainers/${trainer.id}/plan`, { method: 'POST', body: JSON.stringify(values) })
     box.close()
@@ -475,17 +497,13 @@ async function renderPlans() {
       const name = el('td')
       name.append(input('name', plan.name))
       const price = el('td')
-      if (plan.isTrial) price.append(el('small', 'admin-muted', 'Grátis (14 dias)'))
+      if (plan.isFree) price.append(el('small', 'admin-muted', 'Grátis · permanente'))
       else price.append(input('price', (plan.priceCents / 100).toFixed(2), 'number'))
       const limit = el('td')
-      limit.append(input('studentLimit', plan.studentLimit, 'number'))
+      limit.append(input('studentLimit', plan.studentLimit, 'number'), el('small', 'admin-muted', plan.studentLimit ? `até ${plan.studentLimit} alunos` : 'sem limite'))
       const desc = el('td')
       desc.append(input('description', plan.description))
-      const active = el('td')
-      const box = input('active', '', 'checkbox')
-      box.checked = plan.active
-      active.append(box)
-      tr.append(name, price, limit, desc, active)
+      tr.append(name, price, limit, desc)
       return tr
     }),
   )
@@ -499,12 +517,12 @@ async function savePlans() {
     priceCents: Math.round(Number(tr.querySelector('[name="price"]')?.value || 0) * 100),
     studentLimit: Number(tr.querySelector('[name="studentLimit"]').value),
     description: tr.querySelector('[name="description"]').value,
-    active: tr.querySelector('[name="active"]').checked,
   }))
   status.textContent = 'Salvando…'
   try {
     await api('/admin/saas-plans', { method: 'PUT', body: JSON.stringify({ plans }) })
-    status.textContent = 'Planos salvos. Os novos valores já aparecem para os personais.'
+    status.textContent = 'Planos salvos. Os novos valores já valem para os personais.'
+    await reload()
     await renderPlans()
   } catch (error) {
     status.textContent = error.message

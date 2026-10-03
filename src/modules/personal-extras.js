@@ -42,12 +42,25 @@ function paintTopbar() {
 /* Cartão do plano                                                     */
 /* ------------------------------------------------------------------ */
 
+// Limite de alunos do plano; 0 no plano = sem limite.
+const limitOf = (profile) =>
+  profile?.planManaged ? Number(profile.studentLimit) || Infinity : Number(profile?.studentLimit) || DEFAULT_LIMIT
+
 function paintCapacity() {
   const card = document.querySelector('.sidebar .capacity')
   if (!card) return
   const profile = profileOf()
-  const limit = Number(profile?.studentLimit) || DEFAULT_LIMIT
+  const limit = limitOf(profile)
   const total = countedStudents().length
+  if (!Number.isFinite(limit)) {
+    card.querySelector('span').textContent = profile?.planName || 'Plano'
+    card.querySelector('small').textContent = `${total} aluno(s) · sem limite`
+    const meter = card.querySelector('progress, .meter span, .capacity-bar span')
+    if (meter?.tagName === 'PROGRESS') meter.value = 0
+    else if (meter) meter.style.width = '0%'
+    card.classList.remove('capacity--warn', 'capacity--full')
+    return
+  }
   const free = Math.max(0, limit - total)
   const ratio = total / limit
   card.querySelector('span').textContent = profile?.planName || 'Plano profissional'
@@ -112,7 +125,10 @@ function openProfileDialog(focusField) {
   const hint = form.querySelector('[data-capacity-hint]')
   const paintHint = () => {
     const total = countedStudents().length
-    hint.textContent = `${profile.planName || 'Plano'}: ${total} de ${profile.studentLimit || DEFAULT_LIMIT} alunos.`
+    const limit = limitOf(profile)
+    hint.textContent = Number.isFinite(limit)
+      ? `${profile.planName || 'Plano'}: ${total} de ${limit} alunos.`
+      : `${profile.planName || 'Plano'}: ${total} aluno(s), sem limite.`
   }
   paintHint()
   form.querySelector('[data-plan-link]').addEventListener('click', () => profileDialog.close())
@@ -317,7 +333,7 @@ function trainerNotifications() {
 
   // Vagas do plano.
   const profile = profileOf()
-  const limit = Number(profile?.studentLimit) || DEFAULT_LIMIT
+  const limit = limitOf(profile)
   const total = countedStudents().length
   if (total >= limit * 0.9)
     items.push({
@@ -325,7 +341,7 @@ function trainerNotifications() {
       tone: total >= limit ? 'danger' : 'warn',
       icon: '👥',
       title: total >= limit ? 'Seu plano está completo' : `Restam ${limit - total} vaga(s) no seu plano`,
-      detail: `${total} de ${limit} alunos. Faça upgrade em Minha assinatura.`,
+      detail: `${total} de ${limit} alunos. Veja as opções em Minha assinatura.`,
       onClick: () => { location.hash = '#assinatura' },
     })
 

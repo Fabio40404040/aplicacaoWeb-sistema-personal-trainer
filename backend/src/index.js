@@ -590,7 +590,7 @@ async function handleRoutes(request, env) {
       return { data: await listResource(db, resource, session.sub) };
     if (request.method === "POST" && !id && resource === "students" && saas?.studentLimit && saas.students >= saas.studentLimit)
       return {
-        error: `Seu plano ${saas.planName} permite até ${saas.studentLimit} alunos. Faça upgrade em Minha assinatura para cadastrar mais.`,
+        error: `Seu plano ${saas.planName} permite até ${saas.studentLimit} alunos. Para cadastrar mais, veja Minha assinatura ou fale com o suporte.`,
         status: 403,
       };
     if (request.method === "POST" && !id) {

@@ -39,7 +39,7 @@ function avatarValue(value) {
 
 export async function trainerProfile(db, trainerId) {
   if (!(await profileSchemaReady(db))) return null;
-  return (
+  const profile = (
     await db.query(
       `SELECT id, name, email, phone, cref, bio, avatar,
          plan_name AS "planName", student_limit AS "studentLimit"
@@ -47,6 +47,21 @@ export async function trainerProfile(db, trainerId) {
       [trainerId],
     )
   ).rows[0] || null;
+  if (!profile) return null;
+  // O plano e o limite de alunos vêm da assinatura (0 = sem limite).
+  try {
+    const plan = (
+      await db.query(
+        `SELECT p.name, COALESCE(t.saas_student_limit, p.student_limit) AS "limit"
+         FROM trainers t JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id=$1`,
+        [trainerId],
+      )
+    ).rows[0];
+    if (plan) Object.assign(profile, { planName: plan.name, studentLimit: Number(plan.limit), planManaged: true });
+  } catch {
+    /* sem as migrações 027/028 */
+  }
+  return profile;
 }
 
 export async function updateTrainerProfile(db, trainerId, body) {

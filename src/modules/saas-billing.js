@@ -1,5 +1,5 @@
-// Planos da plataforma para o personal: cadastro com 14 dias grátis
-// (tela "Criar conta"), página "Minha assinatura" e avisos de vencimento.
+// Planos da plataforma para o personal: cadastro no plano Grátis (tela
+// "Criar conta"), página "Minha assinatura" e avisos de vencimento.
 import {
   fetchBilling,
   fetchSaasPlans,
@@ -22,6 +22,7 @@ const day = (value) =>
 
 let billing = null
 const choice = { plan: null, cycle: 'monthly' }
+const limitText = (limit) => (Number(limit) ? `Até ${limit} alunos` : 'Alunos ilimitados')
 
 // ---------- cadastro
 function planCard(plan, { selectable = false } = {}) {
@@ -30,8 +31,8 @@ function planCard(plan, { selectable = false } = {}) {
   const monthly = plan.prices.find((price) => price.cycle === 'monthly')
   card.append(
     el('strong', '', plan.name),
-    el('span', 'saas-plan-price', plan.isTrial ? 'Grátis por 14 dias' : `${money(monthly?.amountCents)}/mês`),
-    el('small', '', `Até ${plan.studentLimit} alunos`),
+    el('span', 'saas-plan-price', plan.isFree ? 'Grátis para sempre' : `${money(monthly?.amountCents)}/mês`),
+    el('small', '', limitText(plan.studentLimit)),
   )
   if (plan.description) card.append(el('small', 'saas-plan-desc', plan.description))
   return card
@@ -45,10 +46,10 @@ async function initSignup() {
     .then((plans) => {
       if (!plans?.length) return
       plansBox.replaceChildren(
-        el('small', 'saas-plans-title', 'Depois do teste, escolha um plano (pode mudar quando quiser):'),
+        el('small', 'saas-plans-title', 'Você começa no Grátis e pode passar para o Ilimitado quando quiser:'),
         (() => {
           const grid = el('div', 'saas-plan-grid')
-          grid.append(...plans.filter((plan) => !plan.isTrial).map((plan) => planCard(plan)))
+          grid.append(...plans.map((plan) => planCard(plan)))
           return grid
         })(),
       )
@@ -77,27 +78,25 @@ async function initSignup() {
 // ---------- página "Minha assinatura"
 function statusLine(state) {
   if (!state) return ['Plano', '']
-  if (state.status === 'expired') return ['Vencida', `Venceu em ${day(state.expiresAt)}. Renove para voltar a editar.`]
-  if (state.status === 'trial')
-    return ['Teste grátis', `${state.daysLeft} dia(s) restante(s) · termina em ${day(state.expiresAt)}`]
+  if (state.status === 'free')
+    return ['Grátis', state.studentLimit ? `Sem vencimento · até ${state.studentLimit} alunos` : 'Sem vencimento · alunos ilimitados']
   if (state.status === 'courtesy') return ['Ativa', 'Sem vencimento (cortesia da plataforma)']
-  return ['Ativa', `Válida até ${day(state.expiresAt)}${state.daysLeft <= 7 ? ` · vence em ${state.daysLeft} dia(s)` : ''}`]
+  return [
+    'Ativa',
+    `Válida até ${day(state.expiresAt)}${state.daysLeft <= 7 ? ` · vence em ${state.daysLeft} dia(s). Sem renovação, a conta volta para o Grátis.` : ''}`,
+  ]
 }
 
 function checkoutBox(root) {
-  const plans = billing.plans.filter((plan) => !plan.isTrial)
+  const plans = billing.plans.filter((plan) => !plan.isFree)
+  if (!plans.length) return
   const state = billing.state
   const section = el('section', 'panel saas-checkout')
-  section.append(el('h2', '', state?.status === 'trial' || state?.status === 'expired' ? 'Escolha seu plano' : 'Renovar ou mudar de plano'))
+  section.append(el('h2', '', state?.status === 'free' ? 'Passar para o Ilimitado' : 'Renovar o plano'))
   const grid = el('div', 'saas-plan-grid')
   plans.forEach((plan) => {
-    const tooSmall = state && state.students > plan.studentLimit
     const card = planCard(plan, { selectable: true })
     if (state?.planCode === plan.code) card.append(el('em', 'saas-current', 'Seu plano'))
-    if (tooSmall) {
-      card.disabled = true
-      card.append(el('small', 'saas-warn', `Você já tem ${state.students} alunos`))
-    }
     card.addEventListener('click', () => {
       choice.plan = plan.code
       render()
@@ -107,22 +106,7 @@ function checkoutBox(root) {
   section.append(grid)
   const plan = plans.find((item) => item.code === choice.plan)
   if (plan) {
-    const cycles = el('div', 'saas-cycles')
-    plan.prices.forEach((price) => {
-      const chip = el('button', `saas-cycle${choice.cycle === price.cycle ? ' is-active' : ''}`)
-      chip.type = 'button'
-      chip.append(
-        el('strong', '', price.label),
-        el('span', '', money(price.amountCents)),
-        el('small', '', price.cycle === 'monthly' ? 'por mês' : `${money(price.monthlyCents)}/mês${price.cycle === 'annual' ? ' · 2 meses grátis' : ' · 5% off'}`),
-      )
-      chip.addEventListener('click', () => {
-        choice.cycle = price.cycle
-        render()
-      })
-      cycles.append(chip)
-    })
-    const price = plan.prices.find((item) => item.cycle === choice.cycle)
+    const price = plan.prices.find((item) => item.cycle === choice.cycle) || plan.prices[0]
     const actions = el('div', 'saas-pay-actions')
     const pix = el('button', 'button button--primary', `Pagar ${money(price.amountCents)} com Pix`)
     const card = el('button', 'button button--secondary', 'Pagar com cartão')
@@ -168,9 +152,7 @@ function checkoutBox(root) {
     pix.addEventListener('click', () => pay('pix', pix))
     card.addEventListener('click', () => pay('card', card))
     actions.append(pix, card)
-    section.append(el('h3', '', 'Período'), cycles, actions, result)
-  } else {
-    section.append(el('p', 'support-muted', 'Toque em um plano para ver os períodos e pagar.'))
+    section.append(el('p', 'support-muted', 'Cada pagamento libera 1 mês. Renovar antes de vencer soma o mês ao prazo atual.'), actions, result)
   }
   root.append(section)
 }
@@ -181,9 +163,9 @@ function startPolling() {
   let tries = 0
   pollTimer = window.setInterval(async () => {
     tries += 1
-    const before = billing?.state?.expiresAt
+    const before = `${billing?.state?.planCode}|${billing?.state?.expiresAt}`
     await load()
-    if (billing?.state?.expiresAt !== before) {
+    if (`${billing?.state?.planCode}|${billing?.state?.expiresAt}` !== before) {
       window.clearInterval(pollTimer)
       showToast('Pagamento aprovado! Sua assinatura foi atualizada.')
     }
@@ -204,9 +186,11 @@ function render() {
   if (state) {
     const usage = el('div', 'saas-usage')
     const bar = el('progress')
-    bar.max = state.studentLimit || 1
-    bar.value = Math.min(state.students, state.studentLimit || 0)
-    usage.append(el('small', '', `${state.students} de ${state.studentLimit} alunos no plano`), bar)
+    if (state.studentLimit) {
+      bar.max = state.studentLimit
+      bar.value = Math.min(state.students, state.studentLimit)
+      usage.append(el('small', '', `${state.students} de ${state.studentLimit} alunos no plano`), bar)
+    } else usage.append(el('small', '', `${state.students} aluno(s) · sem limite`))
     summary.append(usage)
   }
   root.append(summary)
@@ -217,41 +201,30 @@ function render() {
     el(
       'p',
       'support-muted saas-legal',
-      'Pagamento por período, sem renovação automática. Você pode cancelar em até 7 dias da contratação com reembolso (CDC, art. 49). Dúvidas: Falar com o suporte.',
+      'Pagamento mensal, sem renovação automática. Se não renovar, a conta volta para o plano Grátis e nada é apagado. Você pode cancelar em até 7 dias da contratação com reembolso (CDC, art. 49). Dúvidas: Falar com o suporte.',
     ),
   )
 }
 
 function paintAlerts() {
   const state = billing?.state
+  const soon = state?.status === 'active' && state.daysLeft !== null && state.daysLeft <= 5
   const alert = document.querySelector('[data-billing-alert]')
-  const soon = state && ['trial', 'active'].includes(state.status) && state.daysLeft !== null && state.daysLeft <= 5
-  if (alert) alert.hidden = !(state?.status === 'expired' || soon)
+  if (alert) alert.hidden = !soon
   let bar = document.querySelector('[data-billing-banner]')
-  if (state?.status === 'expired' || (state?.status === 'trial' && state.daysLeft <= 3)) {
+  if (soon) {
     if (!bar) {
       bar = el('div', 'billing-banner')
       bar.dataset.billingBanner = ''
       document.querySelector('.main-content')?.prepend(bar)
     }
+    const link = el('a', 'button button--primary', 'Renovar agora')
+    link.href = '#assinatura'
     bar.replaceChildren(
-      el(
-        'span',
-        '',
-        state.status === 'expired'
-          ? '⚠ Sua assinatura venceu. O painel está só para consulta — seus alunos continuam com acesso.'
-          : `⏳ Seu teste grátis termina em ${state.daysLeft} dia(s).`,
-      ),
-      (() => {
-        const link = el('a', 'button button--primary', state.status === 'expired' ? 'Renovar agora' : 'Escolher plano')
-        link.href = '#assinatura'
-        return link
-      })(),
+      el('span', '', `⏳ Seu plano ${state.planName} vence em ${state.daysLeft} dia(s). Depois disso a conta volta para o Grátis.`),
+      link,
     )
   } else bar?.remove()
-  const capacity = document.querySelector('.sidebar .capacity small')
-  if (capacity && state?.status === 'trial' && !capacity.textContent.includes('teste'))
-    capacity.textContent += ` · teste: ${state.daysLeft} dia(s)`
 }
 
 async function load() {
@@ -262,8 +235,7 @@ async function load() {
     return
   }
   if (!choice.plan) {
-    const current = billing.plans.find((plan) => plan.code === billing.state?.planCode && !plan.isTrial)
-    choice.plan = current?.code || billing.plans.find((plan) => !plan.isTrial && plan.studentLimit >= (billing.state?.students || 0))?.code || null
+    choice.plan = billing.plans.find((plan) => !plan.isFree)?.code || null
   }
   paintAlerts()
   if (location.hash === '#assinatura') render()

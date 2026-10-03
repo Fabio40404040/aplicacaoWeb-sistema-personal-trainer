@@ -1,15 +1,15 @@
-// Planos da plataforma para os personais (migração 027): cadastro do
-// personal com teste grátis, limite de alunos por plano, assinatura paga por
-// Pix ou cartão (Mercado Pago) e painel em "somente leitura" quando vence.
+// Planos da plataforma para os personais (migrações 027 e 028): dois planos —
+// "Grátis" (permanente) e "Ilimitado" (preço único mensal, Pix ou cartão pelo
+// Mercado Pago). Limite de alunos: o do plano ou o ajuste feito pelo admin
+// para aquele personal (0 = sem limite). Quando o Ilimitado vence, o personal
+// volta sozinho para o Grátis.
 import { createSession, hashPassword, isStrongPassword } from '../lib/session.js'
 import { mercadoPago, officialPaymentForIntent } from './payments.js'
 
 export const SAAS_CYCLES = {
   monthly: { label: 'Mensal', months: 1, factor: 1 },
-  quarterly: { label: 'Trimestral', months: 3, factor: 0.95 },
-  annual: { label: 'Anual', months: 12, factor: 10 / 12 }, // 2 meses grátis
 }
-const TRIAL_DAYS = 14
+export const FREE_PLAN = 'free'
 const DAY = 86_400_000
 
 export const saasAmount = (plan, cycle) =>
@@ -27,7 +27,8 @@ export async function saasPlans(db, { includeInactive = false } = {}) {
       ...plan,
       active: Boolean(plan.active),
       isTrial: Boolean(plan.isTrial),
-      prices: plan.isTrial
+      isFree: !Number(plan.priceCents),
+      prices: !Number(plan.priceCents)
         ? []
         : Object.keys(SAAS_CYCLES).map((cycle) => ({
             cycle,
@@ -43,37 +44,52 @@ export async function saasPlans(db, { includeInactive = false } = {}) {
 
 // Situação da assinatura de um personal.
 export async function saasState(db, trainerId) {
-  let row
-  try {
-    row = (
+  const read = async () =>
+    (
       await db.query(
         `SELECT t.saas_plan_code AS "planCode", t.saas_cycle AS "cycle", t.saas_expires_at AS "expiresAt",
-           p.name AS "planName", p.student_limit AS "studentLimit", p.is_trial AS "isTrial",
+           t.saas_student_limit AS "customLimit",
+           p.name AS "planName", p.student_limit AS "planLimit", p.price_cents AS "priceCents",
            (SELECT COUNT(*) FROM students s WHERE s.trainer_id=t.id) AS "students"
          FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id=$1`,
         [trainerId],
       )
     ).rows[0]
+  let row
+  try {
+    row = await read()
+    // Plano pago vencido: volta para o Grátis (permanente).
+    if (row?.expiresAt && Date.parse(row.expiresAt) < Date.now()) {
+      await db.query(
+        `UPDATE trainers SET saas_plan_code=$2, saas_cycle=NULL, saas_expires_at=NULL WHERE id=$1`,
+        [trainerId, FREE_PLAN],
+      )
+      row = { ...(await read()), downgraded: true }
+    }
   } catch {
-    return null // sem a migração 027: sem limites
+    return null // sem as migrações 027/028: sem limites
   }
   if (!row) return null
   const expires = row.expiresAt ? Date.parse(row.expiresAt) : null
-  const expired = Boolean(expires && expires < Date.now())
+  const isFree = !Number(row.priceCents)
+  const custom = row.customLimit === null || row.customLimit === undefined ? null : Number(row.customLimit)
   return {
     planCode: row.planCode,
     planName: row.planName || row.planCode,
     cycle: row.cycle,
-    isTrial: Boolean(row.isTrial),
+    isFree,
     expiresAt: row.expiresAt,
     daysLeft: expires ? Math.ceil((expires - Date.now()) / DAY) : null,
-    status: expired ? 'expired' : row.isTrial ? 'trial' : expires ? 'active' : 'courtesy',
-    studentLimit: Number(row.studentLimit || 0),
+    status: isFree ? 'free' : expires ? 'active' : 'courtesy',
+    // 0 = sem limite de alunos.
+    studentLimit: custom ?? Number(row.planLimit || 0),
+    customLimit: custom,
     students: Number(row.students || 0),
+    downgraded: Boolean(row.downgraded),
   }
 }
 
-// ---------- cadastro do personal (teste grátis)
+// ---------- cadastro do personal (plano Grátis)
 export async function registerTrainer(env, db, body) {
   const name = String(body?.name || '').trim().slice(0, 120)
   const email = String(body?.email || '').trim().toLowerCase()
@@ -90,7 +106,6 @@ export async function registerTrainer(env, db, body) {
     return { error: 'Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.', status: 400 }
   const exists = (await db.query('SELECT id FROM trainers WHERE lower(email)=$1', [email])).rows[0]
   if (exists) return { error: 'Já existe uma conta com este e-mail. Use “Esqueci a senha”.', status: 409 }
-  const trial = (await db.query("SELECT student_limit AS \"limit\" FROM saas_plans WHERE code='trial'")).rows[0]
   const trainer = (
     await db.query(
       `INSERT INTO trainers (name,email,password_hash) VALUES ($1,$2,$3) RETURNING id,name,email,auth_version`,
@@ -98,14 +113,13 @@ export async function registerTrainer(env, db, body) {
     )
   ).rows[0]
   await db.query(
-    `UPDATE trainers SET saas_plan_code='trial', saas_expires_at=$2, terms_accepted_at=CURRENT_TIMESTAMP,
-       phone=$3, cref=$4, student_limit=$5, plan_name='Teste grátis', last_login_at=CURRENT_TIMESTAMP WHERE id=$1`,
+    `UPDATE trainers SET saas_plan_code=$2, saas_expires_at=NULL, terms_accepted_at=CURRENT_TIMESTAMP,
+       phone=$3, cref=$4, last_login_at=CURRENT_TIMESTAMP WHERE id=$1`,
     [
       trainer.id,
-      new Date(Date.now() + TRIAL_DAYS * DAY).toISOString(),
+      FREE_PLAN,
       String(body?.phone || '').trim().slice(0, 30) || null,
       String(body?.cref || '').trim().slice(0, 30) || null,
-      Number(trial?.limit || 5),
     ],
   )
   return {
@@ -140,16 +154,10 @@ export async function startSaasCheckout(env, db, trainerId, body) {
   if (!env.MERCADO_PAGO_ACCESS_TOKEN)
     return { error: 'Pagamento online ainda não configurado. Fale com o suporte.', status: 503 }
   const plans = await saasPlans(db)
-  const plan = plans.find((item) => item.code === body?.planCode && !item.isTrial)
+  const plan = plans.find((item) => item.code === body?.planCode && !item.isFree)
   if (!plan) return { error: 'Escolha um plano.', status: 400 }
-  const cycle = SAAS_CYCLES[body?.cycle] ? body.cycle : 'monthly'
+  const cycle = 'monthly'
   const method = body?.method === 'card' ? 'card' : 'pix'
-  const state = await saasState(db, trainerId)
-  if (state && state.students > plan.studentLimit)
-    return {
-      error: `Você tem ${state.students} alunos e o plano ${plan.name} permite até ${plan.studentLimit}. Escolha um plano maior.`,
-      status: 400,
-    }
   const trainer = (await db.query('SELECT name, email FROM trainers WHERE id=$1', [trainerId])).rows[0]
   const amountCents = saasAmount(plan, cycle)
   const intentId = `saas_${crypto.randomUUID().replace(/-/gu, '')}`
@@ -231,13 +239,12 @@ export async function approveSaasPayment(db, intent, payment) {
     current?.exp && current.code === intent.plan_code && Date.parse(current.exp) > Date.now()
       ? new Date(current.exp)
       : new Date()
-  base.setUTCMonth(base.getUTCMonth() + SAAS_CYCLES[intent.cycle].months)
-  const plan = (await db.query('SELECT name, student_limit AS "limit" FROM saas_plans WHERE code=$1', [intent.plan_code])).rows[0]
+  base.setUTCMonth(base.getUTCMonth() + (SAAS_CYCLES[intent.cycle]?.months || 1))
   await db.batch([
     { sql: "UPDATE saas_payment_intents SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=$1", values: [intent.id] },
     {
-      sql: `UPDATE trainers SET saas_plan_code=$2, saas_cycle=$3, saas_expires_at=$4, plan_name=$5, student_limit=$6 WHERE id=$1`,
-      values: [intent.trainer_id, intent.plan_code, intent.cycle, base.toISOString(), plan?.name || intent.plan_code, plan?.limit || 60],
+      sql: `UPDATE trainers SET saas_plan_code=$2, saas_cycle=$3, saas_expires_at=$4 WHERE id=$1`,
+      values: [intent.trainer_id, intent.plan_code, intent.cycle, base.toISOString()],
     },
   ])
 }
@@ -280,43 +287,47 @@ export async function saasWebhook(db, payment) {
   return true
 }
 
-// ---------- admin: editar planos e dar plano/prazo a um personal
+// ---------- admin: editar os dois planos e ajustar plano/limite de um personal
+const limitValue = (value) => Math.max(0, Math.min(100000, Math.round(Number(value) || 0)))
+
 export async function adminSavePlans(db, body) {
-  const plans = Array.isArray(body?.plans) ? body.plans : []
-  const queries = plans
-    .filter((plan) => /^[a-z0-9_-]{2,30}$/u.test(String(plan?.code || '')))
-    .map((plan, index) => ({
-      sql: `INSERT INTO saas_plans (code,name,price_cents,student_limit,description,position,active,is_trial)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-            ON CONFLICT(code) DO UPDATE SET name=excluded.name, price_cents=excluded.price_cents,
-              student_limit=excluded.student_limit, description=excluded.description, position=excluded.position,
-              active=excluded.active`,
+  const plans = (Array.isArray(body?.plans) ? body.plans : []).filter((plan) =>
+    [FREE_PLAN, 'unlimited'].includes(String(plan?.code || '')),
+  )
+  if (!plans.length) return { error: 'Nenhum plano informado.', status: 400 }
+  const paid = plans.find((plan) => plan.code === 'unlimited')
+  if (paid && !(Math.round(Number(paid.priceCents)) >= 100))
+    return { error: 'Informe o preço mensal do plano pago (mínimo R$ 1,00).', status: 400 }
+  await db.batch(
+    plans.map((plan) => ({
+      sql: `UPDATE saas_plans SET name=$2, price_cents=$3, student_limit=$4, description=$5 WHERE code=$1`,
       values: [
         plan.code,
-        String(plan.name || plan.code).slice(0, 60),
-        plan.code === 'trial' ? 0 : Math.max(0, Math.round(Number(plan.priceCents) || 0)),
-        Math.max(1, Math.min(100000, Number(plan.studentLimit) || 1)),
+        String(plan.name || plan.code).trim().slice(0, 60) || plan.code,
+        plan.code === FREE_PLAN ? 0 : Math.round(Number(plan.priceCents)),
+        limitValue(plan.studentLimit),
         String(plan.description || '').slice(0, 200) || null,
-        index,
-        plan.active === false ? 0 : 1,
-        plan.code === 'trial' ? 1 : 0,
       ],
-    }))
-  if (!queries.length) return { error: 'Nenhum plano informado.', status: 400 }
-  await db.batch(queries)
+    })),
+  )
   return { data: await saasPlans(db, { includeInactive: true }) }
 }
 
 export async function adminSetTrainerPlan(db, trainerId, body) {
   const plan = (
-    await db.query('SELECT code, name, student_limit AS "limit" FROM saas_plans WHERE code=$1', [String(body?.planCode || '')])
+    await db.query('SELECT code, price_cents AS "price" FROM saas_plans WHERE code=$1', [String(body?.planCode || '')])
   ).rows[0]
   if (!plan) return { error: 'Plano inválido.', status: 400 }
-  const expiresAt = body?.expiresAt ? new Date(`${body.expiresAt}T23:59:59-03:00`) : null
+  // O Grátis é permanente: nunca tem vencimento.
+  const expiresAt = body?.expiresAt && Number(plan.price) ? new Date(`${body.expiresAt}T23:59:59-03:00`) : null
   if (expiresAt && Number.isNaN(expiresAt.getTime())) return { error: 'Data inválida.', status: 400 }
+  if (expiresAt && expiresAt.getTime() < Date.now()) return { error: 'A data de validade já passou.', status: 400 }
+  // Vazio = usa o limite do plano; 0 = sem limite; número = limite só deste personal.
+  const raw = body?.studentLimit
+  const custom = raw === '' || raw === null || raw === undefined ? null : limitValue(raw)
   await db.query(
-    `UPDATE trainers SET saas_plan_code=$2, saas_expires_at=$3, plan_name=$4, student_limit=$5 WHERE id=$1`,
-    [trainerId, plan.code, expiresAt ? expiresAt.toISOString() : null, plan.name, plan.limit],
+    `UPDATE trainers SET saas_plan_code=$2, saas_expires_at=$3, saas_student_limit=$4 WHERE id=$1`,
+    [trainerId, plan.code, expiresAt ? expiresAt.toISOString() : null, custom],
   )
-  return { data: { planCode: plan.code, expiresAt: expiresAt?.toISOString() || null } }
+  return { data: { planCode: plan.code, expiresAt: expiresAt?.toISOString() || null, studentLimit: custom } }
 }

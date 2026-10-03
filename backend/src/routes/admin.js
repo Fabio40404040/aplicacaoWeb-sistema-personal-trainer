@@ -85,6 +85,8 @@ export async function adminTrainers(db) {
         openTickets: Number(extras.get(row.id)?.openTickets || 0),
         revenue30Cents: Number(extras.get(row.id)?.revenue30Cents || 0),
         ...row,
+        planName: extras.get(row.id)?.planName ?? row.planName,
+        studentLimit: Number(extras.get(row.id)?.studentLimit ?? row.studentLimit ?? 0),
         students: Number(row.students || 0),
         activeStudents: Number(row.activeStudents || 0),
         workouts: Number(row.workouts || 0),
@@ -178,6 +180,9 @@ export async function adminTrainerExtras(db) {
       await db.query(
         `SELECT t.id, t.status, t.blocked_reason AS "blockedReason", t.admin_notes AS "adminNotes",
            t.phone, t.cref, t.saas_plan_code AS "saasPlan", t.saas_expires_at AS "saasExpiresAt",
+           t.saas_student_limit AS "customLimit",
+           COALESCE(t.saas_student_limit, (SELECT p.student_limit FROM saas_plans p WHERE p.code=t.saas_plan_code)) AS "studentLimit",
+           (SELECT p.name FROM saas_plans p WHERE p.code=t.saas_plan_code) AS "planName",
            (SELECT COUNT(*) FROM support_tickets k WHERE k.trainer_id=t.id AND k.admin_unread=1 AND k.status<>'closed') AS "openTickets",
            (SELECT COALESCE(SUM(p.amount_cents),0) FROM payments p WHERE p.trainer_id=t.id AND p.status='paid'
               AND p.paid_at >= datetime('now','-30 day')) AS "revenue30Cents"
@@ -204,12 +209,8 @@ export async function adminCreateTrainer(db, admin, body) {
     )
   ).rows[0]
   try {
-    await db.query('UPDATE trainers SET plan_name=$2, student_limit=$3, phone=$4 WHERE id=$1', [
-      row.id,
-      text(body?.planName, 60) || 'Plano profissional',
-      Math.max(1, Math.min(10000, Number(body?.studentLimit) || 60)),
-      text(body?.phone, 30),
-    ])
+    await db.query('UPDATE trainers SET phone=$2, cref=$3 WHERE id=$1', [row.id, text(body?.phone, 30), text(body?.cref, 30)])
+    await db.query("UPDATE trainers SET saas_plan_code='free', saas_expires_at=NULL WHERE id=$1", [row.id])
   } catch {
     /* sem a migração 018 */
   }
@@ -227,15 +228,13 @@ export async function adminUpdateTrainer(db, admin, id, body) {
   ).rows[0]
   if (clash) return { error: 'Outro personal já usa este e-mail.', status: 409 }
   await db.query(
-    `UPDATE trainers SET name=$2, email=$3, phone=$4, cref=$5, plan_name=$6, student_limit=$7, admin_notes=$8 WHERE id=$1`,
+    `UPDATE trainers SET name=$2, email=$3, phone=$4, cref=$5, admin_notes=$6 WHERE id=$1`,
     [
       id,
       text(body?.name, 120) || trainer.name,
       email,
       text(body?.phone, 30),
       text(body?.cref, 30),
-      text(body?.planName, 60) || 'Plano profissional',
-      Math.max(1, Math.min(10000, Number(body?.studentLimit) || 60)),
       text(body?.adminNotes, 2000),
     ],
   )
