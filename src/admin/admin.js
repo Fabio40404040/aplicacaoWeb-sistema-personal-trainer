@@ -156,6 +156,19 @@ function render() {
       const menu = el('details', 'admin-menu')
       const summary = el('summary', 'button button--secondary', 'Ações ▾')
       const items = el('div', 'admin-menu-list')
+      // Abre o menu por cima da página, alinhado ao botão (não é cortado pela tabela).
+      menu.addEventListener('toggle', () => {
+        if (!menu.open) return
+        document.querySelectorAll('.admin-menu[open]').forEach((other) => {
+          if (other !== menu) other.open = false
+        })
+        const rect = summary.getBoundingClientRect()
+        const height = items.offsetHeight || 230
+        const below = rect.bottom + 6 + height <= window.innerHeight
+        items.style.top = `${below ? rect.bottom + 6 : Math.max(8, rect.top - height - 6)}px`
+        items.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`
+        items.style.left = 'auto'
+      })
       const action = (label, handler, extra = '') => {
         const button = el('button', extra, label)
         button.type = 'button'
@@ -679,6 +692,15 @@ function init() {
   document.querySelectorAll('[data-admin-tab]').forEach((tab) =>
     tab.addEventListener('click', () => showTab(tab.dataset.adminTab)),
   )
+  // Fecha o menu "Ações" ao clicar fora, rolar ou redimensionar.
+  const closeMenus = (event) => {
+    document.querySelectorAll('.admin-menu[open]').forEach((menu) => {
+      if (!event?.target || !menu.contains(event.target)) menu.open = false
+    })
+  }
+  document.addEventListener('click', closeMenus)
+  window.addEventListener('scroll', () => closeMenus(), true)
+  window.addEventListener('resize', () => closeMenus())
   window.setInterval(() => {
     if (getToken() && !document.hidden && !document.querySelector('dialog[open]')) void loadTickets()
   }, 60_000)

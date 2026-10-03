@@ -283,12 +283,10 @@
   display: none;
 }
 .admin-menu-list {
-  position: absolute;
-  right: 0;
-  z-index: 20;
+  z-index: 300;
   display: grid;
   min-width: 220px;
-  margin-top: 6px;
+  margin: 0;
   padding: 6px;
   border: 1px solid var(--line, #e2e8f0);
   border-radius: 12px;
@@ -349,19 +347,20 @@
 .admin-section .toolbar select {
   width: auto;
 }
+/* A tabela rola dentro do quadro em qualquer largura; o menu "Ações" abre
+   por cima de tudo (posição calculada no admin.js), sem ser cortado. */
 .content-panel .table-wrap {
-  overflow: visible;
+  overflow-x: auto;
+}
+.admin-menu-list {
+  position: fixed;
 }
 @media (max-width: 760px) {
-  .content-panel .table-wrap {
-    overflow-x: auto;
-  }
   .admin-menu-list {
-    position: fixed;
-    right: 12px;
-    left: 12px;
-    bottom: 12px;
-    top: auto;
+    right: 12px !important;
+    left: 12px !important;
+    bottom: 12px !important;
+    top: auto !important;
   }
 }
 /* Nada estica a página no celular: só a tabela rola de lado */
@@ -404,4 +403,8 @@
   justify-content: space-between;
   gap: 10px;
   padding: 14px 18px;
+}
+.admin-table td.admin-actions {
+  padding-right: 18px;
+  white-space: nowrap;
 }
