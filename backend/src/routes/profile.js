@@ -74,7 +74,7 @@ export async function updateTrainerProfile(db, trainerId, body) {
   await db.query(
     // Plano e limite de alunos vêm da assinatura (admin/planos), não do perfil.
     `UPDATE trainers SET name=$2, phone=$3, cref=$4, bio=$5
-       ${avatar.keep ? "" : ", avatar=$8"}
+       ${avatar.keep ? "" : ", avatar=$6"}
      WHERE id=$1`,
     [
       trainerId,
@@ -82,9 +82,7 @@ export async function updateTrainerProfile(db, trainerId, body) {
       text(body?.phone, 30),
       text(body?.cref, 30),
       text(body?.bio, 500),
-      text(body?.planName, 60) || "Plano profissional",
-      limit,
-      avatar.value ?? null,
+      ...(avatar.keep ? [] : [avatar.value ?? null]),
     ],
   );
   return { data: await trainerProfile(db, trainerId) };
