@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "FARISA Personal Trainer",
-  "short_name": "FARISA Personal",
+  "name": "FARISA Aluno",
+  "short_name": "FARISA Aluno",
   "description": "Treinos de musculação, avaliação física e acompanhamento.",
   "lang": "pt-BR",
   "start_url": "/#inicio",
