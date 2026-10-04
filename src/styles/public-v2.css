@@ -1216,3 +1216,176 @@ html[data-accent] .public-menu a:hover {
 .public-screen.is-trainer-page .hero-proof-grid {
   display: none;
 }
+
+/* ---------- Vitrine da plataforma (página principal) ---------- */
+.saas-main {
+  display: none;
+}
+html[data-home='saas'] .public-main {
+  display: none;
+}
+html[data-home='saas'] .saas-main {
+  display: block;
+}
+.saas-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 64px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(120px, 14vw, 170px) 24px clamp(56px, 7vw, 96px);
+}
+.saas-hero h1 {
+  margin: 14px 0 18px;
+  color: var(--site-text);
+  font-size: clamp(2.3rem, 5vw, 4rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.saas-hero h1 em {
+  color: var(--site-blue-light);
+  font-style: normal;
+}
+.saas-hero-copy > p {
+  max-width: 520px;
+  font-size: 1.12rem;
+  line-height: 1.6;
+}
+.saas-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+.saas-hero-actions .public-cta {
+  margin-top: 0;
+}
+.saas-ghost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 0 22px;
+  border: 1px solid var(--site-line);
+  border-radius: 11px;
+  color: var(--site-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+.saas-ghost:hover {
+  border-color: var(--site-blue-light);
+}
+.saas-hero-note {
+  display: block;
+  margin-top: 16px;
+  color: var(--site-muted);
+}
+.saas-hero-shot {
+  margin: 0;
+  border: 1px solid var(--site-line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--site-card);
+  box-shadow: 0 30px 80px rgba(4, 10, 18, 0.5);
+}
+.saas-hero-shot img,
+.saas-demo-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.saas-demo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.saas-demo-card img {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top;
+  border: 1px solid var(--site-line);
+  border-radius: 12px;
+  background: var(--site-bg-soft);
+}
+.saas-demo-card h3,
+.saas-demo-card p {
+  margin: 0;
+}
+.saas-demo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin-top: auto;
+  padding: 0 18px;
+  border: 1px solid var(--site-blue-light);
+  border-radius: 10px;
+  background: rgba(61, 139, 253, 0.13);
+  color: var(--site-text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.saas-demo-button:hover {
+  background: rgba(61, 139, 253, 0.26);
+}
+.saas-demo-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.saas-demo-status {
+  min-height: 1.4em;
+  margin: 16px 0 0;
+  text-align: center;
+}
+.saas-plan-grid {
+  grid-template-columns: repeat(2, minmax(0, 380px));
+  justify-content: center;
+}
+.saas-final .public-cta {
+  margin-top: 22px;
+}
+@media (max-width: 900px) {
+  .saas-hero {
+    grid-template-columns: 1fr;
+    padding-top: 112px;
+  }
+}
+@media (max-width: 620px) {
+  .saas-plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .saas-hero-actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+/* Faixa da conta de demonstração (painel e app do aluno). */
+.demo-banner {
+  position: fixed;
+  z-index: 200;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: #111926;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 12px 32px rgba(4, 10, 18, 0.4);
+}
+.demo-banner a {
+  color: #7dd3fc;
+  font-weight: 700;
+}

@@ -75,6 +75,8 @@ import {
   manualPixPaid,
   paymentOptions,
 } from "./routes/payments.js";
+import { demoSession } from "./routes/demo.js";
+import { demoReadOnly, isDemoEmail } from "./lib/demo.js";
 import { publicSite, publicSiteHero, saveSite, saveSiteHero, siteSettings } from "./routes/site.js";
 import {
   payoutConnectUrl,
@@ -211,6 +213,8 @@ async function handleRoutes(request, env) {
   // Cadastro do personal (teste grátis) e planos da plataforma.
   if (request.method === "POST" && route === "auth/register")
     return withDb(env, async (db) => registerTrainer(env, db, await readJson(request)));
+  if (request.method === "POST" && segments[0] === "public" && segments[1] === "demo" && segments[2])
+    return withDb(env, (db) => demoSession(env, db, segments[2]));
   if (request.method === "GET" && segments[0] === "public" && segments[1] === "site" && segments.length <= 3)
     return withDb(env, (db) => publicSite(db, segments[2] || ""));
   if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-hero" && segments[2])
@@ -238,6 +242,8 @@ async function handleRoutes(request, env) {
 
   const session = await readSession(request, env);
   if (!session) return { error: "Sessão inválida ou expirada.", status: 401 };
+  // Contas de demonstração (abertas a qualquer visitante): só leitura.
+  if (isDemoEmail(session.email) && !["GET", "HEAD"].includes(request.method)) return demoReadOnly;
   if (segments[0] === "admin" || session.role === "admin") {
     if (session.role !== "admin")
       return { error: "Acesso exclusivo do administrador.", status: 403 };

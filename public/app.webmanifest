@@ -4,7 +4,7 @@
   "short_name": "FARISA Aluno",
   "description": "Treinos de musculação, avaliação física e acompanhamento.",
   "lang": "pt-BR",
-  "start_url": "/#inicio",
+  "start_url": "/#entrar-aluno",
   "scope": "/",
   "display": "standalone",
   "background_color": "#18212d",

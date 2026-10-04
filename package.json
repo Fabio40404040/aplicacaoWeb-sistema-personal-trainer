@@ -16,6 +16,8 @@
     "senha": "node backend/scripts/trocar-senha-personal.mjs",
     "admin": "node backend/scripts/criar-admin.mjs",
     "db:migrate:remote": "npm --prefix backend run db:migrate:remote",
+    "demo:reset:local": "npm --prefix backend run demo:reset:local",
+    "demo:reset:remote": "npm --prefix backend run demo:reset:remote",
     "demo:remover": "npm --prefix backend run demo:remover:local && npm --prefix backend run demo:remover:remote",
     "wrangler:login": "npm --prefix backend exec -- wrangler login"
   },

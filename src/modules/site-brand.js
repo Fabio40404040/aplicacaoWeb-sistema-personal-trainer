@@ -172,6 +172,8 @@ export async function initSiteBrand() {
   // O painel do personal e o admin não usam a marca da página.
   if (document.documentElement.dataset.surface === 'painel') return
   const slug = currentSiteSlug()
+  // A página principal é a vitrine da plataforma (saas-home.js), não a de um personal.
+  if (!slug && document.documentElement.dataset.home === 'saas') return
   try {
     if (slug) sessionStorage.setItem(SLUG_KEY, slug)
     else sessionStorage.removeItem(SLUG_KEY)

@@ -77,7 +77,7 @@ function handleLocation() {
     document.title = appTitle()
     return
   }
-  if (!route || ['inicio', 'consultoria', 'planos', 'aluno', 'faq', 'contato'].includes(route)) {
+  if (!route || ['inicio', 'consultoria', 'planos', 'aluno', 'faq', 'contato', 'demonstracao', 'recursos'].includes(route)) {
     showPublic()
     return
   }

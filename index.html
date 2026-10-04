@@ -24,7 +24,7 @@
     />
     <meta
       name="description"
-      content="FARISA Personal — musculação, avaliação física e acompanhamento personalizado."
+      content="FARISA — site, app e gestão de alunos para personal trainers. Página com a sua marca, fichas com vídeo, agenda e pagamentos na sua conta."
     />
     <link
       rel="icon"
@@ -34,11 +34,11 @@
     <link rel="canonical" href="https://aplicacaoweb-sistema-personal-trainer.pages.dev/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="pt_BR" />
-    <meta property="og:site_name" content="FARISA Personal" />
-    <meta property="og:title" content="FARISA Personal — consultoria e treino personalizado" />
+    <meta property="og:site_name" content="FARISA" />
+    <meta property="og:title" content="FARISA — site e app para personal trainers" />
     <meta
       property="og:description"
-      content="Treino personalizado, avaliação física e acompanhamento online ou presencial com o FARISA Personal."
+      content="Monte sua página com a sua marca, entregue fichas com vídeo e receba dos alunos direto na sua conta. Comece grátis."
     />
     <meta property="og:url" content="https://aplicacaoweb-sistema-personal-trainer.pages.dev/" />
     <meta property="og:image" content="https://aplicacaoweb-sistema-personal-trainer.pages.dev/og.jpg" />
@@ -57,6 +57,10 @@
       // A entrada do personal é /personal/#acesso-farisa.
       ;(function () {
         var path = location.pathname.replace(/\/+$/, '')
+        // Página principal = vitrine da plataforma (para personais). As
+        // páginas dos personais ficam em /p/<endereço>.
+        if (path.indexOf('/p/') !== 0 && path.indexOf('/personal') !== 0)
+          document.documentElement.setAttribute('data-home', 'saas')
         if (path === '/app' || path === '/app.html') {
           location.replace('/personal/' + location.hash)
           return
@@ -109,7 +113,7 @@
       rel="stylesheet"
       href="/src/styles/main.css"
     />
-    <title>FARISA Personal Trainer</title>
+    <title>FARISA — site e app para personal trainers</title>
   </head>
   <body>
     <svg
@@ -782,6 +786,321 @@
           </div>
         </section>
       </main>
+
+      <!-- Vitrine da plataforma (página principal). As páginas dos personais
+           (/p/<endereço>) usam o <main class="public-main"> acima. -->
+      <main
+        class="saas-main"
+        data-saas-main
+      >
+        <section
+          class="saas-hero"
+          data-anchor="inicio"
+          aria-labelledby="saas-title"
+        >
+          <div class="saas-hero-copy">
+            <span class="public-kicker">Plataforma para personal trainers</span>
+            <h1 id="saas-title">Seu site, seu app e seus alunos <em>em um só lugar</em></h1>
+            <p>
+              Monte sua página com a sua marca, entregue fichas com vídeo, acompanhe a evolução e
+              receba dos alunos direto na sua conta.
+            </p>
+            <div class="saas-hero-actions">
+              <a
+                class="public-cta"
+                href="/personal/#ativar-personal"
+                >Criar minha conta grátis <svg><use href="#icon-arrow"></use></svg
+              ></a>
+              <a
+                class="saas-ghost"
+                href="#demonstracao"
+                >Ver funcionando</a
+              >
+            </div>
+            <small class="saas-hero-note">Grátis para sempre no plano inicial. Sem cartão e sem domínio para pagar.</small>
+          </div>
+          <figure class="saas-hero-shot">
+            <img
+              src="/landing/painel.webp"
+              alt="Painel do personal na FARISA, com alunos, agenda e avisos"
+              width="1280"
+              height="800"
+            />
+          </figure>
+        </section>
+
+        <section
+          class="public-section"
+          data-anchor="demonstracao"
+        >
+          <div class="public-section-heading">
+            <span>Veja antes de criar a conta</span>
+            <h2>Teste agora, sem cadastro</h2>
+            <p>Entre numa conta de demonstração com dados fictícios. Mexa à vontade: nada é salvo.</p>
+          </div>
+          <div class="public-card-grid public-card-grid--three saas-demo-grid">
+            <article class="public-info-card saas-demo-card">
+              <img
+                src="/landing/pagina.webp"
+                alt="Exemplo de página de um personal"
+                loading="lazy"
+                width="640"
+                height="400"
+              />
+              <h3>A página do personal</h3>
+              <p>O site que seus alunos vão ver: sua marca, sua cor, seus planos e seu contato.</p>
+              <a
+                class="saas-demo-button"
+                href="/p/demo"
+                target="_blank"
+                rel="noopener"
+                >Ver página de exemplo</a
+              >
+            </article>
+            <article class="public-info-card saas-demo-card">
+              <img
+                src="/landing/painel.webp"
+                alt="Painel do personal"
+                loading="lazy"
+                width="640"
+                height="400"
+              />
+              <h3>O painel do personal</h3>
+              <p>Alunos, fichas de treino, avaliações, agenda, check-ins e recebimentos.</p>
+              <button
+                class="saas-demo-button"
+                type="button"
+                data-demo="trainer"
+              >
+                Testar o painel
+              </button>
+            </article>
+            <article class="public-info-card saas-demo-card">
+              <img
+                src="/landing/aluno.webp"
+                alt="App do aluno com a ficha de treino"
+                loading="lazy"
+                width="640"
+                height="400"
+              />
+              <h3>O app do aluno</h3>
+              <p>Ficha com vídeo, evolução, check-in semanal e agenda, no celular do aluno.</p>
+              <button
+                class="saas-demo-button"
+                type="button"
+                data-demo="student"
+              >
+                Ver como o aluno usa
+              </button>
+            </article>
+          </div>
+          <p
+            class="saas-demo-status"
+            role="status"
+            data-demo-status
+          ></p>
+        </section>
+
+        <section
+          class="public-section"
+          data-anchor="recursos"
+        >
+          <div class="public-section-heading">
+            <span>Tudo o que você precisa</span>
+            <h2>O que você ganha</h2>
+            <p>Um sistema pronto para atender online e presencial, sem depender de planilhas.</p>
+          </div>
+          <div class="public-card-grid public-card-grid--three">
+            <article class="public-info-card">
+              <span class="card-number">01</span>
+              <div class="card-icon">
+                <svg><use href="#icon-edit"></use></svg>
+              </div>
+              <h3>Página com a sua marca</h3>
+              <p>Link próprio com seu nome, sua cor, sua foto, seus preços e seu contato. Pronta em minutos.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">02</span>
+              <div class="card-icon">
+                <svg><use href="#icon-dumbbell"></use></svg>
+              </div>
+              <h3>Fichas de treino com vídeo</h3>
+              <p>Monte treinos com biblioteca de exercícios, vídeos e GIFs. O aluno abre no celular.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">03</span>
+              <div class="card-icon">
+                <svg><use href="#icon-clipboard"></use></svg>
+              </div>
+              <h3>Avaliação física e evolução</h3>
+              <p>Medidas, composição corporal, fotos e gráficos de progresso de cada aluno.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">04</span>
+              <div class="card-icon">
+                <svg><use href="#icon-calendar"></use></svg>
+              </div>
+              <h3>Agenda online e presencial</h3>
+              <p>Horários livres, agendamento pelo aluno e controle de atendimentos por plano.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">05</span>
+              <div class="card-icon">
+                <svg><use href="#icon-message"></use></svg>
+              </div>
+              <h3>Check-ins semanais</h3>
+              <p>O aluno responde como foi a semana e você devolve o feedback pelo app.</p>
+            </article>
+            <article class="public-info-card">
+              <span class="card-number">06</span>
+              <div class="card-icon">
+                <svg><use href="#icon-check"></use></svg>
+              </div>
+              <h3>Pagamento na sua conta</h3>
+              <p>Pix e cartão pelo Mercado Pago, ou Pix direto na sua chave. O dinheiro é seu.</p>
+            </article>
+          </div>
+        </section>
+
+        <section
+          class="public-section public-section--plans"
+          data-anchor="planos"
+        >
+          <div class="public-section-heading">
+            <span>Simples e sem surpresa</span>
+            <h2>Planos para o personal</h2>
+            <p>Comece grátis. Passe para o Ilimitado quando sua carteira de alunos crescer.</p>
+          </div>
+          <div class="public-card-grid saas-plan-grid">
+            <article class="plan-card">
+              <div>
+                <span class="plan-label">Para começar</span>
+                <h3>Grátis</h3>
+              </div>
+              <ul>
+                <li>
+                  <svg><use href="#icon-check"></use></svg><span data-saas-free-limit>Número limitado de alunos</span>
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Página com a sua marca
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Fichas, avaliações, agenda e check-ins
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Recebimento na sua conta
+                </li>
+              </ul>
+              <p class="plan-price"><strong>R$ 0</strong><span>para sempre</span></p>
+              <a href="/personal/#ativar-personal"
+                >Criar conta grátis <svg><use href="#icon-arrow"></use></svg
+              ></a>
+            </article>
+            <article class="plan-card plan-card--featured">
+              <span class="plan-badge">Para crescer</span>
+              <div>
+                <span class="plan-label">Completo</span>
+                <h3>Ilimitado</h3>
+              </div>
+              <ul>
+                <li>
+                  <svg><use href="#icon-check"></use></svg><span data-saas-paid-limit>Alunos ilimitados</span>
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Tudo do plano Grátis
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Pagamento mensal, sem fidelidade
+                </li>
+                <li>
+                  <svg><use href="#icon-check"></use></svg>Suporte direto com a plataforma
+                </li>
+              </ul>
+              <p class="plan-price"><strong data-saas-paid-price>Consulte</strong><span>/mês</span></p>
+              <a href="/personal/#ativar-personal"
+                >Começar agora <svg><use href="#icon-arrow"></use></svg
+              ></a>
+            </article>
+          </div>
+        </section>
+
+        <section
+          class="public-section public-section--faq"
+          data-anchor="faq"
+        >
+          <div class="public-section-heading">
+            <span>Dúvidas comuns</span>
+            <h2>Perguntas frequentes</h2>
+          </div>
+          <div class="faq-list">
+            <details>
+              <summary>Preciso pagar domínio ou hospedagem?</summary>
+              <p>Não. Sua página fica dentro da FARISA, com um link próprio para você divulgar. Não há custo de domínio nem de hospedagem.</p>
+            </details>
+            <details>
+              <summary>Como eu recebo dos meus alunos?</summary>
+              <p>Direto na sua conta. Você conecta o seu Mercado Pago (Pix e cartão, com liberação automática do aluno) ou cadastra a sua chave Pix de qualquer banco.</p>
+            </details>
+            <details>
+              <summary>O aluno precisa instalar alguma coisa?</summary>
+              <p>Não é obrigatório. Ele acessa pelo navegador do celular e, se quiser, adiciona o app à tela inicial com um toque.</p>
+            </details>
+            <details>
+              <summary>O plano Grátis tem prazo?</summary>
+              <p>Não. Ele é permanente, com um número limitado de alunos. Você só passa para o Ilimitado se precisar de mais.</p>
+            </details>
+            <details>
+              <summary>E se eu parar de pagar o Ilimitado?</summary>
+              <p>Sua conta volta para o plano Grátis. Nada é apagado; apenas o cadastro de novos alunos acima do limite fica bloqueado.</p>
+            </details>
+            <details>
+              <summary>Os dados dos meus alunos ficam seguros?</summary>
+              <p>Sim. Cada personal só vê os próprios alunos, e a plataforma segue a LGPD. Veja os Termos de Uso e a Política de Privacidade no rodapé.</p>
+            </details>
+          </div>
+        </section>
+
+        <section
+          class="public-contact saas-final"
+          data-anchor="contato"
+        >
+          <div>
+            <span class="public-kicker">Comece hoje</span>
+            <h2>Crie sua página em poucos minutos</h2>
+            <p>Sem cartão de crédito. Se precisar de ajuda, fale com a gente.</p>
+            <a
+              class="public-cta"
+              href="/personal/#ativar-personal"
+              >Criar minha conta grátis <svg><use href="#icon-arrow"></use></svg
+            ></a>
+          </div>
+          <div class="contact-links saas-contact-links">
+            <a
+              href="/personal/#acesso-farisa"
+              ><svg><use href="#icon-lock"></use></svg><span>Já sou personal: entrar</span></a
+            >
+            <a
+              href="#entrar-aluno"
+              ><svg><use href="#icon-users"></use></svg><span>Sou aluno: entrar</span></a
+            >
+            <a
+              href="https://wa.me/"
+              target="_blank"
+              rel="noreferrer"
+              data-saas-whatsapp
+              hidden
+              ><svg><use href="#icon-message"></use></svg><span>WhatsApp</span></a
+            >
+            <a
+              href="mailto:"
+              data-saas-email
+              hidden
+              ><svg><use href="#icon-mail"></use></svg><span>E-mail</span></a
+            >
+          </div>
+        </section>
+      </main>
+
 
       <footer class="public-footer">
         <a

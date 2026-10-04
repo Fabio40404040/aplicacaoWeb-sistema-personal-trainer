@@ -17,8 +17,7 @@ let site = null
 let presets = null
 const draft = { accent: 'blue', heroKind: 'default', heroPreset: null }
 
-const pageUrl = (slug = site?.slug) =>
-  site?.isOwner ? `${location.origin}/` : `${location.origin}/p/${slug}`
+const pageUrl = (slug = site?.slug) => `${location.origin}/p/${slug}`
 
 // Banners prontos: arquivos public/banners/banner-1 … banner-12 (.webp ou .jpg).
 function findPresets() {
@@ -79,14 +78,8 @@ function section(title, hint) {
 function linkCard() {
   const card = el('section', 'panel site-card site-link-card')
   card.append(
-    el('h2', '', site.isOwner ? 'Seu site' : 'Sua página'),
-    el(
-      'p',
-      'support-muted',
-      site.isOwner
-        ? 'Você é o dono da plataforma: o que mudar aqui aparece no site principal.'
-        : 'Divulgue este link. Quem se cadastra por ele já entra como seu aluno.',
-    ),
+    el('h2', '', 'Sua página'),
+    el('p', 'support-muted', 'Divulgue este link. Quem se cadastra por ele já entra como seu aluno.'),
   )
   const row = el('div', 'site-link-row')
   const url = el('code', 'site-link', pageUrl())
@@ -118,7 +111,7 @@ function brandCard(form) {
     field('Complemento', 'brandName', site.brandName, { maxLength: 24, placeholder: 'Ex.: Personal' }),
   )
   card.append(grid)
-  if (!site.isOwner) {
+  {
     const slug = field('Endereço da sua página', 'slug', site.slug, { maxLength: 30, required: true, pattern: '[a-zA-Z0-9-]{3,30}' })
     slug.append(el('small', 'support-muted', `${location.origin}/p/…  ·  só letras, números e hífen. Mudar o endereço invalida o link antigo.`))
     card.append(slug)
