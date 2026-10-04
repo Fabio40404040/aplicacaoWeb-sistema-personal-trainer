@@ -204,6 +204,23 @@ async function pendingManual(db, trainerId) {
   ).rows
 }
 
+// Pagamentos já recebidos (últimos 200), para o histórico agrupado por mês.
+async function paidHistory(db, trainerId) {
+  try {
+    return (
+      await db.query(
+        `SELECT p.id, p.amount_cents AS "amountCents", p.method, p.provider, p.paid_at AS "paidAt",
+           p.billing_cycle AS "billingCycle", s.name AS "studentName", pl.name AS "planName"
+         FROM payments p LEFT JOIN students s ON s.id=p.student_id LEFT JOIN plans pl ON pl.code=p.plan_code
+         WHERE p.trainer_id=$1 AND p.status='paid' ORDER BY p.paid_at DESC LIMIT 200`,
+        [trainerId],
+      )
+    ).rows
+  } catch {
+    return []
+  }
+}
+
 export async function payoutInfo(db, env, trainerId) {
   let row
   try {
@@ -223,6 +240,7 @@ export async function payoutInfo(db, env, trainerId) {
         ? { type: row.pix_key_type, key: row.pix_key, holder: row.pix_holder, city: row.pix_city }
         : null,
       pending: await pendingManual(db, trainerId),
+      history: await paidHistory(db, trainerId),
     },
   }
 }

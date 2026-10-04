@@ -4699,3 +4699,14 @@ dialog.demo-invite::backdrop {
 [data-support-new] {
   white-space: nowrap;
 }
+
+/* Recebimentos: pastas (Pix para conferir e pagamentos por mês). */
+.payout-folder {
+  background: transparent;
+}
+.payout-folder summary {
+  font-size: 1rem;
+}
+.payout-folder .payout-pending-row:first-of-type {
+  border-top: 0;
+}

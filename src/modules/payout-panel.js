@@ -22,6 +22,7 @@ const MP_RESULT = {
   erro: 'O Mercado Pago não concluiu a conexão. Tente de novo em instantes.',
 }
 
+const folderOpen = {}
 let info = null
 let editingPix = false
 
@@ -75,9 +76,10 @@ function badge(active) {
 
 function pendingBox() {
   if (!info.pending?.length) return null
-  const section = el('section', 'panel payout-card payout-pending')
+  const card = el('section', 'panel payout-card payout-pending')
+  const section = folder('pending', 'Pix para conferir', info.pending.length, true)
+  card.append(section)
   section.append(
-    el('h2', '', `Pix para conferir (${info.pending.length})`),
     el('p', 'support-muted', 'O aluno avisou que pagou. Confira no extrato do seu banco e confirme para liberar o acesso.'),
   )
   info.pending.forEach((item) => {
@@ -103,7 +105,70 @@ function pendingBox() {
     row.append(text, actions)
     section.append(row)
   })
-  return section
+  return card
+}
+
+// Pasta que abre e fecha (lembra o estado enquanto a página está aberta).
+function folder(key, label, count, openByDefault) {
+  const details = el('details', 'support-folder payout-folder')
+  details.open = folderOpen[key] ?? openByDefault
+  details.addEventListener('toggle', () => {
+    folderOpen[key] = details.open
+  })
+  const summary = el('summary')
+  summary.append(el('span', '', label), el('small', '', String(count)))
+  details.append(summary)
+  return details
+}
+
+const METHODS = { pix: 'Pix', credit_card: 'Cartão' }
+// Pagamentos recebidos, agrupados por mês (só o mês atual começa aberto).
+function historyBox() {
+  const history = info.history || []
+  if (!history.length) return null
+  const card = el('section', 'panel payout-card')
+  card.append(el('h2', '', 'Pagamentos recebidos'))
+  const months = new Map()
+  history.forEach((item) => {
+    const raw = String(item.paidAt || '')
+    const date = new Date(raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`)
+    const key = Number.isNaN(date.getTime()) ? 'sem-data' : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    if (!months.has(key)) months.set(key, { date, items: [] })
+    months.get(key).items.push({ ...item, date })
+  })
+  let first = true
+  months.forEach((month, key) => {
+    const total = month.items.reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
+    const title =
+      key === 'sem-data'
+        ? 'Sem data'
+        : month.date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./u, (letter) => letter.toUpperCase())
+    const details = folder(`month:${key}`, `${title} · ${money(total)}`, month.items.length, first)
+    first = false
+    month.items.forEach((item) => {
+      const row = el('div', 'payout-pending-row')
+      const text = el('div')
+      text.append(
+        el('strong', '', `${item.studentName || 'Aluno removido'} · ${money(item.amountCents)}`),
+        el(
+          'small',
+          '',
+          [
+            key === 'sem-data' ? '' : item.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            item.planName,
+            METHODS[item.method] || item.method,
+            item.provider === 'pix_manual' ? 'confirmado por você' : '',
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        ),
+      )
+      row.append(text)
+      details.append(row)
+    })
+    card.append(details)
+  })
+  return card
 }
 
 function mercadoPagoCard() {
@@ -270,10 +335,13 @@ function render() {
   root.append(summary)
   const pending = pendingBox()
   if (pending) root.append(pending)
-  if (info.mode === 'platform') return
-  const grid = el('div', 'payout-grid')
-  grid.append(mercadoPagoCard(), pixCard())
-  root.append(grid)
+  if (info.mode !== 'platform') {
+    const grid = el('div', 'payout-grid')
+    grid.append(mercadoPagoCard(), pixCard())
+    root.append(grid)
+  }
+  const history = historyBox()
+  if (history) root.append(history)
 }
 
 function paintBadge() {
