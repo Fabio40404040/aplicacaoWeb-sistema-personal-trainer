@@ -1390,10 +1390,6 @@ html[data-home='saas'] .saas-main {
   font-weight: 700;
 }
 
-/* A vitrine não oferece instalar app (quem instala é o aluno ou o personal). */
-html[data-home='saas'] .public-install-button {
-  display: none !important;
-}
 /* Selo das páginas do plano Grátis. */
 .farisa-badge {
   flex-basis: 100%;

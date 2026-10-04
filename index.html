@@ -70,10 +70,6 @@
           if (touch) touch.setAttribute('href', '/api/public/site-icon/' + slug + '/192')
         } else if (path.indexOf('/personal') !== 0) {
           document.documentElement.setAttribute('data-home', 'saas')
-          // A vitrine não é um app: quem instala é o aluno (na página do
-          // personal) ou o personal (no painel).
-          if (manifestLink && !/^#(entrar-aluno|painel-aluno|cadastro-aluno|recuperar-senha|nova-senha)/.test(location.hash))
-            manifestLink.parentNode.removeChild(manifestLink)
         }
         if (path === '/app' || path === '/app.html') {
           location.replace('/personal/' + location.hash)
