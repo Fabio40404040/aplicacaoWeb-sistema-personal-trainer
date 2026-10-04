@@ -158,7 +158,7 @@ function demoBanner() {
 }
 
 // Carrossel do topo: página do personal → painel → app do aluno. Troca devagar
-// e para quando a pessoa toca, passa o mouse ou usa o teclado.
+// e, quando a pessoa toca ou clica, espera 10 segundos e volta a girar.
 function initCarousel() {
   const root = document.querySelector('[data-carousel]')
   const track = root?.querySelector('[data-carousel-track]')
@@ -166,7 +166,11 @@ function initCarousel() {
   if (!track || !dotsBox) return
   const slides = [...track.children]
   let current = 0
-  let paused = false
+  // Depois de um toque ou clique, espera um pouco e volta a girar sozinho.
+  let pausedUntil = 0
+  const pause = () => {
+    pausedUntil = Date.now() + 10000
+  }
   const go = (index, smooth = true) => {
     current = (index + slides.length) % slides.length
     track.scrollTo({ left: slides[current].offsetLeft - track.offsetLeft, behavior: smooth ? 'smooth' : 'auto' })
@@ -176,7 +180,7 @@ function initCarousel() {
     dot.type = 'button'
     dot.setAttribute('aria-label', `Mostrar: ${slide.querySelector('figcaption')?.textContent || `tela ${index + 1}`}`)
     dot.addEventListener('click', () => {
-      paused = true
+      pause()
       go(index)
     })
     dotsBox.append(dot)
@@ -193,14 +197,7 @@ function initCarousel() {
       paint()
     })
   })
-  ;['pointerdown', 'keydown', 'focusin'].forEach((type) =>
-    root.addEventListener(type, () => {
-      paused = true
-    }),
-  )
-  let hovering = false
-  root.addEventListener('mouseenter', () => (hovering = true))
-  root.addEventListener('mouseleave', () => (hovering = false))
+  ;['pointerdown', 'touchstart', 'keydown'].forEach((type) => root.addEventListener(type, pause, { passive: true }))
   track.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowRight') go(current + 1)
     if (event.key === 'ArrowLeft') go(current - 1)
@@ -208,9 +205,9 @@ function initCarousel() {
   paint()
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   window.setInterval(() => {
-    if (paused || hovering || document.visibilityState !== 'visible') return
+    if (Date.now() < pausedUntil || document.visibilityState !== 'visible') return
     go(current + 1)
-  }, 5000)
+  }, 4500)
 }
 
 export function initSaasHome() {
