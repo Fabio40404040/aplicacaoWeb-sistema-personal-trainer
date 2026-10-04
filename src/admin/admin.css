@@ -473,3 +473,65 @@
 .admin-folder + .table-wrap {
   margin-top: 12px;
 }
+
+/* Suporte: buscador e grupos da lista de chamados. */
+.support-search {
+  margin-bottom: 10px;
+}
+.support-items {
+  display: grid;
+  gap: 8px;
+}
+.support-items .admin-folder {
+  margin-top: 6px;
+  padding: 10px 12px;
+}
+.support-group {
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+/* Registro de ações: filtros. */
+.audit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.audit-chip {
+  padding: 7px 14px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.audit-chip.is-active {
+  background: #6d28d9;
+  border-color: #6d28d9;
+  color: #fff;
+}
+.audit-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+}
+.audit-clear {
+  border: 0;
+  background: none;
+  color: #6d28d9;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.audit-clear[hidden] {
+  display: none;
+}

@@ -227,6 +227,26 @@
             </div>
           </div>
           <article class="panel content-panel">
+            <div class="audit-chips" data-audit-type data-value="all" role="group" aria-label="Tipo de ação">
+              <button class="audit-chip is-active" type="button" data-type="all">Tudo</button>
+              <button class="audit-chip" type="button" data-type="personais">Personais</button>
+              <button class="audit-chip" type="button" data-type="acessos">Acessos de suporte</button>
+              <button class="audit-chip" type="button" data-type="planos">Planos</button>
+              <button class="audit-chip" type="button" data-type="suporte">Chamados</button>
+            </div>
+            <div class="toolbar">
+              <label class="search-box"><svg><use href="#icon-search"></use></svg><input type="search" placeholder="Buscar por personal, ação ou detalhe" data-audit-search /></label>
+              <select data-audit-period aria-label="Período">
+                <option value="all">Todo o período</option>
+                <option value="hoje">Hoje</option>
+                <option value="semana">Últimos 7 dias</option>
+                <option value="mes">Últimos 30 dias</option>
+              </select>
+            </div>
+            <div class="audit-summary">
+              <small class="admin-muted" data-audit-count></small>
+              <button class="audit-clear" type="button" data-audit-clear hidden>Limpar filtros</button>
+            </div>
             <div class="table-wrap">
               <table class="admin-table">
                 <thead><tr><th>Quando</th><th>Ação</th><th>Alvo</th><th>Detalhes</th><th>Por</th></tr></thead>

@@ -85,6 +85,8 @@ let folderOpen = false
 const PLAN_NAMES = { free: 'Grátis', unlimited: 'Ilimitado' }
 let tickets = []
 let openTicket = null
+let ticketQuery = ''
+let ticketsOpen = false
 
 function render() {
   const recentLimit = Date.now() - 30 * 86_400_000
@@ -570,8 +572,17 @@ async function renderSupport() {
   const root = $('[data-admin-support]')
   const list = el('aside', 'panel support-list')
   list.append(el('h2', '', 'Chamados'))
-  if (!tickets.length) list.append(el('p', 'support-muted', 'Nenhum chamado ainda.'))
-  tickets.forEach((ticket) => {
+  // Buscador + "Aguardando você" sempre à vista + pasta "Todos os chamados"
+  // (abre ao clicar, ou sozinha quando há busca).
+  const search = el('label', 'search-box support-search')
+  const input = el('input')
+  input.type = 'search'
+  input.placeholder = 'Buscar chamado'
+  input.setAttribute('aria-label', 'Buscar por personal ou assunto')
+  input.value = ticketQuery
+  search.append(input)
+  const items = el('div', 'support-items')
+  const ticketButton = (ticket) => {
     const item = el('button', `support-item${ticket.id === openTicket ? ' is-active' : ''}${ticket.unread ? ' is-unread' : ''}`)
     item.type = 'button'
     item.append(
@@ -582,8 +593,51 @@ async function renderSupport() {
       openTicket = ticket.id
       void renderSupport()
     })
-    list.append(item)
+    return item
+  }
+  const paintItems = () => {
+    const query = ticketQuery.trim().toLocaleLowerCase('pt-BR')
+    if (!tickets.length) {
+      items.replaceChildren(el('p', 'support-muted', 'Nenhum chamado ainda.'))
+      return
+    }
+    if (query) {
+      const found = tickets.filter((ticket) =>
+        `${ticket.subject} ${ticket.trainerName} ${ticket.trainerEmail || ''}`.toLocaleLowerCase('pt-BR').includes(query),
+      )
+      items.replaceChildren(
+        el('small', 'support-group', `${found.length} resultado(s)`),
+        ...(found.length ? found.map(ticketButton) : [el('p', 'support-muted', 'Nenhum chamado encontrado.')]),
+      )
+      return
+    }
+    const waiting = tickets.filter((ticket) => ticket.status === 'open')
+    const folder = el('button', `admin-folder${ticketsOpen ? ' is-open' : ''}`)
+    folder.type = 'button'
+    folder.setAttribute('aria-expanded', String(ticketsOpen))
+    const text = el('span', 'admin-folder-text')
+    text.append(
+      el('strong', '', 'Todos os chamados'),
+      el('small', '', `${tickets.length} chamado(s) · ${ticketsOpen ? 'toque para fechar' : 'toque para abrir'}`),
+    )
+    folder.append(el('span', 'admin-folder-icon', '📁'), text, el('span', 'admin-folder-arrow', '▾'))
+    folder.addEventListener('click', () => {
+      ticketsOpen = !ticketsOpen
+      paintItems()
+    })
+    items.replaceChildren(
+      el('small', 'support-group', `Aguardando você (${waiting.length})`),
+      ...(waiting.length ? waiting.map(ticketButton) : [el('p', 'support-muted', 'Nada pendente. 🎉')]),
+      folder,
+      ...(ticketsOpen ? tickets.map(ticketButton) : []),
+    )
+  }
+  input.addEventListener('input', () => {
+    ticketQuery = input.value
+    paintItems()
   })
+  paintItems()
+  list.append(search, items)
   const main = el('section', 'panel support-thread')
   if (!openTicket) {
     main.append(el('p', 'support-muted', 'Escolha um chamado para ver a conversa.'))
@@ -662,8 +716,36 @@ const ACTIONS = {
   support_closed: 'Chamado encerrado',
   support_open: 'Chamado reaberto',
 }
-async function renderAudit() {
-  const rows = (await api('/admin/audit').catch(() => [])) || []
+const AUDIT_GROUPS = {
+  personais: ['trainer_created', 'trainer_updated', 'trainer_blocked', 'trainer_unblocked', 'trainer_password_reset', 'trainer_deleted'],
+  acessos: ['trainer_impersonated'],
+  planos: ['trainer_plan_set', 'saas_plans_updated'],
+  suporte: ['support_replied', 'support_closed', 'support_open'],
+}
+const AUDIT_DAYS = { hoje: 1, semana: 7, mes: 30 }
+let auditRows = []
+function paintAudit() {
+  const query = ($('[data-audit-search]').value || '').trim().toLocaleLowerCase('pt-BR')
+  const type = $('[data-audit-type]').dataset.value || 'all'
+  const period = $('[data-audit-period]').value
+  const since =
+    period === 'hoje'
+      ? new Date().setHours(0, 0, 0, 0)
+      : AUDIT_DAYS[period]
+        ? Date.now() - AUDIT_DAYS[period] * 86_400_000
+        : 0
+  const rows = auditRows.filter(
+    (row) =>
+      (type === 'all' || AUDIT_GROUPS[type]?.includes(row.action)) &&
+      (!since || (toDate(row.createdAt)?.getTime() || 0) >= since) &&
+      (!query ||
+        `${ACTIONS[row.action] || row.action} ${row.targetLabel || ''} ${row.details || ''} ${row.adminEmail || ''}`
+          .toLocaleLowerCase('pt-BR')
+          .includes(query)),
+  )
+  $('[data-audit-count]').textContent = `${rows.length} de ${auditRows.length} ação(ões)`
+  const filtered = Boolean(query) || type !== 'all' || period !== 'all'
+  $('[data-audit-clear]').hidden = !filtered
   $('[data-admin-audit]').replaceChildren(
     ...(rows.length
       ? rows.map((row) => {
@@ -679,12 +761,33 @@ async function renderAudit() {
         })
       : [(() => {
           const tr = document.createElement('tr')
-          const td = el('td', 'admin-muted', 'Nenhuma ação registrada ainda.')
+          const td = el('td', 'admin-muted', auditRows.length ? 'Nenhuma ação com esse filtro.' : 'Nenhuma ação registrada ainda.')
           td.colSpan = 5
           tr.append(td)
           return tr
         })()]),
   )
+}
+async function renderAudit() {
+  auditRows = (await api('/admin/audit').catch(() => [])) || []
+  paintAudit()
+}
+function initAuditFilters() {
+  const chips = $('[data-audit-type]')
+  chips.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-type]')
+    if (!chip) return
+    chips.dataset.value = chip.dataset.type
+    chips.querySelectorAll('[data-type]').forEach((node) => node.classList.toggle('is-active', node === chip))
+    paintAudit()
+  })
+  $('[data-audit-search]').addEventListener('input', paintAudit)
+  $('[data-audit-period]').addEventListener('change', paintAudit)
+  $('[data-audit-clear]').addEventListener('click', () => {
+    $('[data-audit-search]').value = ''
+    $('[data-audit-period]').value = 'all'
+    chips.querySelector('[data-type="all"]').click()
+  })
 }
 
 function showTab(name) {
@@ -734,6 +837,7 @@ async function showPanel() {
 }
 
 function init() {
+  initAuditFilters()
   $('[data-admin-folder]').addEventListener('click', () => {
     folderOpen = !folderOpen
     render()
