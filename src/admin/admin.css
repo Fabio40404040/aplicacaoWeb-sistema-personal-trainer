@@ -430,3 +430,46 @@
 .admin-table td.admin-actions:has(.admin-menu[open]) {
   z-index: 6;
 }
+
+/* Pasta "Todos os personais": a lista só abre ao clicar. */
+.admin-folder {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 14px;
+  background: #f8fafc;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-folder:hover,
+.admin-folder.is-open {
+  background: #f1edff;
+  border-color: #c4b5fd;
+}
+.admin-folder-icon {
+  font-size: 1.4rem;
+}
+.admin-folder-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.admin-folder-text small {
+  color: #64748b;
+}
+.admin-folder-arrow {
+  transition: transform 0.15s;
+}
+.admin-folder.is-open .admin-folder-arrow {
+  transform: rotate(180deg);
+}
+.admin-folder + .table-wrap {
+  margin-top: 12px;
+}

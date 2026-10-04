@@ -81,6 +81,7 @@ const money = (cents) =>
   (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 let overview = {}
 let saasPlansList = []
+let folderOpen = false
 const PLAN_NAMES = { free: 'Grátis', unlimited: 'Ilimitado' }
 let tickets = []
 let openTicket = null
@@ -109,6 +110,18 @@ function render() {
       `${item.name} ${item.email}`.toLocaleLowerCase('pt-BR').includes(query) &&
       (filter === 'all' || (item.status || 'active') === filter),
   )
+  // A lista fica fechada na pasta "Todos os personais": abre ao clicar, ou
+  // sozinha quando há busca ou filtro.
+  const searching = Boolean(query) || filter !== 'all'
+  const open = folderOpen || searching
+  const folder = $('[data-admin-folder]')
+  folder.setAttribute('aria-expanded', String(open))
+  folder.classList.toggle('is-open', open)
+  folder.querySelector('strong').textContent = searching ? 'Resultado da busca' : 'Todos os personais'
+  $('[data-admin-folder-count]').textContent = searching
+    ? `${list.length} de ${trainers.length} personal(is)`
+    : `${trainers.length} personal(is) · ${open ? 'toque para fechar' : 'toque para abrir'}`
+  $('[data-admin-table]').hidden = !open
   $('[data-admin-trainers]').replaceChildren(
     ...list.map((trainer) => {
       const row = document.createElement('tr')
@@ -214,7 +227,7 @@ function render() {
       return row
     }),
   )
-  $('[data-admin-empty]').hidden = list.length > 0
+  $('[data-admin-empty]').hidden = !open || list.length > 0
 }
 
 // ---------- janelas (formulário, confirmação, resultado)
@@ -721,6 +734,10 @@ async function showPanel() {
 }
 
 function init() {
+  $('[data-admin-folder]').addEventListener('click', () => {
+    folderOpen = !folderOpen
+    render()
+  })
   $('[data-admin-search]').addEventListener('input', render)
   $('[data-admin-filter]').addEventListener('change', render)
   $('[data-admin-new-trainer]').addEventListener('click', () => openTrainerForm())

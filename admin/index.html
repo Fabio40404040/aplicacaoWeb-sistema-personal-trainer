@@ -165,7 +165,12 @@
                 <option value="blocked">Bloqueados</option>
               </select>
             </div>
-            <div class="table-wrap">
+            <button class="admin-folder" type="button" data-admin-folder aria-expanded="false">
+              <span class="admin-folder-icon" aria-hidden="true">📁</span>
+              <span class="admin-folder-text"><strong>Todos os personais</strong><small data-admin-folder-count></small></span>
+              <span class="admin-folder-arrow" aria-hidden="true">▾</span>
+            </button>
+            <div class="table-wrap" data-admin-table hidden>
               <table class="admin-table">
                 <thead><tr><th>Personal</th><th>Situação</th><th>Alunos</th><th>Fichas</th><th>Último acesso</th><th class="admin-actions-head"><span class="sr-only">Ações</span></th></tr></thead>
                 <tbody data-admin-trainers></tbody>
