@@ -535,3 +535,54 @@
 .audit-clear[hidden] {
   display: none;
 }
+
+/* Chamados agrupados por situação (abre e fecha). */
+.support-folder {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.support-folder + .support-folder {
+  margin-top: 8px;
+}
+.support-folder summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  list-style: none;
+}
+.support-folder summary::-webkit-details-marker {
+  display: none;
+}
+.support-folder summary::before {
+  content: '▸';
+  margin-right: 2px;
+  color: #64748b;
+}
+.support-folder[open] summary::before {
+  content: '▾';
+}
+.support-folder summary span {
+  flex: 1;
+}
+.support-folder summary small {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+}
+.support-folder[open] summary {
+  margin-bottom: 4px;
+}
+.support-folder .support-item {
+  margin-top: 6px;
+}

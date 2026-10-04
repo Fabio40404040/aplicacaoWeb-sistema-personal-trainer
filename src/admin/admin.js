@@ -87,6 +87,7 @@ let tickets = []
 let openTicket = null
 let ticketQuery = ''
 let ticketsOpen = false
+const ticketGroups = {}
 
 function render() {
   const recentLimit = Date.now() - 30 * 86_400_000
@@ -629,7 +630,26 @@ async function renderSupport() {
       el('small', 'support-group', `Aguardando você (${waiting.length})`),
       ...(waiting.length ? waiting.map(ticketButton) : [el('p', 'support-muted', 'Nada pendente. 🎉')]),
       folder,
-      ...(ticketsOpen ? tickets.map(ticketButton) : []),
+      ...(ticketsOpen
+        ? [
+            ['answered', 'Respondidos'],
+            ['closed', 'Encerrados'],
+          ]
+            .map(([status, label]) => {
+              const group = tickets.filter((ticket) => ticket.status === status)
+              if (!group.length) return null
+              const details = el('details', 'support-folder')
+              details.open = ticketGroups[status] ?? status === 'answered'
+              details.addEventListener('toggle', () => {
+                ticketGroups[status] = details.open
+              })
+              const summary = el('summary')
+              summary.append(el('span', '', label), el('small', '', String(group.length)))
+              details.append(summary, ...group.map(ticketButton))
+              return details
+            })
+            .filter(Boolean)
+        : []),
     )
   }
   input.addEventListener('input', () => {

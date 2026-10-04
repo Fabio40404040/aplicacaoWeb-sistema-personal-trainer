@@ -31,6 +31,12 @@ const when = (value) => {
     : date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+const GROUPS = [
+  { key: 'answered', label: 'Respondidos pelo suporte', statuses: ['answered'], open: true },
+  { key: 'open', label: 'Aguardando o suporte', statuses: ['open'], open: true },
+  { key: 'closed', label: 'Encerrados', statuses: ['closed'], open: false },
+]
+const groupOpen = {}
 let tickets = []
 let openId = null
 let creating = false
@@ -150,7 +156,7 @@ async function render() {
   const list = el('aside', 'panel support-list')
   list.append(el('h2', '', 'Meus chamados'))
   if (!tickets.length) list.append(el('p', 'support-muted', 'Nenhum chamado ainda. Use “Novo chamado” para falar com a gente.'))
-  tickets.forEach((ticket) => {
+  const ticketButton = (ticket) => {
     const item = el('button', `support-item${ticket.id === openId ? ' is-active' : ''}${ticket.unread ? ' is-unread' : ''}`)
     item.type = 'button'
     item.append(
@@ -162,7 +168,21 @@ async function render() {
       creating = false
       render()
     })
-    list.append(item)
+    return item
+  }
+  // Chamados agrupados por situação; cada grupo abre e fecha.
+  GROUPS.forEach((group) => {
+    const items = tickets.filter((ticket) => group.statuses.includes(ticket.status))
+    if (!items.length) return
+    const details = el('details', 'support-folder')
+    details.open = groupOpen[group.key] ?? (group.open || items.some((ticket) => ticket.id === openId))
+    details.addEventListener('toggle', () => {
+      groupOpen[group.key] = details.open
+    })
+    const summary = el('summary')
+    summary.append(el('span', '', group.label), el('small', '', String(items.length)))
+    details.append(summary, ...items.map(ticketButton))
+    list.append(details)
   })
   const main = creating
     ? newTicketForm()
