@@ -5,11 +5,19 @@ export const planNames = {
   athlete: 'Performance Atleta',
 }
 
-const whatsappNumber = String(import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/gu, '')
+let whatsappNumber = String(import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/gu, '')
+let brandLabel = 'FARISA'
+
+// Página de um personal (Meu site): usa o WhatsApp e a marca dele.
+export function setWhatsappContact({ number, brand } = {}) {
+  if (number) whatsappNumber = String(number).replace(/\D/gu, '')
+  if (brand) brandLabel = brand
+  initWhatsappFloat()
+}
 
 export function createWhatsappUrl({ name = '', planCode = '', planName = '', purpose = '' } = {}) {
   const selectedPlan = planName || planNames[planCode] || 'consultoria online'
-  const greeting = name ? `Olá, Fábio! Meu nome é ${name}.` : 'Olá, Fábio!'
+  const greeting = name ? `Olá! Meu nome é ${name}.` : 'Olá!'
   const request =
     purpose === 'card'
       ? 'Gostaria de receber o link seguro para pagamento no cartão de crédito.'
@@ -20,7 +28,7 @@ export function createWhatsappUrl({ name = '', planCode = '', planName = '', pur
 }
 
 export function createGeneralWhatsappUrl() {
-  const message = 'Olá! Vim pelo site da FARISA e gostaria de tirar algumas dúvidas.'
+  const message = `Olá! Vim pelo site ${brandLabel} e gostaria de tirar algumas dúvidas.`
   const destination = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/'
   return `${destination}?text=${encodeURIComponent(message)}`
 }

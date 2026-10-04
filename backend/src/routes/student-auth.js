@@ -1,3 +1,4 @@
+import { trainerIdForSlug, trainerSellsPlan } from './site.js'
 import { readJson } from '../lib/http.js'
 import { createSession, hashPassword, isStrongPassword, verifyPassword } from '../lib/session.js'
 
@@ -33,10 +34,23 @@ export async function studentAuth(request, env, db, action) {
         error: 'Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.',
         status: 400,
       }
-    const trainer = (await db.query('SELECT id FROM trainers ORDER BY created_at LIMIT 1')).rows[0]
+    // Cadastro feito na página de um personal (/p/<slug>) cai para ele; pelo
+    // site principal, para o dono.
+    const siteSlug = typeof body.site === 'string' ? body.site.trim().toLowerCase() : ''
+    if (siteSlug && !/^[a-z0-9-]{3,30}$/u.test(siteSlug))
+      return { error: 'Página do personal não encontrada. Abra de novo o link que ele enviou.', status: 404 }
+    const trainerId = await trainerIdForSlug(db, siteSlug)
+    const trainer = trainerId ? { id: trainerId } : null
     if (!trainer)
-      return { error: 'O cadastro ainda não foi habilitado pelo personal.', status: 503 }
+      return {
+        error: siteSlug
+          ? 'Página do personal não encontrada. Abra de novo o link que ele enviou.'
+          : 'O cadastro ainda não foi habilitado pelo personal.',
+        status: siteSlug ? 404 : 503,
+      }
     const planCode = PLAN_CODES.has(body.planCode) ? body.planCode : 'basic'
+    if (!(await trainerSellsPlan(db, trainer.id, planCode)))
+      return { error: 'Este plano não está disponível com este personal. Escolha outro plano.', status: 400 }
     const paymentChannel = ['webapp', 'whatsapp', 'pix', 'credit_card'].includes(
       body.paymentChannel,
     )

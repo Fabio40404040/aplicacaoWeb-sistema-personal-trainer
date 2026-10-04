@@ -1,3 +1,4 @@
+import { trainerPlans } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
 
@@ -57,7 +58,7 @@ export async function studentPortal(db, accountId, version) {
     (withVideoLink ? 'e.video_id AS "videoId",' : "");
   const account = (
     await db.query(
-      `SELECT a.id, a.name, a.email, a.auth_version AS "authVersion",
+      `SELECT a.id, a.name, a.email, a.auth_version AS "authVersion", a.trainer_id AS "accountTrainerId",
         s.id AS "studentId", s.trainer_id AS "trainerId", s.goal, s.status,
         s.access_status AS "accessStatus", s.plan_code AS "planCode",
         s.access_type AS "accessType", s.billing_cycle AS "billingCycle", s.access_expires_at AS "accessExpiresAt",
@@ -100,7 +101,7 @@ export async function studentPortal(db, accountId, version) {
     // Foto, telefone, nascimento e dia do check-in (null sem a migração 018).
     profile: await studentProfileFields(db, accountId),
     // Planos para "Mudar de plano" (valores já calculados por período).
-    planOptions: await planOptions(db),
+    planOptions: await planOptions(db, account.trainerId || account.accountTrainerId),
     pendingChange: await pendingChange(db, accountId),
   };
   if (!accessActive || !account.studentId) return response;
@@ -302,13 +303,9 @@ export async function requestPlan(db, accountId, body) {
   };
 }
 
-async function planOptions(db) {
-  const plans = (
-    await db.query(
-      `SELECT code, name, price_cents AS "priceCents", access_type AS "accessType" FROM plans
-       WHERE active=1 ORDER BY price_cents`,
-    )
-  ).rows;
+// Planos que o personal do aluno vende, com os preços dele.
+async function planOptions(db, trainerId) {
+  const plans = await trainerPlans(db, trainerId);
   return plans.map((plan) => ({
     code: plan.code,
     name: plan.name,

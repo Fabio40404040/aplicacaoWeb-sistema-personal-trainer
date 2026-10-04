@@ -1,3 +1,8 @@
+import { trainerPrices } from './site.js'
+async function withTrainerPrices(db, trainerId, plans) {
+  const prices = await trainerPrices(db, trainerId)
+  return plans.map((plan) => (prices.has(plan.code) ? { ...plan, priceCents: prices.get(plan.code).priceCents } : plan))
+}
 // A biblioteca de GIFs depende da migracao 015. Enquanto ela nao for aplicada
 // no banco (por exemplo logo apos um deploy), o painel continua funcionando
 // sem os GIFs em vez de quebrar inteiro.
@@ -195,7 +200,8 @@ export async function dashboard(db, trainerId) {
     workouts: workouts.rows,
     assessments: assessments.rows,
     checkins: checkins.rows,
-    plans: plans.rows,
+    // Preços que este personal cobra (Meu site → Preços).
+    plans: await withTrainerPrices(db, trainerId, plans.rows),
     appointments: appointments.rows,
     readyWorkouts: readyWorkouts.rows,
     readyPrograms: readyPrograms.rows,

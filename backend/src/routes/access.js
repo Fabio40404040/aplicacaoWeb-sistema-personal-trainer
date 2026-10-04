@@ -1,3 +1,4 @@
+import { withTrainerPrice } from './site.js'
 import { safeEqual } from '../lib/session.js'
 const BILLING_CYCLES = {
   monthly: { days: 30, months: 1, discount: 1 },
@@ -49,6 +50,7 @@ export async function updateStudentAccess(db, trainerId, studentId, body) {
     )
   ).rows[0]
   if (!plan) return { error: 'Plano inválido.', status: 400 }
+  await withTrainerPrice(db, trainerId, plan)
   const billingCycle = normalizeBillingCycle(plan, body?.billingCycle)
   const accessStatus = ['active', 'pending', 'paused', 'cancelled'].includes(body?.accessStatus)
     ? body.accessStatus
@@ -148,6 +150,7 @@ export async function paymentWebhook(request, env, db) {
       [body.email || ''],
     )
   ).rows[0]
+  if (plan && student) await withTrainerPrice(db, student.trainerId, plan)
   const billingCycle = normalizeBillingCycle(plan || {}, body.billingCycle)
   if (!plan || !student || Number(body.amountCents) !== amountFor(plan, billingCycle))
     return { error: 'Pagamento não corresponde ao aluno e plano informados.', status: 400 }

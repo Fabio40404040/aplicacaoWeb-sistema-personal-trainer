@@ -1164,3 +1164,55 @@
     font-size: 0.92rem;
   }
 }
+
+/* ---------- Página de cada personal: cor da marca e banner próprios ---------- */
+html[data-accent] .public-screen,
+html[data-accent] .student-access {
+  --site-blue: var(--accent);
+  --site-blue-light: var(--accent-light);
+}
+html[data-accent] .public-brand .brand-mark,
+html[data-accent] .student-access .brand-mark {
+  background: linear-gradient(145deg, var(--accent-dark), var(--accent-light));
+  box-shadow: 0 9px 24px rgba(var(--accent-rgb), 0.32);
+}
+html[data-accent] .public-cta {
+  border-color: var(--accent-light);
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  box-shadow: 0 15px 36px rgba(var(--accent-rgb), 0.32);
+}
+html[data-accent] .public-cta:hover {
+  box-shadow: 0 20px 42px rgba(var(--accent-rgb), 0.4);
+}
+html[data-accent] .public-menu a:hover {
+  background: rgba(var(--accent-rgb), 0.14);
+}
+.plan-card[hidden] {
+  display: none;
+}
+.contact-links a[hidden],
+.whatsapp-float[hidden] {
+  display: none;
+}
+/* Banner do personal: a foto ocupa o fundo, com um véu escuro para o texto. */
+.public-screen.has-hero-photo .public-hero {
+  background:
+    linear-gradient(180deg, rgba(11, 17, 24, 0.5) 0%, rgba(11, 17, 24, 0.35) 45%, rgba(11, 17, 24, 0.82) 100%),
+    var(--hero-photo) center / cover no-repeat #101721;
+}
+.public-screen.has-hero-photo .public-hero-athlete {
+  display: none;
+}
+@media (max-width: 620px) {
+  .public-screen.has-hero-photo .public-hero {
+    background: var(--site-bg);
+  }
+  .public-screen.has-hero-photo .public-hero-athlete {
+    display: block;
+    background: var(--hero-photo) center / cover no-repeat;
+  }
+}
+
+.public-screen.is-trainer-page .hero-proof-grid {
+  display: none;
+}

@@ -1,3 +1,4 @@
+import { currentSiteSlug } from "./site-brand.js";
 import { downloadWorkoutPdf } from "./workout-pdf.js";
 import { openSecureCardForm } from "./mercado-pago-card.js";
 import { createQrCodeImage } from "./pix.js";
@@ -928,6 +929,8 @@ export function initStudentAccess() {
       try {
         const data = Object.fromEntries(new FormData(form)),
           action = form.dataset.studentForm;
+        // Cadastro feito na página de um personal (/p/<slug>) cai para ele.
+        if (action === "register") data.site = currentSiteSlug();
         if (action === "reset")
           data.token = new URLSearchParams(
             location.hash.split("?")[1] || "",

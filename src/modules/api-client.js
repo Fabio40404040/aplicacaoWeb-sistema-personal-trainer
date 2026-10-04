@@ -308,3 +308,14 @@ export function payoutAction(path, method = "POST", data) {
     timeoutMs: 20000,
   });
 }
+
+// "Meu site": marca, cor, banner, contato e preços dos planos do personal.
+export function fetchSiteSettings() {
+  return request("/site", { timeoutMs: 20000 });
+}
+export function saveSiteSettings(data) {
+  return request("/site", { method: "PUT", body: JSON.stringify(data), timeoutMs: 20000 });
+}
+export function saveSiteHero(image) {
+  return request("/site/hero", { method: "PUT", body: JSON.stringify({ image }), timeoutMs: 60000 });
+}

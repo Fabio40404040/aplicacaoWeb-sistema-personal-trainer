@@ -1,4 +1,5 @@
 import { NOT_CONFIGURED, pixBrCode, resolvePay } from './payout.js'
+import { withTrainerPrice } from './site.js'
 
 export const BILLING_CYCLES = {
   monthly: { days: 30, months: 1, discount: 1 },
@@ -136,7 +137,12 @@ export async function createCheckout(db, accountId, platformEnv, body) {
   }
 }
 
+// Plano e valor a cobrar do aluno, já com o preço do personal dele.
 async function paymentAccount(db, accountId) {
+  const row = await basePaymentAccount(db, accountId)
+  return withTrainerPrice(db, row?.trainerId, row)
+}
+async function basePaymentAccount(db, accountId) {
   // Mudança de plano pedida pelo aluno (migração 025): cobra o plano novo.
   try {
     return (

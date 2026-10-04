@@ -75,6 +75,7 @@ import {
   manualPixPaid,
   paymentOptions,
 } from "./routes/payments.js";
+import { publicSite, publicSiteHero, saveSite, saveSiteHero, siteSettings } from "./routes/site.js";
 import {
   payoutConnectUrl,
   payoutDisconnect,
@@ -210,6 +211,10 @@ async function handleRoutes(request, env) {
   // Cadastro do personal (teste grátis) e planos da plataforma.
   if (request.method === "POST" && route === "auth/register")
     return withDb(env, async (db) => registerTrainer(env, db, await readJson(request)));
+  if (request.method === "GET" && segments[0] === "public" && segments[1] === "site" && segments.length <= 3)
+    return withDb(env, (db) => publicSite(db, segments[2] || ""));
+  if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-hero" && segments[2])
+    return withDb(env, (db) => publicSiteHero(db, segments[2]));
   if (request.method === "GET" && route === "public/saas-plans")
     return withDb(env, async (db) => ({ data: await saasPlans(db) }));
   if (request.method === "POST" && route === "auth/login")
@@ -402,6 +407,11 @@ async function handleRoutes(request, env) {
       return billingInfo(env, db, session.sub);
     if (request.method === "POST" && route === "billing/checkout")
       return startSaasCheckout(env, db, session.sub, await readJson(request));
+    // "Meu site": marca, cor, banner, contato e preços dos planos do personal.
+    if (request.method === "GET" && route === "site") return siteSettings(db, session.sub);
+    if (request.method === "PUT" && route === "site") return saveSite(db, session.sub, await readJson(request));
+    if (request.method === "PUT" && route === "site/hero")
+      return saveSiteHero(db, session.sub, await readJson(request));
     // Recebimento do personal: conta Mercado Pago conectada ou chave Pix.
     if (segments[0] === "payout") {
       if (request.method === "GET" && route === "payout") return payoutInfo(db, env, session.sub);
