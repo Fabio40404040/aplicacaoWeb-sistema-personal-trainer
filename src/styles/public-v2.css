@@ -1389,3 +1389,17 @@ html[data-home='saas'] .saas-main {
   color: #7dd3fc;
   font-weight: 700;
 }
+
+/* A vitrine não oferece instalar app (quem instala é o aluno ou o personal). */
+html[data-home='saas'] .public-install-button {
+  display: none !important;
+}
+/* Selo das páginas do plano Grátis. */
+.farisa-badge {
+  flex-basis: 100%;
+  margin-top: 6px;
+  color: var(--site-muted);
+  font-size: 0.82rem;
+  text-align: center;
+  text-decoration: underline;
+}

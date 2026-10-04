@@ -69,6 +69,10 @@ function applyBrand(site) {
     footer.firstChild.textContent = `© ${new Date().getFullYear()} ${mark} ${name} · `
   document.title = `${mark} ${name}`
   document.querySelector('.public-brand')?.setAttribute('aria-label', `${mark} ${name} — início`)
+  // Nome do app instalado no iPhone e no aviso de instalação.
+  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', mark)
+  const installTitle = document.querySelector('[data-install-title]')
+  if (installTitle) installTitle.textContent = `Adicionar ${mark} ${name} à tela inicial`
   return `${mark} ${name}`
 }
 
@@ -160,7 +164,20 @@ function applyContact(site, brand) {
   if (contact.whatsapp) setWhatsappContact({ number: contact.whatsapp, brand })
 }
 
+// Selo "Feito com FARISA" (páginas do plano Grátis): leva à vitrine da plataforma.
+function applyBadge(site) {
+  if (!site.badge || document.querySelector('.farisa-badge')) return
+  const badge = document.createElement('a')
+  badge.className = 'farisa-badge'
+  badge.href = '/'
+  badge.target = '_blank'
+  badge.rel = 'noopener'
+  badge.textContent = 'Feito com FARISA · crie a sua página grátis'
+  document.querySelector('.public-footer')?.append(badge)
+}
+
 export function applySite(site) {
+  applyBadge(site)
   applyAccent(site.accent)
   const brand = applyBrand(site)
   applyHero(site)

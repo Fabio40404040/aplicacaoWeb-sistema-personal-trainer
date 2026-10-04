@@ -2,6 +2,7 @@
 // banner, contato, redes e preços dos planos). A estrutura do site é fixa.
 import { fetchSiteSettings, saveSiteHero, saveSiteSettings } from './api-client.js'
 import { ACCENTS } from './site-brand.js'
+import { createQrCodeImage } from './pix.js'
 import { showToast } from './utils.js'
 
 const HERO_WIDTH = 1600
@@ -36,6 +37,40 @@ function findPresets() {
     return presets
   })
 }
+
+// Ícone do app do aluno: quadrado na cor da marca, halter e o nome da logo.
+function drawIcon(size, mark, accent) {
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const context = canvas.getContext('2d')
+  const unit = size / 512
+  context.fillStyle = accent.dark
+  context.fillRect(0, 0, size, size)
+  context.fillStyle = accent.main
+  context.beginPath()
+  context.roundRect(28 * unit, 28 * unit, 456 * unit, 456 * unit, 112 * unit)
+  context.fill()
+  context.fillStyle = '#ffffff'
+  const bar = (x, y, width, height, radius) => {
+    context.beginPath()
+    context.roundRect(x * unit, y * unit, width * unit, height * unit, radius * unit)
+    context.fill()
+  }
+  bar(115, 150, 47, 98, 12)
+  bar(350, 150, 47, 98, 12)
+  bar(150, 185, 212, 28, 4)
+  const text = String(mark || 'APP').toUpperCase().slice(0, 14)
+  let font = 86
+  do {
+    context.font = `800 ${font * unit}px "Ubuntu Sans", system-ui, -apple-system, "Segoe UI", sans-serif`
+    font -= 4
+  } while (context.measureText(text).width > 360 * unit && font > 26)
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText(text, 256 * unit, 340 * unit)
+  return canvas.toDataURL('image/png')
+}
+const markOf = (value) => String(value || site?.brandMark || (site?.trainerName || 'Personal').split(/\s+/u)[0]).slice(0, 14)
 
 // Recorta no centro e reduz para 1600 × 900 (o navegador faz o ajuste).
 async function prepareHero(file) {
@@ -100,6 +135,28 @@ function linkCard() {
   })
   row.append(url, copy, open)
   card.append(row)
+  // QR Code para divulgar e o ícone que o aluno vê ao instalar o app.
+  const share = el('div', 'site-share')
+  const qrBox = el('div', 'site-share-item')
+  const qr = el('img', 'site-qr')
+  qr.alt = 'QR Code da sua página'
+  const download = el('a', 'button button--secondary', 'Baixar QR Code')
+  download.download = `qrcode-${site.slug}.png`
+  void createQrCodeImage(pageUrl()).then((image) => {
+    qr.src = image
+    download.href = image
+  })
+  qrBox.append(qr, download)
+  const iconBox = el('div', 'site-share-item')
+  const icon = el('img', 'site-app-icon')
+  icon.alt = 'Ícone do app do aluno'
+  icon.src = drawIcon(192, markOf(), ACCENTS[site.accent] || ACCENTS.blue)
+  iconBox.append(
+    icon,
+    el('small', 'support-muted', 'Assim o seu app aparece no celular do aluno. O nome e a cor vêm da sua marca.'),
+  )
+  share.append(qrBox, iconBox)
+  card.append(share)
   return card
 }
 
@@ -309,6 +366,8 @@ function render() {
           brandMark: values.brandMark,
           brandName: values.brandName,
           accent: draft.accent,
+          icon192: drawIcon(192, markOf(values.brandMark), ACCENTS[draft.accent] || ACCENTS.blue),
+          icon512: drawIcon(512, markOf(values.brandMark), ACCENTS[draft.accent] || ACCENTS.blue),
           heroKind: draft.heroKind,
           heroPreset: draft.heroPreset,
           whatsapp: values.whatsapp,

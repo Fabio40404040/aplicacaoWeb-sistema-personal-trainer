@@ -4612,3 +4612,35 @@ dialog.demo-invite::backdrop {
 .demo-invite-actions .button {
   width: auto;
 }
+
+/* Meu site: QR Code de divulgação e ícone do app. */
+.site-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+  padding-top: 12px;
+  border-top: 1px solid var(--line, #e5e7eb);
+}
+.site-share-item {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  max-width: 240px;
+}
+.site-share-item .button {
+  width: auto;
+}
+.site-qr {
+  width: 150px;
+  height: 150px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 10px;
+  background: #fff;
+}
+.site-app-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 18%);
+}

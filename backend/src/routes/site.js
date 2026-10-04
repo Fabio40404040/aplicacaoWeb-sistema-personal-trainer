@@ -5,6 +5,7 @@ const ACCENTS = ['blue', 'green', 'red', 'orange', 'purple', 'pink', 'teal', 'go
 const RESERVED = new Set(['admin', 'personal', 'api', 'p', 'assets', 'icons', 'banners', 'docs', 'farisa', 'suporte', 'site', 'app', 'login'])
 const HERO_PATTERN = /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/u
 const MAX_HERO_CHARS = 950_000
+const ICON_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/u
 const PRESET_PATTERN = /^banner-[1-9]\d?\.(jpg|webp)$/u
 
 const clean = (value, max) => {
@@ -150,6 +151,80 @@ function publicShape(row, trainer, isOwner) {
   }
 }
 
+async function isFreePlan(db, trainerId) {
+  try {
+    const row = (
+      await db.query(
+        `SELECT p.price_cents AS price FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id=$1`,
+        [trainerId],
+      )
+    ).rows[0]
+    return !Number(row?.price)
+  } catch {
+    return false
+  }
+}
+
+const brandOf = (row, trainer) => {
+  const mark = row?.brand_mark || String(trainer?.name || 'Personal').split(/\s+/u)[0].slice(0, 14)
+  return { mark, full: `${mark} ${row?.brand_name || 'Personal'}`.trim() }
+}
+
+// Manifesto do app do aluno com a marca do personal (instalado a partir de /p/<slug>).
+export async function siteManifest(db, slug) {
+  const clean = String(slug || '').toLowerCase()
+  let row = null
+  let trainer = null
+  try {
+    row = (await db.query('SELECT * FROM trainer_site WHERE slug=$1', [clean])).rows[0] || null
+    if (row) trainer = (await db.query('SELECT name FROM trainers WHERE id=$1', [row.trainer_id])).rows[0]
+  } catch {
+    row = null
+  }
+  if (!row) return new Response('Not found', { status: 404 })
+  const brand = brandOf(row, trainer)
+  const version = Number(row.icon_version || 0)
+  const icon = (size) =>
+    row.icon_192 && row.icon_512 ? `/api/public/site-icon/${clean}/${size}?v=${version}` : `/icons/icon-${size}.png`
+  const manifest = {
+    id: `/p/${clean}`,
+    name: brand.full.slice(0, 45),
+    short_name: brand.mark.slice(0, 12),
+    description: `App de treinos de ${trainer?.name || brand.full}.`,
+    lang: 'pt-BR',
+    start_url: `/p/${clean}#entrar-aluno`,
+    scope: `/p/${clean}`,
+    display: 'standalone',
+    background_color: '#18212d',
+    theme_color: '#18212d',
+    icons: [
+      { src: icon(192), sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: icon(512), sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+    ],
+  }
+  return new Response(JSON.stringify(manifest), {
+    headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
+  })
+}
+
+export async function siteIcon(db, slug, size) {
+  let row
+  try {
+    row = (
+      await db.query('SELECT icon_192 AS small, icon_512 AS large FROM trainer_site WHERE slug=$1', [String(slug || '').toLowerCase()])
+    ).rows[0]
+  } catch {
+    row = null
+  }
+  const data = String(size) === '512' ? row?.large : row?.small
+  const match = String(data || '').match(/^data:image\/png;base64,(.+)$/u)
+  if (!match)
+    return new Response(null, { status: 302, headers: { Location: `/icons/icon-${String(size) === '512' ? 512 : 192}.png` } })
+  return new Response(Uint8Array.from(atob(match[1]), (char) => char.charCodeAt(0)), {
+    headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' },
+  })
+}
+
 // ---------- público
 export async function publicSite(db, slug) {
   let trainerId
@@ -173,6 +248,8 @@ export async function publicSite(db, slug) {
   return {
     data: {
       ...publicShape(row, trainer, isOwner),
+      // Selo "Feito com FARISA" nas páginas do plano Grátis.
+      badge: !isOwner && (await isFreePlan(db, trainerId)),
       plans: (await trainerPlans(db, trainerId)).map(({ code, name, priceCents, accessType }) => ({ code, name, priceCents, accessType })),
     },
   }
@@ -278,7 +355,21 @@ export async function saveSite(db, trainerId, body) {
       })
     }
   }
-  await db.batch(queries)
+  // Ícones do app do aluno (gerados no navegador com a marca e a cor).
+  const icon192 = String(body?.icon192 || '')
+  const icon512 = String(body?.icon512 || '')
+  if (ICON_PATTERN.test(icon192) && ICON_PATTERN.test(icon512) && icon192.length < 200_000 && icon512.length < 600_000)
+    queries.push({
+      sql: 'UPDATE trainer_site SET icon_192=$2, icon_512=$3, icon_version=icon_version+1 WHERE trainer_id=$1',
+      values: [trainerId, icon192, icon512],
+    })
+  try {
+    await db.batch(queries)
+  } catch (error) {
+    // Sem a migração 031 (ícones): salva o resto.
+    if (!/icon_/u.test(String(error?.message))) throw error
+    await db.batch(queries.slice(0, -1))
+  }
   return siteSettings(db, trainerId)
 }
 

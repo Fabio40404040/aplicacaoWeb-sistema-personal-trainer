@@ -77,7 +77,7 @@ import {
 } from "./routes/payments.js";
 import { demoSession } from "./routes/demo.js";
 import { demoReadOnly, isDemoEmail } from "./lib/demo.js";
-import { publicSite, publicSiteHero, saveSite, saveSiteHero, siteSettings } from "./routes/site.js";
+import { publicSite, publicSiteHero, saveSite, saveSiteHero, siteIcon, siteManifest, siteSettings } from "./routes/site.js";
 import {
   payoutConnectUrl,
   payoutDisconnect,
@@ -217,6 +217,10 @@ async function handleRoutes(request, env) {
     return withDb(env, (db) => demoSession(env, db, segments[2]));
   if (request.method === "GET" && segments[0] === "public" && segments[1] === "site" && segments.length <= 3)
     return withDb(env, (db) => publicSite(db, segments[2] || ""));
+  if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-manifest" && segments[2])
+    return withDb(env, (db) => siteManifest(db, segments[2]));
+  if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-icon" && segments[2])
+    return withDb(env, (db) => siteIcon(db, segments[2], segments[3]));
   if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-hero" && segments[2])
     return withDb(env, (db) => publicSiteHero(db, segments[2]));
   if (request.method === "GET" && route === "public/saas-plans")

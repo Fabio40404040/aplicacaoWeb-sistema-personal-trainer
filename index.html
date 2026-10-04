@@ -59,8 +59,22 @@
         var path = location.pathname.replace(/\/+$/, '')
         // Página principal = vitrine da plataforma (para personais). As
         // páginas dos personais ficam em /p/<endereço>.
-        if (path.indexOf('/p/') !== 0 && path.indexOf('/personal') !== 0)
+        var manifestLink = document.querySelector('link[rel="manifest"]')
+        var page = path.match(/^\/p\/([a-z0-9-]{3,30})$/i)
+        if (page) {
+          // Página de um personal: o app instalado leva o nome, a cor e o
+          // ícone dele (manifesto gerado pelo servidor).
+          var slug = page[1].toLowerCase()
+          if (manifestLink) manifestLink.setAttribute('href', '/api/public/site-manifest/' + slug)
+          var touch = document.querySelector('link[rel="apple-touch-icon"]')
+          if (touch) touch.setAttribute('href', '/api/public/site-icon/' + slug + '/192')
+        } else if (path.indexOf('/personal') !== 0) {
           document.documentElement.setAttribute('data-home', 'saas')
+          // A vitrine não é um app: quem instala é o aluno (na página do
+          // personal) ou o personal (no painel).
+          if (manifestLink && !/^#(entrar-aluno|painel-aluno|cadastro-aluno|recuperar-senha|nova-senha)/.test(location.hash))
+            manifestLink.parentNode.removeChild(manifestLink)
+        }
         if (path === '/app' || path === '/app.html') {
           location.replace('/personal/' + location.hash)
           return
@@ -3312,7 +3326,7 @@
       class="install-dialog"
       data-install-dialog
     >
-      <h2>Adicionar FARISA Personal à tela inicial</h2>
+      <h2 data-install-title>Adicionar o app à tela inicial</h2>
       <p data-install-instructions></p>
       <button
         type="button"
