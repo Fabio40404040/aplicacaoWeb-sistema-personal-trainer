@@ -1,3 +1,4 @@
+import { demoInviteOn } from "./demo-invite.js";
 import { clearStoredData, getData, replaceData } from "./state.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -48,6 +49,7 @@ async function request(path, options = {}) {
   }
   // O 401 do próprio login é senha errada, não sessão vencida.
   if (token && path !== "/auth/login") handleUnauthorized(response.status);
+  demoInviteOn(response);
   if (response.status === 204) return null;
   let result;
   try {

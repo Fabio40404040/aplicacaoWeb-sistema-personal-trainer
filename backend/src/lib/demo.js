@@ -20,7 +20,7 @@ export const demoBlocked = {
 // A demonstração é só para olhar: qualquer visitante entra nela pela página
 // principal, então nada do que ele fizer é gravado.
 export const demoReadOnly = {
-  error: 'Esta é uma conta de demonstração: as alterações não são salvas. Crie sua conta grátis para usar de verdade.',
+  error: 'Demonstração: nada é salvo aqui. Crie sua conta grátis em 1 minuto para fazer isso de verdade.',
   status: 403,
 }
 

@@ -1,3 +1,4 @@
+import { demoInviteOn } from "./demo-invite.js";
 import { currentSiteSlug } from "./site-brand.js";
 import { downloadWorkoutPdf } from "./workout-pdf.js";
 import { openSecureCardForm } from "./mercado-pago-card.js";
@@ -28,6 +29,7 @@ async function studentRequest(path, data) {
       "Não foi possível conectar ao serviço de contas. Tente novamente mais tarde.",
     );
   }
+  demoInviteOn(response);
   let result;
   try {
     result = await response.json();

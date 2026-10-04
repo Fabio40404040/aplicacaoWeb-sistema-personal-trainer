@@ -1,6 +1,8 @@
 // Página principal = vitrine da plataforma para personais. O <head> marca
 // html[data-home="saas"] antes de pintar; aqui a página do personal sai do
 // DOM, o menu vira o da plataforma e os botões de demonstração funcionam.
+import { leaveDemoToSignup } from './demo-invite.js'
+
 const API_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/u, '')
 const DEMO_KEY = 'farisa-demo'
 const isHome = () => document.documentElement.dataset.home === 'saas'
@@ -147,11 +149,9 @@ function demoBanner() {
   const link = document.createElement('a')
   link.href = '/personal/#ativar-personal'
   link.textContent = 'Criar minha conta grátis'
-  link.addEventListener('click', () => {
-    // Sai da conta de demonstração antes de ir para o cadastro.
-    ;['farisa-coach-api-token', 'farisa-coach-session-v2', 'farisa-coach-data-v1', 'farisa-student-token', DEMO_KEY].forEach(
-      (key) => sessionStorage.removeItem(key),
-    )
+  link.addEventListener('click', (event) => {
+    event.preventDefault()
+    leaveDemoToSignup() // sai da demonstração antes de ir para o cadastro
   })
   bar.append(text, link)
   document.body.append(bar)

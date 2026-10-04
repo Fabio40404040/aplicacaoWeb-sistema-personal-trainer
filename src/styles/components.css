@@ -4571,3 +4571,44 @@ dialog.confirm-dialog::backdrop {
 .site-save .button {
   width: auto;
 }
+
+/* Convite que aparece quando o visitante tenta salvar algo na demonstração. */
+dialog.demo-invite {
+  width: min(92vw, 440px);
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 35%);
+}
+dialog.demo-invite::backdrop {
+  background: rgb(15 23 42 / 60%);
+}
+.demo-invite > div {
+  display: grid;
+  gap: 12px;
+  padding: 26px;
+}
+.demo-invite h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.demo-invite p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+}
+.demo-invite small {
+  color: #64748b;
+}
+.demo-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+.demo-invite-actions .button {
+  width: auto;
+}
