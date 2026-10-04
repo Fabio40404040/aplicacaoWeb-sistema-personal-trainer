@@ -1471,3 +1471,38 @@ html[data-home='saas'] .saas-main {
 .saas-carousel-dots button[aria-current='true']::before {
   background: var(--site-blue-light);
 }
+
+/* Topo da vitrine: texto centralizado em cima e o carrossel grande embaixo. */
+.saas-hero {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: clamp(28px, 4vw, 48px);
+  max-width: 1180px;
+  padding-bottom: clamp(32px, 4vw, 56px);
+  text-align: center;
+}
+.saas-hero-copy {
+  max-width: 820px;
+}
+.saas-hero-copy > p {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.saas-hero-actions {
+  justify-content: center;
+}
+.saas-carousel {
+  width: 100%;
+}
+.saas-slide figcaption {
+  left: 16px;
+  bottom: 16px;
+  font-size: 0.95rem;
+}
+@media (max-width: 620px) {
+  .saas-slide figcaption {
+    left: 10px;
+    bottom: 10px;
+    font-size: 0.8rem;
+  }
+}
