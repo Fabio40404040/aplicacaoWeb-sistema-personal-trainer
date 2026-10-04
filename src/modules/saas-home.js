@@ -157,10 +157,67 @@ function demoBanner() {
   document.body.append(bar)
 }
 
+// Carrossel do topo: página do personal → painel → app do aluno. Troca devagar
+// e para quando a pessoa toca, passa o mouse ou usa o teclado.
+function initCarousel() {
+  const root = document.querySelector('[data-carousel]')
+  const track = root?.querySelector('[data-carousel-track]')
+  const dotsBox = root?.querySelector('[data-carousel-dots]')
+  if (!track || !dotsBox) return
+  const slides = [...track.children]
+  let current = 0
+  let paused = false
+  const go = (index, smooth = true) => {
+    current = (index + slides.length) % slides.length
+    track.scrollTo({ left: slides[current].offsetLeft - track.offsetLeft, behavior: smooth ? 'smooth' : 'auto' })
+  }
+  const dots = slides.map((slide, index) => {
+    const dot = document.createElement('button')
+    dot.type = 'button'
+    dot.setAttribute('aria-label', `Mostrar: ${slide.querySelector('figcaption')?.textContent || `tela ${index + 1}`}`)
+    dot.addEventListener('click', () => {
+      paused = true
+      go(index)
+    })
+    dotsBox.append(dot)
+    return dot
+  })
+  const paint = () => dots.forEach((dot, index) => dot.setAttribute('aria-current', String(index === current)))
+  // A posição real manda (o visitante pode arrastar com o dedo).
+  let frame = 0
+  track.addEventListener('scroll', () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(() => {
+      const index = Math.round(track.scrollLeft / Math.max(1, track.clientWidth))
+      if (index !== current && slides[index]) current = index
+      paint()
+    })
+  })
+  ;['pointerdown', 'keydown', 'focusin'].forEach((type) =>
+    root.addEventListener(type, () => {
+      paused = true
+    }),
+  )
+  let hovering = false
+  root.addEventListener('mouseenter', () => (hovering = true))
+  root.addEventListener('mouseleave', () => (hovering = false))
+  track.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowRight') go(current + 1)
+    if (event.key === 'ArrowLeft') go(current - 1)
+  })
+  paint()
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  window.setInterval(() => {
+    if (paused || hovering || document.visibilityState !== 'visible') return
+    go(current + 1)
+  }, 5000)
+}
+
 export function initSaasHome() {
   demoBanner()
   if (!isHome()) return
   buildHome()
+  initCarousel()
   initDemoButtons()
   void fillPlans()
   void fillContact()

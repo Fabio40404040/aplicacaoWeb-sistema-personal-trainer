@@ -1290,7 +1290,6 @@ html[data-home='saas'] .saas-main {
   background: var(--site-card);
   box-shadow: 0 30px 80px rgba(4, 10, 18, 0.5);
 }
-.saas-hero-shot img,
 .saas-demo-card img {
   display: block;
   width: 100%;
@@ -1398,4 +1397,77 @@ html[data-home='saas'] .saas-main {
   font-size: 0.82rem;
   text-align: center;
   text-decoration: underline;
+}
+
+/* Carrossel do topo da vitrine (arrasta com o dedo; bolinhas para escolher). */
+.saas-carousel {
+  min-width: 0;
+}
+.saas-carousel-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border: 1px solid var(--site-line);
+  border-radius: 18px;
+  background: var(--site-card);
+  box-shadow: 0 30px 80px rgba(4, 10, 18, 0.5);
+}
+.saas-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+.saas-carousel-track:focus-visible {
+  outline: 2px solid var(--site-blue-light);
+  outline-offset: 3px;
+}
+.saas-slide {
+  position: relative;
+  flex: 0 0 100%;
+  margin: 0;
+  scroll-snap-align: start;
+}
+.saas-slide img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top;
+}
+.saas-slide figcaption {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(13, 20, 33, 0.88);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.saas-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.saas-carousel-dots button {
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.saas-carousel-dots button::before {
+  content: '';
+  display: block;
+  width: 26px;
+  height: 5px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: rgba(189, 211, 240, 0.3);
+}
+.saas-carousel-dots button[aria-current='true']::before {
+  background: var(--site-blue-light);
 }
