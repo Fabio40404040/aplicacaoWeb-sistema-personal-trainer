@@ -142,7 +142,8 @@ export async function billingInfo(env, db, trainerId) {
         await db.query(
           `SELECT id, plan_code AS "planCode", cycle, amount_cents AS "amountCents", method, status,
              created_at AS "createdAt" FROM saas_payment_intents
-           WHERE trainer_id=$1 AND status IN ('pending','in_process') ORDER BY created_at DESC LIMIT 3`,
+           WHERE trainer_id=$1 AND status IN ('in_process','authorized')
+             AND created_at >= datetime('now','-3 day') ORDER BY created_at DESC LIMIT 3`,
           [trainerId],
         )
       ).rows,
@@ -268,7 +269,7 @@ export async function reconcileSaas(env, db, trainerId) {
       const payment = await officialPaymentForIntent(intent, env)
       if (!payment) continue
       if (payment.status === 'approved') await approveSaasPayment(db, intent, payment)
-      else if (['rejected', 'cancelled'].includes(payment.status))
+      else if (['rejected', 'cancelled', 'in_process', 'authorized'].includes(payment.status))
         await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, payment.status])
     } catch (error) {
       console.error('[assinatura] não foi possível conferir', intent.id, error?.message)
