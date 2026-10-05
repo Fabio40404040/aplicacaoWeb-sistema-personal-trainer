@@ -129,14 +129,21 @@ export function openPlanChange(data, { request, reload, paymentControls, resume 
     }
     body.replaceChildren(...sections, status)
     const price = state.plan?.prices.find((item) => item.cycle === state.cycle) || state.plan?.prices[0]
-    const same = state.plan?.code === current && state.cycle === data.access.billingCycle
+    const samePlan = state.plan?.code === current && state.cycle === data.access.billingCycle
+    // Voltar ao plano atual só faz sentido se houver uma troca aguardando pagamento.
+    const keep = samePlan && data.access.active && Boolean(data.pendingChange)
+    const same = samePlan && data.access.active && !data.pendingChange
     const back = el('button', 'button button--secondary', 'Voltar')
     back.type = 'button'
     back.addEventListener('click', () => box.close())
     const next = el(
       'button',
       'button button--primary',
-      state.plan && price ? `Continuar · ${money(price.amountCents)}` : 'Continuar',
+      keep
+        ? 'Ficar no meu plano atual'
+        : state.plan && price
+          ? `Continuar · ${money(price.amountCents)}`
+          : 'Continuar',
     )
     next.type = 'button'
     next.disabled = !state.plan || same
@@ -144,6 +151,12 @@ export function openPlanChange(data, { request, reload, paymentControls, resume 
       next.disabled = true
       status.textContent = ''
       try {
+        if (keep) {
+          await request('plan-change', { cancel: true })
+          box.close()
+          await reload()
+          return
+        }
         const result = await request('plan-change', { planCode: state.plan.code, billingCycle: state.cycle })
         paymentStep(box, {
           title: state.plan.name,
@@ -157,6 +170,7 @@ export function openPlanChange(data, { request, reload, paymentControls, resume 
         next.disabled = false
       }
     })
+    status.textContent = same ? 'Esse já é o seu plano atual. Escolha outro plano ou outro período.' : ''
     footer.replaceChildren(back, next)
   }
   paint()
