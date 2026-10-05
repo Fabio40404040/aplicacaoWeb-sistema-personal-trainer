@@ -199,6 +199,8 @@ function brandCard(form) {
 // "em pé" na frente do fundo. Devolve { cutout: dataURL } ou { opaque: true }.
 const CUTOUT_HEIGHT = 1400
 async function prepareCutout(file) {
+  if (/heic|heif/iu.test(file.type) || /\.hei[cf]$/iu.test(file.name))
+    throw new Error('Foto HEIC (iPhone) não funciona aqui. Veja abaixo como resolver pelo Canva.')
   if (!/^image\/(jpeg|png|webp)$/u.test(file.type)) throw new Error('Escolha uma foto PNG, JPG ou WebP.')
   if (file.size > 25 * 1024 * 1024) throw new Error('Esta foto é muito pesada. Escolha uma de até 25 MB.')
   const bitmap = await createImageBitmap(file).catch(() => null)
@@ -248,6 +250,30 @@ async function prepareCutout(file) {
   throw new Error('Não foi possível reduzir esta foto. Tente uma imagem menor.')
 }
 
+// Como tirar o fundo da foto, de graça (usado na dica e abaixo do botão).
+function removeBackgroundHelp() {
+  const sites = el('p', '')
+  sites.append('Remova o fundo grátis em ')
+  ;[
+    ['remove.bg', 'https://www.remove.bg/pt-br'],
+    ['Adobe Express', 'https://www.adobe.com/br/express/feature/image/remove-background'],
+    ['Photoroom', 'https://www.photoroom.com/pt-br/ferramentas/remover-fundo-de-imagem'],
+  ].forEach(([name, url], index, list) => {
+    const link = el('a', '', name)
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    sites.append(link, index < list.length - 1 ? (index === list.length - 2 ? ' ou ' : ', ') : '')
+  })
+  sites.append(' e baixe em PNG.')
+  return [
+    sites,
+    el('p', '', 'iPhone (foto HEIC): no Canva, arraste a foto para importar, remova o fundo e baixe em PNG.'),
+    el('p', '', 'Depois, peça a uma IA para ajustar o tamanho:'),
+    el('p', 'site-photo-prompt', '“Ajuste esta imagem para 600 × 1800 px, corpo inteiro em pé, fundo transparente, em PNG.”'),
+  ]
+}
+
 function heroCard(form) {
   const card = section('Banner principal', 'O topo da sua página: a sua foto na frente de um fundo de academia.')
   const preview = el('div', 'site-hero-preview')
@@ -268,7 +294,7 @@ function heroCard(form) {
   const upload = el('label', 'button button--primary site-upload')
   const input = el('input')
   input.type = 'file'
-  input.accept = 'image/png,image/webp,image/jpeg'
+  input.accept = 'image/png,image/webp,image/jpeg,image/heic,image/heif,.heic,.heif'
   input.hidden = true
   const uploadText = el('span', '', 'Enviar minha foto')
   upload.append(input, uploadText)
@@ -328,15 +354,14 @@ function heroCard(form) {
       })
       const tip = el('div', 'site-photo-tip')
       tip.append(
-        el('strong', '', 'Esta foto tem fundo. Para ficar igual ao exemplo, ela precisa ter fundo transparente.'),
-        el('p', '', 'É rápido resolver com uma IA: abra o ChatGPT, o Gemini, o Canva ou o site remove.bg, envie a sua foto e peça:'),
-        el('p', 'site-photo-prompt', '“Remova o fundo desta foto, deixe o fundo transparente, mantenha meu corpo inteiro em pé e me entregue em PNG.”'),
-        el('p', '', 'Depois envie aqui o PNG que a IA devolver.'),
+        el('strong', '', 'Esta foto tem fundo. Ela precisa ter fundo transparente.'),
+        ...removeBackgroundHelp(),
         useAnyway,
       )
       status.replaceChildren(tip)
     } catch (error) {
       status.replaceChildren(el('small', 'site-status', error.message))
+      if (/HEIC/u.test(error.message)) help.open = true
     } finally {
       paintPhotoActions()
     }
@@ -379,6 +404,12 @@ function heroCard(form) {
     )
     choices.replaceChildren(...items)
   }
+  // Ajuda sempre à mão: como tirar o fundo da foto.
+  const help = el('details', 'site-photo-help')
+  const helpTitle = el('summary', '', 'Não tem a foto sem fundo? Veja como fazer, grátis')
+  const helpBody = el('div', 'site-photo-tip')
+  helpBody.append(...removeBackgroundHelp())
+  help.append(helpTitle, helpBody)
   paintPreview()
   paintPhotoActions()
   paintChoices()
@@ -389,10 +420,11 @@ function heroCard(form) {
     el(
       'small',
       'support-muted',
-      'Envie uma foto sua de corpo inteiro, em pé, em PNG com fundo transparente (recomendado: 600 × 1800 px). O ajuste de tamanho é automático. Não tem a foto sem fundo? Uma IA faz isso em segundos: envie qualquer foto e nós explicamos como.',
+      'Envie uma foto sua de corpo inteiro, em pé, em PNG com fundo transparente (recomendado: 600 × 1800 px). O ajuste de tamanho é automático.',
     ),
     photoActions,
     status,
+    help,
     el('strong', 'site-sub', '2. Fundo'),
     el('small', 'support-muted', 'Escolha o fundo que fica atrás da sua foto. Clique em “Salvar meu site” para aplicar.'),
     choices,

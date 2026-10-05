@@ -4750,3 +4750,17 @@ dialog.demo-invite::backdrop {
 .site-photo-tip .button {
   width: fit-content;
 }
+
+.site-photo-help summary {
+  width: fit-content;
+  color: var(--green-700, #047857);
+  font-weight: 700;
+  cursor: pointer;
+}
+.site-photo-help[open] summary {
+  margin-bottom: 8px;
+}
+.site-photo-tip a {
+  font-weight: 700;
+  text-decoration: underline;
+}
