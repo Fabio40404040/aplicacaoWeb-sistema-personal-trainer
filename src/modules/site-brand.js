@@ -218,7 +218,7 @@ function applyExamplePhoto(site) {
       show()
       athlete.classList.remove('is-swapping')
     }, 350)
-  }, 4000)
+  }, 2500)
 }
 
 export function applySite(site) {
