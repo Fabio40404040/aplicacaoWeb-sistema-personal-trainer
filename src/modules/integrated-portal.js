@@ -96,7 +96,7 @@ function enhanceRegistration() {
   )
   const billingCycle = field(
     'Período da consultoria',
-    `<select name="billingCycle"><option value="monthly">Mensal — sem desconto</option><option value="quarterly" selected>Trimestral — recomendado, 5% de desconto</option><option value="semiannual">Semestral — 10% de desconto</option><option value="annual">Anual — melhor valor, 15% de desconto</option></select>`,
+    `<select name="billingCycle"><option value="monthly" selected>Mensal — sem desconto</option><option value="quarterly">Trimestral — recomendado, 5% de desconto</option><option value="semiannual">Semestral — 10% de desconto</option><option value="annual">Anual — melhor valor, 15% de desconto</option></select>`,
   )
   const channel = field('Forma de pagamento', '<select name="paymentChannel"></select>')
   const paymentTitle = document.createElement('span')
@@ -124,8 +124,9 @@ function enhanceRegistration() {
     paymentTitle.hidden = false
     form.querySelector('[type="submit"]').textContent = 'Criar pré-cadastro'
     if (selectedPlan === 'ready') {
+      // Pagamento único: o período não se aplica (o servidor grava "permanente").
       billingCycle.hidden = true
-      billingCycle.querySelector('select').value = 'permanent'
+      billingCycle.querySelector('select').disabled = true
     } else {
       const monthlyPrice = consultingPrices[selectedPlan]
       const billingSelect = billingCycle.querySelector('select')
@@ -134,14 +135,21 @@ function enhanceRegistration() {
       billingSelect.options[2].textContent = `Semestral — ${money.format(monthlyPrice * 6 * 0.9)} (10% off)`
       billingSelect.options[3].textContent = `Anual — ${money.format(monthlyPrice * 12 * 0.85)} (15% off)`
       billingCycle.hidden = false
-      if (billingCycle.querySelector('select').value === 'permanent')
-        billingCycle.querySelector('select').value = 'quarterly'
+      billingSelect.disabled = false
+      // Nunca fica em branco: sem escolha válida, mostra o primeiro (Mensal).
+      if (!['monthly', 'quarterly', 'semiannual', 'annual'].includes(billingSelect.value)) billingSelect.value = 'monthly'
     }
   }
   // "Treinos Prontos" mostra o preço do personal no próprio nome da opção.
+  // Cada opção mostra o preço do plano (os mesmos valores dos cartões).
+  const PLAN_LABELS = { basic: 'Consultoria Básica', premium: 'Consultoria Premium', athlete: 'Performance Atleta' }
   function paintReadyOption() {
     const option = plan.querySelector('option[value="ready"]')
     if (option) option.textContent = `Treinos Prontos — ${money.format(consultingPrices.ready)} — acesso permanente`
+    Object.entries(PLAN_LABELS).forEach(([code, label]) => {
+      const item = plan.querySelector(`option[value="${code}"]`)
+      if (item) item.textContent = `${label} — ${money.format(consultingPrices[code])}/mês`
+    })
   }
   paintReadyOption()
   window.addEventListener('farisa:site-plans', (event) => {
