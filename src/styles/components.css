@@ -4715,3 +4715,38 @@ dialog.demo-invite::backdrop {
   width: fit-content;
   margin: 4px 0;
 }
+
+/* Meu site: prévia do banner (fundo + foto do personal) e dica da foto. */
+.site-hero-preview {
+  position: relative;
+  overflow: hidden;
+}
+.site-hero-person {
+  position: absolute;
+  inset: 6% 0 0;
+  background: center bottom / contain no-repeat;
+}
+.site-photo-status:empty {
+  display: none;
+}
+.site-photo-tip {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #fcd34d;
+  border-radius: 12px;
+  background: #fffbeb;
+}
+.site-photo-tip p {
+  margin: 0;
+  color: #334155;
+}
+.site-photo-tip .site-photo-prompt {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff;
+  font-style: italic;
+}
+.site-photo-tip .button {
+  width: fit-content;
+}

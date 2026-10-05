@@ -79,14 +79,21 @@ function applyBrand(site) {
 function applyHero(site) {
   const screen = document.querySelector('[data-public-screen]')
   if (!screen) return
-  // Sem foto própria, a página de outro personal usa um banner neutro (a foto
-  // padrão do site principal é do dono).
   // As fotos de evolução do topo são do dono; nas outras páginas ficam ocultas.
   screen.classList.toggle('is-trainer-page', !site.isOwner)
-  const url = site.hero?.url || (site.isOwner ? null : '/banners/banner-1.webp')
-  if (!url) return
-  screen.style.setProperty('--hero-photo', `url("${url}")`)
-  screen.classList.add('has-hero-photo')
+  const hero = site.hero || {}
+  // Fundo: o escolhido em "Meu site"; páginas de outros personais sem escolha
+  // usam o fundo 1 (a foto padrão do site principal é do dono).
+  const background = hero.url || (site.isOwner ? null : '/banners/banner-1.webp')
+  if (background) {
+    screen.style.setProperty('--hero-bg', `url("${background}")`)
+    screen.classList.add('has-hero-bg')
+  }
+  // Foto do personal (fundo transparente) por cima do fundo. Sem foto própria,
+  // só o dono mantém a foto padrão — e nem ele, se usa uma foto como fundo inteiro.
+  if (hero.cutoutUrl) screen.style.setProperty('--hero-cutout', `url("${hero.cutoutUrl}")`)
+  else if (!site.isOwner || hero.kind === 'upload') screen.style.setProperty('--hero-cutout', 'none')
+  screen.classList.toggle('has-hero-cutout', Boolean(hero.cutoutUrl) || !site.isOwner || hero.kind === 'upload')
 }
 
 let sitePlans = null
@@ -144,10 +151,10 @@ function applyContact(site, brand) {
   const links = {
     'Falar pelo WhatsApp': contact.whatsapp && `https://wa.me/${contact.whatsapp}`,
     'Abrir Instagram': contact.instagram && `https://instagram.com/${contact.instagram}`,
-    'Abrir Facebook': contact.facebook && `https://facebook.com/${contact.facebook}`,
+    'Abrir Facebook': contact.facebook && `https://www.facebook.com/${contact.facebook}`,
     'Abrir TikTok': contact.tiktok && `https://www.tiktok.com/@${contact.tiktok}`,
   }
-  document.querySelectorAll('.contact-links a').forEach((link) => {
+  document.querySelectorAll('.public-main .contact-links a').forEach((link) => {
     const label = link.getAttribute('aria-label') || ''
     if (label in links) {
       link.hidden = !links[label]
@@ -156,11 +163,13 @@ function applyContact(site, brand) {
       // E-mail
       link.hidden = !contact.email
       if (contact.email) {
-        link.href = `mailto:${contact.email}`
-        link.removeAttribute('target')
-        link.setAttribute('aria-label', 'Enviar e-mail')
+        // Abre o Gmail já com o destinatário preenchido.
+        link.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact.email)}`
+        link.target = '_blank'
+        link.rel = 'noopener noreferrer'
+        link.setAttribute('aria-label', 'Enviar e-mail pelo Gmail (abre em nova aba)')
         const text = link.querySelector('span')
-        if (text) text.textContent = 'E-mail'
+        if (text) text.textContent = 'Gmail'
       }
     }
   })

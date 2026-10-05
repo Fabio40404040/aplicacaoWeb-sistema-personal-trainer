@@ -5,6 +5,8 @@ const ACCENTS = ['blue', 'green', 'red', 'orange', 'purple', 'pink', 'teal', 'go
 const RESERVED = new Set(['admin', 'personal', 'api', 'p', 'assets', 'icons', 'banners', 'docs', 'farisa', 'suporte', 'site', 'app', 'login'])
 const HERO_PATTERN = /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/u
 const MAX_HERO_CHARS = 950_000
+const CUTOUT_PATTERN = /^data:image\/(png|webp);base64,[A-Za-z0-9+/=]+$/u
+const MAX_CUTOUT_CHARS = 1_400_000
 const ICON_PATTERN = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/u
 const PRESET_PATTERN = /^banner-[1-9]\d?\.(jpg|webp)$/u
 
@@ -24,7 +26,10 @@ const slugify = (text) =>
 const handle = (value) => {
   const text = String(value ?? '').trim()
   const match = text.match(/(?:instagram\.com|facebook\.com|tiktok\.com)\/@?([A-Za-z0-9._-]{1,60})/iu)
-  const user = (match ? match[1] : text.replace(/^@/u, '')).trim()
+  // Facebook também tem perfis no formato profile.php?id=123.
+  const byId = text.match(/facebook\.com\/profile\.php\?id=(\d{5,20})/iu) || text.match(/^profile\.php\?id=(\d{5,20})$/iu)
+  if (byId) return `profile.php?id=${byId[1]}`
+  const user = (match ? match[1] : text.replace(/^@/u, '').replace(/^(https?:\/\/)?(www\.|m\.)?(fb\.com|fb\.me)\//iu, '').replace(/\/+$/u, '')).trim()
   return /^[A-Za-z0-9._-]{1,60}$/u.test(user) ? user : null
 }
 // WhatsApp: só dígitos, com 55 na frente.
@@ -134,12 +139,17 @@ function publicShape(row, trainer, isOwner) {
     brandMark: row?.brand_mark || null,
     brandName: row?.brand_name || null,
     accent: row?.accent || 'blue',
-    hero:
-      row?.hero_kind === 'upload' && row.hero_image
+    hero: {
+      ...(row?.hero_kind === 'upload' && row.hero_image
         ? { kind: 'upload', url: `/api/public/site-hero/${row.slug}?v=${row.hero_version}` }
         : row?.hero_kind === 'preset' && row.hero_preset
           ? { kind: 'preset', url: `/banners/${row.hero_preset}` }
-          : { kind: 'default', url: null },
+          : { kind: 'default', url: null }),
+      // Foto do personal com fundo transparente, por cima do fundo.
+      cutoutUrl: row?.hero_cutout
+        ? `/api/public/site-hero/${row.slug}?kind=cutout&v=${row.hero_cutout_version || 0}`
+        : null,
+    },
     contact: {
       whatsapp: row?.whatsapp || null,
       email: row?.contact_email || null,
@@ -255,14 +265,21 @@ export async function publicSite(db, slug) {
   }
 }
 
-export async function publicSiteHero(db, slug) {
+export async function publicSiteHero(db, slug, kind) {
   let row
   try {
-    row = (await db.query("SELECT hero_image FROM trainer_site WHERE slug=$1 AND hero_kind='upload'", [String(slug || '')])).rows[0]
+    row = (
+      await db.query(
+        kind === 'cutout'
+          ? 'SELECT hero_cutout AS image FROM trainer_site WHERE slug=$1'
+          : "SELECT hero_image AS image FROM trainer_site WHERE slug=$1 AND hero_kind='upload'",
+        [String(slug || '')],
+      )
+    ).rows[0]
   } catch {
     row = null
   }
-  const match = String(row?.hero_image || '').match(/^data:(image\/(?:jpeg|webp));base64,(.+)$/u)
+  const match = String(row?.image || '').match(/^data:(image\/(?:jpeg|webp|png));base64,(.+)$/u)
   if (!match) return new Response('Not found', { status: 404 })
   const bytes = Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0))
   return new Response(bytes, {
@@ -377,7 +394,24 @@ export async function saveSite(db, trainerId, body) {
 export async function saveSiteHero(db, trainerId, body) {
   const row = await siteRow(db, trainerId)
   if (!row) return { error: 'Conta não encontrada.', status: 404 }
+  // Remover a foto do personal (volta a aparecer só o fundo).
+  if (body?.removeCutout) {
+    await db.query('UPDATE trainer_site SET hero_cutout=NULL, updated_at=CURRENT_TIMESTAMP WHERE trainer_id=$1', [trainerId])
+    return siteSettings(db, trainerId)
+  }
   const image = String(body?.image || '')
+  // Foto com fundo transparente: fica por cima do fundo escolhido.
+  if (body?.cutout) {
+    if (!CUTOUT_PATTERN.test(image) || image.length > MAX_CUTOUT_CHARS)
+      return { error: 'Não foi possível usar esta foto. Envie um PNG com fundo transparente.', status: 400 }
+    await db.query(
+      `UPDATE trainer_site SET hero_cutout=$2, hero_cutout_version=hero_cutout_version+1,
+         hero_kind=CASE WHEN hero_kind='upload' THEN 'default' ELSE hero_kind END, updated_at=CURRENT_TIMESTAMP
+       WHERE trainer_id=$1`,
+      [trainerId, image],
+    )
+    return siteSettings(db, trainerId)
+  }
   if (!HERO_PATTERN.test(image) || image.length > MAX_HERO_CHARS)
     return { error: 'Não foi possível usar esta foto. Tente outra imagem (JPG ou PNG).', status: 400 }
   await db.query(

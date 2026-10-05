@@ -1194,22 +1194,23 @@ html[data-accent] .public-menu a:hover {
 .whatsapp-float[hidden] {
   display: none;
 }
-/* Banner do personal: a foto ocupa o fundo, com um véu escuro para o texto. */
-.public-screen.has-hero-photo .public-hero {
+/* Banner do personal: fundo escolhido + a foto dele (fundo transparente) na frente. */
+.public-screen.has-hero-bg .public-hero {
   background:
-    linear-gradient(180deg, rgba(11, 17, 24, 0.5) 0%, rgba(11, 17, 24, 0.35) 45%, rgba(11, 17, 24, 0.82) 100%),
-    var(--hero-photo) center / cover no-repeat #101721;
+    linear-gradient(180deg, rgba(11, 17, 24, 0.28) 0%, rgba(11, 17, 24, 0.2) 50%, rgba(11, 17, 24, 0.6) 100%),
+    var(--hero-bg) center / cover no-repeat #101721;
 }
-.public-screen.has-hero-photo .public-hero-athlete {
-  display: none;
+.public-screen.has-hero-cutout .public-hero-athlete {
+  background-image: var(--hero-cutout);
 }
 @media (max-width: 620px) {
-  .public-screen.has-hero-photo .public-hero {
+  .public-screen.has-hero-bg .public-hero {
     background: var(--site-bg);
   }
-  .public-screen.has-hero-photo .public-hero-athlete {
-    display: block;
-    background: var(--hero-photo) center / cover no-repeat;
+  .public-screen.has-hero-bg .public-hero-athlete,
+  .public-screen.has-hero-cutout .public-hero-athlete {
+    background-image:
+      var(--hero-cutout, url('../assets/img/personal.png')), var(--hero-bg, url('../assets/img/gym-hero-wide.webp'));
   }
 }
 

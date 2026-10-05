@@ -95,7 +95,11 @@ async function fillContact() {
       whatsapp.hidden = false
     }
     if (site.contact?.email && email) {
-      email.href = `mailto:${site.contact.email}`
+      email.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(site.contact.email)}`
+      email.target = '_blank'
+      email.rel = 'noopener noreferrer'
+      const label = email.querySelector('span')
+      if (label) label.textContent = 'Gmail'
       email.hidden = false
     }
   } catch {

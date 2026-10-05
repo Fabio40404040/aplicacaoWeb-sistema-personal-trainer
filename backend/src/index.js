@@ -222,7 +222,7 @@ async function handleRoutes(request, env) {
   if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-icon" && segments[2])
     return withDb(env, (db) => siteIcon(db, segments[2], segments[3]));
   if (request.method === "GET" && segments[0] === "public" && segments[1] === "site-hero" && segments[2])
-    return withDb(env, (db) => publicSiteHero(db, segments[2]));
+    return withDb(env, (db) => publicSiteHero(db, segments[2], new URL(request.url).searchParams.get("kind")));
   if (request.method === "GET" && route === "public/saas-plans")
     return withDb(env, async (db) => ({ data: await saasPlans(db) }));
   if (request.method === "POST" && route === "auth/login")

@@ -321,6 +321,6 @@ export function fetchSiteSettings() {
 export function saveSiteSettings(data) {
   return request("/site", { method: "PUT", body: JSON.stringify(data), timeoutMs: 20000 });
 }
-export function saveSiteHero(image) {
-  return request("/site/hero", { method: "PUT", body: JSON.stringify({ image }), timeoutMs: 60000 });
+export function saveSiteHero(image, options = {}) {
+  return request("/site/hero", { method: "PUT", body: JSON.stringify({ image, ...options }), timeoutMs: 60000 });
 }

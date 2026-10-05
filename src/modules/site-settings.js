@@ -195,46 +195,154 @@ function brandCard(form) {
   form.append(card)
 }
 
-function heroCard(form) {
-  const card = section('Banner principal', 'A foto grande do topo da página.')
-  const preview = el('div', 'site-hero-preview')
-  const paintPreview = () => {
-    const url =
-      draft.heroKind === 'upload' && site.hero?.kind === 'upload'
-        ? site.hero.url
-        : draft.heroKind === 'preset' && draft.heroPreset
-          ? `/banners/${draft.heroPreset}`
-          : null
-    preview.style.backgroundImage = url ? `url("${url}")` : ''
-    preview.classList.toggle('is-empty', !url)
-    preview.textContent = url ? '' : site.isOwner ? 'Banner padrão do site' : 'Banner padrão'
+// Foto do personal para o banner: precisa ter fundo transparente para ficar
+// "em pé" na frente do fundo. Devolve { cutout: dataURL } ou { opaque: true }.
+const CUTOUT_HEIGHT = 1400
+async function prepareCutout(file) {
+  if (!/^image\/(jpeg|png|webp)$/u.test(file.type)) throw new Error('Escolha uma foto PNG, JPG ou WebP.')
+  if (file.size > 25 * 1024 * 1024) throw new Error('Esta foto é muito pesada. Escolha uma de até 25 MB.')
+  const bitmap = await createImageBitmap(file).catch(() => null)
+  if (!bitmap) throw new Error('Não foi possível abrir esta foto. Tente outra.')
+  // Primeiro, uma cópia pequena só para medir a transparência e as margens.
+  const probe = document.createElement('canvas')
+  const probeScale = Math.min(1, 400 / Math.max(bitmap.width, bitmap.height))
+  probe.width = Math.max(1, Math.round(bitmap.width * probeScale))
+  probe.height = Math.max(1, Math.round(bitmap.height * probeScale))
+  const probeContext = probe.getContext('2d', { willReadFrequently: true })
+  probeContext.drawImage(bitmap, 0, 0, probe.width, probe.height)
+  const { data } = probeContext.getImageData(0, 0, probe.width, probe.height)
+  let clear = 0
+  let left = probe.width
+  let right = -1
+  let top = probe.height
+  let bottom = -1
+  for (let y = 0; y < probe.height; y += 1)
+    for (let x = 0; x < probe.width; x += 1) {
+      if (data[(y * probe.width + x) * 4 + 3] < 24) clear += 1
+      else {
+        if (x < left) left = x
+        if (x > right) right = x
+        if (y < top) top = y
+        if (y > bottom) bottom = y
+      }
+    }
+  // Menos de 8% de transparência = foto comum, com fundo.
+  if (right < 0 || clear / (probe.width * probe.height) < 0.08) return { opaque: true }
+  // Corta as sobras transparentes para a pessoa ocupar a imagem toda.
+  const box = {
+    x: Math.max(0, (left - 2) / probeScale),
+    y: Math.max(0, (top - 2) / probeScale),
+    width: Math.min(bitmap.width, (right - left + 5) / probeScale),
+    height: Math.min(bitmap.height, (bottom - top + 5) / probeScale),
   }
+  for (const height of [CUTOUT_HEIGHT, 1100, 900, 700]) {
+    const scale = Math.min(1, height / box.height)
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(box.width * scale))
+    canvas.height = Math.max(1, Math.round(box.height * scale))
+    canvas.getContext('2d').drawImage(bitmap, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height)
+    const webp = canvas.toDataURL('image/webp', 0.9)
+    const image = webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png')
+    if (image.length < 1_350_000) return { cutout: image }
+  }
+  throw new Error('Não foi possível reduzir esta foto. Tente uma imagem menor.')
+}
+
+function heroCard(form) {
+  const card = section('Banner principal', 'O topo da sua página: a sua foto na frente de um fundo de academia.')
+  const preview = el('div', 'site-hero-preview')
+  const person = el('div', 'site-hero-person')
+  preview.append(person)
+  const backgroundUrl = () =>
+    draft.heroKind === 'upload' && site.hero?.kind === 'upload'
+      ? site.hero.url
+      : draft.heroKind === 'preset' && draft.heroPreset
+        ? `/banners/${draft.heroPreset}`
+        : '/banners/banner-1.webp'
+  const paintPreview = () => {
+    preview.style.backgroundImage = `url("${backgroundUrl()}")`
+    person.style.backgroundImage = site.hero?.cutoutUrl ? `url("${site.hero.cutoutUrl}")` : ''
+  }
+
+  // ---- 1) Sua foto
   const upload = el('label', 'button button--primary site-upload')
   const input = el('input')
   input.type = 'file'
-  input.accept = 'image/jpeg,image/png,image/webp'
+  input.accept = 'image/png,image/webp,image/jpeg'
   input.hidden = true
   const uploadText = el('span', '', 'Enviar minha foto')
   upload.append(input, uploadText)
-  const status = el('small', 'site-status')
+  const remove = el('button', 'button button--secondary', 'Remover foto')
+  remove.type = 'button'
+  const status = el('div', 'site-photo-status')
+  const photoActions = el('div', 'site-link-row')
+  photoActions.append(upload, remove)
+  const paintPhotoActions = () => {
+    remove.hidden = !site.hero?.cutoutUrl
+    uploadText.textContent = site.hero?.cutoutUrl ? 'Trocar minha foto' : 'Enviar minha foto'
+  }
+  remove.addEventListener('click', async () => {
+    remove.disabled = true
+    try {
+      site = { ...site, ...(await saveSiteHero('', { removeCutout: true })) }
+      paintPreview()
+      paintPhotoActions()
+      showToast('Foto removida do banner.')
+    } catch (error) {
+      status.replaceChildren(el('small', 'site-status', error.message))
+    } finally {
+      remove.disabled = false
+    }
+  })
   input.addEventListener('change', async () => {
     const file = input.files?.[0]
     input.value = ''
     if (!file) return
     uploadText.textContent = 'Ajustando a foto…'
-    status.textContent = ''
+    status.replaceChildren()
     try {
-      site = { ...site, ...(await saveSiteHero(await prepareHero(file))) }
-      draft.heroKind = 'upload'
-      paintPreview()
-      paintChoices()
-      showToast('Foto do banner atualizada.')
+      const result = await prepareCutout(file)
+      if (result.cutout) {
+        site = { ...site, ...(await saveSiteHero(result.cutout, { cutout: true })) }
+        if (draft.heroKind === 'upload') draft.heroKind = site.hero?.kind || 'default'
+        paintPreview()
+        paintChoices()
+        showToast('Foto do banner atualizada.')
+        return
+      }
+      // Foto comum (com fundo): explica como preparar e oferece usar como fundo.
+      const useAnyway = el('button', 'button button--secondary', 'Usar assim mesmo, como fundo inteiro')
+      useAnyway.type = 'button'
+      useAnyway.addEventListener('click', async () => {
+        useAnyway.disabled = true
+        try {
+          site = { ...site, ...(await saveSiteHero(await prepareHero(file))) }
+          draft.heroKind = 'upload'
+          status.replaceChildren()
+          paintPreview()
+          paintChoices()
+          showToast('Foto aplicada como fundo do banner.')
+        } catch (error) {
+          status.replaceChildren(el('small', 'site-status', error.message))
+        }
+      })
+      const tip = el('div', 'site-photo-tip')
+      tip.append(
+        el('strong', '', 'Esta foto tem fundo. Para ficar igual ao exemplo, ela precisa ter fundo transparente.'),
+        el('p', '', 'É rápido resolver com uma IA: abra o ChatGPT, o Gemini, o Canva ou o site remove.bg, envie a sua foto e peça:'),
+        el('p', 'site-photo-prompt', '“Remova o fundo desta foto, deixe o fundo transparente, mantenha meu corpo inteiro em pé e me entregue em PNG.”'),
+        el('p', '', 'Depois envie aqui o PNG que a IA devolver.'),
+        useAnyway,
+      )
+      status.replaceChildren(tip)
     } catch (error) {
-      status.textContent = error.message
+      status.replaceChildren(el('small', 'site-status', error.message))
     } finally {
-      uploadText.textContent = 'Enviar minha foto'
+      paintPhotoActions()
     }
   })
+
+  // ---- 2) Fundo
   const choices = el('div', 'site-presets')
   const choice = (label, active, onClick, image) => {
     const button = el('button', `site-preset${active ? ' is-active' : ''}`)
@@ -249,36 +357,44 @@ function heroCard(form) {
     return button
   }
   function paintChoices() {
-    const items = [
-      choice('Padrão', draft.heroKind === 'default', () => {
-        draft.heroKind = 'default'
-      }),
-    ]
-    if (site.hero?.kind === 'upload' || draft.heroKind === 'upload')
+    const items = []
+    if (site.hero?.kind === 'upload')
       items.push(
-        choice('Minha foto', draft.heroKind === 'upload', () => {
+        choice('Minha foto de fundo', draft.heroKind === 'upload', () => {
           draft.heroKind = 'upload'
-        }, site.hero?.kind === 'upload' ? site.hero.url : ''),
+        }, site.hero.url),
       )
     ;(presets || []).forEach((file, index) =>
       items.push(
-        choice(`Banner ${index + 1}`, draft.heroKind === 'preset' && draft.heroPreset === file, () => {
-          draft.heroKind = 'preset'
-          draft.heroPreset = file
-        }, `/banners/${file}`),
+        choice(
+          `Fundo ${index + 1}`,
+          (draft.heroKind === 'preset' && draft.heroPreset === file) || (draft.heroKind === 'default' && index === 0),
+          () => {
+            draft.heroKind = 'preset'
+            draft.heroPreset = file
+          },
+          `/banners/${file}`,
+        ),
       ),
     )
     choices.replaceChildren(...items)
   }
   paintPreview()
+  paintPhotoActions()
   paintChoices()
   void findPresets().then(paintChoices)
   card.append(
     preview,
-    upload,
-    el('small', 'support-muted', `Tamanho recomendado: ${HERO_WIDTH} × ${HERO_HEIGHT} px, foto deitada (paisagem). Qualquer foto serve: o recorte e o ajuste são automáticos.`),
+    el('strong', 'site-sub', '1. Sua foto'),
+    el(
+      'small',
+      'support-muted',
+      'Envie uma foto sua de corpo inteiro, em pé, em PNG com fundo transparente (recomendado: 600 × 1800 px). O ajuste de tamanho é automático. Não tem a foto sem fundo? Uma IA faz isso em segundos: envie qualquer foto e nós explicamos como.',
+    ),
+    photoActions,
     status,
-    el('strong', 'site-sub', 'Ou escolha um banner pronto'),
+    el('strong', 'site-sub', '2. Fundo'),
+    el('small', 'support-muted', 'Escolha o fundo que fica atrás da sua foto. Clique em “Salvar meu site” para aplicar.'),
     choices,
   )
   form.append(card)
