@@ -223,6 +223,6 @@ export async function initSiteBrand() {
   } catch {
     /* sem conexão: fica o site padrão */
   } finally {
-    document.documentElement.classList.remove('site-loading')
+    document.documentElement.removeAttribute('data-site-loading')
   }
 }

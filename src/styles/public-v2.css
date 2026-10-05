@@ -1507,3 +1507,11 @@ html[data-home='saas'] .saas-main {
     font-size: 0.8rem;
   }
 }
+
+/* Página de um personal carregando: nada do site padrão aparece antes da hora. */
+html[data-site-loading] body {
+  background: #18212d;
+}
+html[data-site-loading] [data-public-screen] {
+  visibility: hidden;
+}

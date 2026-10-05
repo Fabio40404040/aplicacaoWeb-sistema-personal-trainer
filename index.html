@@ -68,6 +68,12 @@
           if (manifestLink) manifestLink.setAttribute('href', '/api/public/site-manifest/' + slug)
           var touch = document.querySelector('link[rel="apple-touch-icon"]')
           if (touch) touch.setAttribute('href', '/api/public/site-icon/' + slug + '/192')
+          // Esconde o site até a marca, a foto e os preços deste personal
+          // chegarem (senão o padrão aparece por um instante e some).
+          document.documentElement.setAttribute('data-site-loading', '')
+          setTimeout(function () {
+            document.documentElement.removeAttribute('data-site-loading')
+          }, 4000)
         } else if (path.indexOf('/personal') !== 0) {
           document.documentElement.setAttribute('data-home', 'saas')
         }
