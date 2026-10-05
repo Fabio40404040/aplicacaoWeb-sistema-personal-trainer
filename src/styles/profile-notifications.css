@@ -286,3 +286,41 @@
     height: 72px;
   }
 }
+
+/* Apagar notificações */
+.notification-actions {
+  display: flex;
+  gap: 14px;
+  flex: none;
+}
+.notification-mark--clear {
+  color: var(--ink-500);
+}
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+.notification-item > a,
+.notification-item > div {
+  flex: 1;
+  min-width: 0;
+}
+.notification-remove {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink-500);
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.notification-remove:hover,
+.notification-remove:focus-visible {
+  color: var(--ink-900, #0d1b2a);
+  background: var(--canvas);
+}
