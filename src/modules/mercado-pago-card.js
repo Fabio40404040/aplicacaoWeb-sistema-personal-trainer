@@ -32,11 +32,91 @@ function createDialog() {
   return dialog
 }
 
+const REJECTIONS = {
+  cc_rejected_bad_filled_card_number: 'Número do cartão incorreto. Confira e tente de novo.',
+  cc_rejected_bad_filled_date: 'Validade do cartão incorreta. Confira e tente de novo.',
+  cc_rejected_bad_filled_security_code: 'Código de segurança (CVV) incorreto. Confira e tente de novo.',
+  cc_rejected_bad_filled_other: 'Os dados do titular não conferem com o cartão. Confira o nome e o CPF do dono do cartão.',
+  cc_rejected_insufficient_amount: 'Cartão sem limite suficiente. Tente outro cartão ou pague com Pix.',
+  cc_rejected_call_for_authorize: 'O banco pediu autorização. Ligue para o banco do cartão e tente de novo.',
+  cc_rejected_card_disabled: 'Cartão desativado. Ligue para o banco para ativar ou use outro cartão.',
+  cc_rejected_duplicated_payment: 'Este pagamento já foi feito. Se precisar pagar de novo, use outro cartão ou o Pix.',
+  cc_rejected_high_risk: 'Pagamento recusado por segurança. Use o cartão e o CPF do próprio titular ou pague com Pix.',
+  cc_rejected_blacklist: 'Pagamento recusado por segurança. Tente outro cartão ou pague com Pix.',
+  cc_rejected_max_attempts: 'Muitas tentativas com este cartão. Use outro cartão ou pague com Pix.',
+  cc_rejected_invalid_installments: 'Este cartão não aceita esse número de parcelas. Escolha outra opção.',
+  cc_rejected_card_type_not_allowed: 'Este tipo de cartão não é aceito. Use um cartão de crédito ou pague com Pix.',
+}
+
 function paymentMessage(result) {
   if (result.status === 'approved') return 'Pagamento aprovado. Seu acesso foi liberado.'
   if (['pending', 'in_process', 'authorized'].includes(result.status))
     return 'Pagamento recebido e em análise. O acesso será liberado após a aprovação.'
-  return 'Pagamento não aprovado. Confira os dados ou tente outro cartão.'
+  return (
+    REJECTIONS[result.statusDetail] ||
+    'Pagamento não aprovado. Confira os dados do titular ou tente outro cartão.'
+  )
+}
+
+function validDocument(type, value) {
+  const digits = String(value || '').replace(/\D/gu, '')
+  const check = (base, weights) => {
+    const sum = weights.reduce((total, weight, index) => total + Number(base[index]) * weight, 0)
+    const rest = sum % 11
+    return rest < 2 ? 0 : 11 - rest
+  }
+  if (type === 'CNPJ') {
+    if (digits.length !== 14 || /^(\d)\1+$/u.test(digits)) return false
+    const first = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    return (
+      check(digits, first) === Number(digits[12]) && check(digits, [6, ...first]) === Number(digits[13])
+    )
+  }
+  if (digits.length !== 11 || /^(\d)\1+$/u.test(digits)) return false
+  return (
+    check(digits, [10, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(digits[9]) &&
+    check(digits, [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) === Number(digits[10])
+  )
+}
+
+// Confere o que dá para conferir antes de mandar ao Mercado Pago.
+function holderProblem(form) {
+  const name = form.querySelector('#mp-cardholder-name').value.trim()
+  const email = form.querySelector('#mp-cardholder-email').value.trim()
+  const type = form.querySelector('#mp-identification-type').value || 'CPF'
+  const number = form.querySelector('#mp-identification-number').value
+  if (name.length < 3) return 'Digite o nome como está impresso no cartão.'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u.test(email)) return 'E-mail inválido. Confira o e-mail do titular.'
+  if (!validDocument(type, number)) return `${type} inválido. Confira os números do documento do titular.`
+  return ''
+}
+
+const FIELD_NAMES = {
+  cardNumber: 'número do cartão',
+  expirationDate: 'validade',
+  expirationMonth: 'validade',
+  expirationYear: 'validade',
+  securityCode: 'código de segurança (CVV)',
+  cardholderName: 'nome impresso no cartão',
+  cardholderEmail: 'e-mail',
+  identificationType: 'tipo de documento',
+  identificationNumber: 'CPF',
+  installments: 'parcelas',
+  issuer: 'banco emissor',
+}
+
+function formErrorMessage(error) {
+  const list = (Array.isArray(error) ? error : [error]).filter(Boolean)
+  const text = list.map((item) => `${item.field || ''} ${item.message || ''} ${item.code || ''}`).join(' ')
+  const fields = [
+    ...new Set(
+      Object.keys(FIELD_NAMES)
+        .filter((key) => text.includes(key))
+        .map((key) => FIELD_NAMES[key]),
+    ),
+  ]
+  if (fields.length) return `Confira: ${fields.join(', ')}.`
+  return 'Não foi possível validar o cartão. Confira os dados e tente de novo.'
 }
 
 function updateCardBrand(dialog, response) {
@@ -84,8 +164,30 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
   dialog.querySelector('[data-card-amount]').textContent = formattedAmount
   form.querySelector('#mp-cardholder-email').value = config.payerEmail
   updateCardBrand(dialog)
-  status.textContent = ''
+  const say = (text, tone = '') => {
+    status.textContent = text
+    status.dataset.tone = tone
+  }
+  say('')
   submit.disabled = false
+  // Roda antes do Mercado Pago: dado errado do titular para aqui, com aviso.
+  if (!dialog.dataset.checked) {
+    dialog.dataset.checked = 'true'
+    dialog.addEventListener(
+      'submit',
+      (event) => {
+        if (event.target.id !== 'mp-card-form') return
+        const problem = holderProblem(event.target)
+        if (!problem) return
+        event.preventDefault()
+        event.stopPropagation()
+        const line = event.target.querySelector('[role="status"]')
+        line.textContent = problem
+        line.dataset.tone = 'error'
+      },
+      true,
+    )
+  }
   dialog.querySelector('[data-card-loading]').hidden = false
   form.hidden = true
 
@@ -109,7 +211,7 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
     callbacks: {
       onFormMounted(error) {
         if (error) {
-          status.textContent = 'Não foi possível preparar os campos seguros do cartão.'
+          say('Não foi possível preparar os campos seguros do cartão.', 'error')
           return
         }
         dialog.querySelector('[data-card-loading]').hidden = true
@@ -118,10 +220,19 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
       onPaymentMethodsReceived(error, paymentMethods) {
         updateCardBrand(dialog, error ? undefined : paymentMethods)
       },
+      onError(error) {
+        say(formErrorMessage(error), 'error')
+        submit.disabled = false
+      },
+      onCardTokenReceived(error) {
+        if (!error) return
+        say(formErrorMessage(error), 'error')
+        submit.disabled = false
+      },
       async onSubmit(event) {
         event.preventDefault()
         submit.disabled = true
-        status.textContent = 'Processando o pagamento com segurança…'
+        say('Processando o pagamento com segurança…')
         try {
           const data = cardForm.getCardFormData()
           const result = await request('payments/card', {
@@ -132,13 +243,13 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
             identificationType: data.identificationType,
             identificationNumber: data.identificationNumber,
           })
-          status.textContent = paymentMessage(result)
+          say(paymentMessage(result), result.status === 'approved' ? '' : result.status === 'rejected' ? 'error' : '')
           if (result.status === 'approved') {
             onApproved?.()
             window.setTimeout(() => dialog.close(), 1200)
           } else submit.disabled = false
         } catch (error) {
-          status.textContent = error.message
+          say(error.message, 'error')
           submit.disabled = false
         }
       },

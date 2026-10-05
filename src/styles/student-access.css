@@ -1228,7 +1228,7 @@
   display: none;
 }
 .student-booking [role="status"] {
-  color: #ffb4a8;
+  color: #a52a1c;
 }
 .student-booking-body {
   overflow-x: hidden;
@@ -1464,7 +1464,7 @@
   font-size: 0.88rem;
 }
 .plan-status {
-  color: #ffb4a8;
+  color: #a52a1c;
 }
 .plan-status:empty {
   display: none;
@@ -1570,4 +1570,13 @@
 }
 .signup-plans .saas-plan-desc {
   display: none;
+}
+
+.secure-card-form [role='status'][data-tone='error'] {
+  padding: 10px 12px;
+  border: 1px solid #c0392b;
+  border-radius: 10px;
+  background: #fdecea;
+  color: #a52a1c;
+  font-weight: 600;
 }
