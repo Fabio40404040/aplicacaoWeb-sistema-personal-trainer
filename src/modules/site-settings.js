@@ -253,22 +253,14 @@ async function prepareCutout(file) {
 // Como tirar o fundo da foto, de graça (usado na dica e abaixo do botão).
 function removeBackgroundHelp() {
   const sites = el('p', '')
-  sites.append('Remova o fundo grátis em ')
-  ;[
-    ['remove.bg', 'https://www.remove.bg/pt-br'],
-    ['Adobe Express', 'https://www.adobe.com/br/express/feature/image/remove-background'],
-    ['Photoroom', 'https://www.photoroom.com/pt-br/ferramentas/remover-fundo-de-imagem'],
-  ].forEach(([name, url], index, list) => {
-    const link = el('a', '', name)
-    link.href = url
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-    sites.append(link, index < list.length - 1 ? (index === list.length - 2 ? ' ou ' : ', ') : '')
-  })
-  sites.append(' e baixe em PNG.')
+  const link = el('a', '', 'remove.bg')
+  link.href = 'https://www.remove.bg/pt-br'
+  link.target = '_blank'
+  link.rel = 'noopener noreferrer'
+  sites.append('Remova o fundo grátis em ', link, ' ou IA e baixe em PNG.')
   return [
     sites,
-    el('p', '', 'iPhone (foto HEIC): no Canva, arraste a foto para importar, remova o fundo e baixe em PNG.'),
+    el('p', '', 'iPhone (foto HEIC): no Canva, arraste a foto ou faça upload e remova o fundo e baixe em PNG.'),
     el('p', '', 'Depois, peça a uma IA para ajustar o tamanho:'),
     el('p', 'site-photo-prompt', '“Ajuste esta imagem para 600 × 1800 px, corpo inteiro em pé, fundo transparente, em PNG.”'),
   ]
