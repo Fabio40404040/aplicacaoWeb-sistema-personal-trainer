@@ -4710,3 +4710,8 @@ dialog.demo-invite::backdrop {
 .payout-folder .payout-pending-row:first-of-type {
   border-top: 0;
 }
+
+.support-upgrade {
+  width: fit-content;
+  margin: 4px 0;
+}

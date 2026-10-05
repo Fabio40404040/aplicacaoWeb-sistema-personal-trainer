@@ -270,6 +270,9 @@ export function saveBookingConfig(config) {
   return request("/booking/config", { method: "PUT", body: JSON.stringify(config) });
 }
 // Suporte (personal ↔ dono da plataforma).
+export function fetchSupportAccess() {
+  return request("/support/access");
+}
 export function fetchSupportTickets() {
   return request("/support/tickets");
 }

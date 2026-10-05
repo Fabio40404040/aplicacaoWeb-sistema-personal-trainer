@@ -19,7 +19,7 @@ import {
   audit,
   currentAdmin,
 } from "./routes/admin.js";
-import { createTicket, replyTicket, trainerTicket, trainerTickets } from "./routes/support.js";
+import { createTicket, replyTicket, supportAccess, trainerTicket, trainerTickets } from "./routes/support.js";
 import { deleteStudentAccount } from "./routes/student-account.js";
 import {
   adminSavePlans,
@@ -449,6 +449,7 @@ async function handleRoutes(request, env) {
         error: "Sua assinatura da plataforma venceu. Renove em Minha assinatura para voltar a editar.",
         status: 402,
       };
+    if (request.method === "GET" && route === "support/access") return supportAccess(db, session.sub);
     if (request.method === "GET" && route === "support/tickets")
       return trainerTickets(db, session.sub);
     if (request.method === "POST" && route === "support/tickets")

@@ -2,8 +2,22 @@
 // (migração 026). O dono responde em /admin → Suporte.
 import { sendNoticeEmail } from '../lib/recovery-email.js'
 import { ticketMessages } from './admin.js'
+import { saasState } from './saas.js'
 
 const CATEGORIES = ['duvida', 'problema', 'pagamento', 'sugestao', 'conta']
+// No plano Grátis o suporte atende só pagamento e conta (para ninguém ficar
+// sem saída se o plano não ativar ou a conta travar). O suporte completo é do
+// plano Ilimitado.
+const FREE_CATEGORIES = ['pagamento', 'conta']
+async function hasFullSupport(db, trainerId) {
+  const state = await saasState(db, trainerId).catch(() => null)
+  return !state || !state.isFree
+}
+export async function supportAccess(db, trainerId) {
+  const full = await hasFullSupport(db, trainerId)
+  return { data: { full, categories: full ? CATEGORIES : FREE_CATEGORIES } }
+}
+
 const text = (value, max) => String(value ?? '').trim().slice(0, max)
 const escape = (value) =>
   String(value).replace(/[&<>]/gu, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
@@ -59,6 +73,11 @@ export async function createTicket(env, db, trainerId, body) {
   const category = CATEGORIES.includes(body?.category) ? body.category : 'duvida'
   if (subject.length < 3) return { error: 'Informe o assunto.', status: 400 }
   if (message.length < 5) return { error: 'Descreva o que precisa.', status: 400 }
+  if (!FREE_CATEGORIES.includes(category) && !(await hasFullSupport(db, trainerId)))
+    return {
+      error: 'O suporte direto faz parte do plano Ilimitado. No plano Grátis você pode abrir chamado sobre pagamento ou sobre a sua conta.',
+      status: 403,
+    }
   const id = crypto.randomUUID().replace(/-/gu, '')
   await db.batch([
     {

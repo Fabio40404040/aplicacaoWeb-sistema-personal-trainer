@@ -3,6 +3,7 @@
 // abriu este painel pelo FARISA Admin.
 import {
   createSupportTicket,
+  fetchSupportAccess,
   fetchSupportTicket,
   fetchSupportTickets,
   replySupportTicket,
@@ -37,6 +38,8 @@ const GROUPS = [
   { key: 'closed', label: 'Encerrados', statuses: ['closed'], open: false },
 ]
 const groupOpen = {}
+// Plano Grátis: só chamados de pagamento e conta (o suporte completo é do Ilimitado).
+let access = { full: true, categories: Object.keys(CATEGORIES) }
 let tickets = []
 let openId = null
 let creating = false
@@ -57,6 +60,11 @@ async function load() {
   } catch {
     tickets = []
   }
+  try {
+    access = await fetchSupportAccess()
+  } catch {
+    /* mantém o que já tinha */
+  }
   paintBadge()
   if (location.hash === '#suporte') render()
 }
@@ -67,11 +75,13 @@ function newTicketForm() {
     <div class="field-grid">
       <label class="field"><span>Assunto</span><input name="subject" required minlength="3" maxlength="120" placeholder="Ex.: Aluno não recebe o e-mail de senha"></label>
       <label class="field"><span>Tipo</span><select name="category">${Object.entries(CATEGORIES)
+        .filter(([value]) => access.categories.includes(value))
         .map(([value, label]) => `<option value="${value}">${label}</option>`)
         .join('')}</select></label>
     </div>
     <label class="field"><span>Mensagem</span><textarea name="message" rows="5" required minlength="5" maxlength="5000"
       placeholder="Conte o que aconteceu, em qual tela e, se for o caso, o nome do aluno."></textarea></label>
+    ${access.full ? '' : '<p class="support-muted">No plano Grátis, o suporte atende assuntos de pagamento e da sua conta. Para dúvidas de uso e outros assuntos, conheça o plano Ilimitado em <a href="#assinatura">Minha assinatura</a>.</p>'}
     <p role="status"></p>
     <div class="support-actions"><button class="button button--secondary" type="button" data-cancel>Cancelar</button>
       <button class="button button--primary" type="submit">Enviar ao suporte</button></div>`
@@ -190,9 +200,20 @@ async function render() {
       ? await conversation(openId)
       : (() => {
           const empty = el('section', 'panel support-empty')
+          if (access.full) {
+            empty.append(
+              el('strong', '', 'Como podemos ajudar?'),
+              el('p', 'support-muted', 'Abra um chamado e descreva o que precisa. Você recebe a resposta aqui, com aviso no menu, e por e-mail.'),
+            )
+            return empty
+          }
+          const upgrade = el('a', 'button button--primary support-upgrade', 'Conhecer o plano Ilimitado')
+          upgrade.href = '#assinatura'
           empty.append(
-            el('strong', '', 'Como podemos ajudar?'),
-            el('p', 'support-muted', 'Abra um chamado e descreva o que precisa. Você recebe a resposta aqui, com aviso no menu, e por e-mail.'),
+            el('strong', '', '🔒 O suporte direto faz parte do plano Ilimitado'),
+            el('p', 'support-muted', 'No Ilimitado você fala com a gente sobre qualquer assunto: dúvidas de uso, problemas e sugestões, com resposta aqui e por e-mail.'),
+            upgrade,
+            el('p', 'support-muted', 'No plano Grátis, você pode abrir chamado sobre pagamento ou sobre a sua conta em “Novo chamado”.'),
           )
           return empty
         })()
