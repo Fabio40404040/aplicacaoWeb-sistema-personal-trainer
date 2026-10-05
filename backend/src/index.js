@@ -26,6 +26,8 @@ import {
   adminSetTrainerPlan,
   billingInfo,
   registerTrainer,
+  saasCardConfig,
+  saasCardPayment,
   saasPlans,
   saasState,
   startSaasCheckout,
@@ -415,6 +417,10 @@ async function handleRoutes(request, env) {
     // Assinatura da plataforma (planos dos personais).
     if (request.method === "GET" && route === "billing")
       return billingInfo(env, db, session.sub);
+    if (request.method === "GET" && route === "billing/card-config")
+      return saasCardConfig(env, db, session.sub, new URL(request.url).searchParams.get("plan"));
+    if (request.method === "POST" && route === "billing/card")
+      return saasCardPayment(env, db, session.sub, await readJson(request));
     if (request.method === "POST" && route === "billing/checkout")
       return startSaasCheckout(env, db, session.sub, await readJson(request));
     // "Meu site": marca, cor, banner, contato e preços dos planos do personal.

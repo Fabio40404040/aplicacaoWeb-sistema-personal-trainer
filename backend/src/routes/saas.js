@@ -225,6 +225,93 @@ export async function startSaasCheckout(env, db, trainerId, body) {
   }
 }
 
+// Cartão digitado no próprio site (mesmo formulário seguro do aluno): o
+// número vira um token no navegador e só o token chega aqui.
+async function paidPlan(db, planCode) {
+  return (await saasPlans(db)).find((item) => item.code === planCode && !item.isFree)
+}
+
+export async function saasCardConfig(env, db, trainerId, planCode) {
+  if (!env.MERCADO_PAGO_ACCESS_TOKEN || !env.MERCADO_PAGO_PUBLIC_KEY)
+    return { error: 'Pagamento com cartão ainda não configurado. Pague com Pix ou fale com o suporte.', status: 503 }
+  const plan = await paidPlan(db, planCode)
+  if (!plan) return { error: 'Escolha um plano.', status: 400 }
+  const trainer = (await db.query('SELECT email FROM trainers WHERE id=$1', [trainerId])).rows[0]
+  return {
+    data: {
+      publicKey: String(env.MERCADO_PAGO_PUBLIC_KEY),
+      amount: (saasAmount(plan, 'monthly') / 100).toFixed(2),
+      description: `FARISA ${plan.name} — ${SAAS_CYCLES.monthly.label}`,
+      payerEmail: trainer?.email || '',
+    },
+  }
+}
+
+export async function saasCardPayment(env, db, trainerId, body) {
+  if (!env.MERCADO_PAGO_ACCESS_TOKEN)
+    return { error: 'Pagamento online ainda não configurado. Fale com o suporte.', status: 503 }
+  const token = String(body?.token || '')
+  const paymentMethodId = String(body?.paymentMethodId || '')
+  const issuerId = String(body?.issuerId || '')
+  const identificationType = String(body?.identificationType || '').toUpperCase()
+  const identificationNumber = String(body?.identificationNumber || '').replace(/\D/gu, '')
+  if (
+    !/^[A-Za-z0-9_-]{10,200}$/u.test(token) ||
+    !/^[a-z0-9_-]{1,40}$/u.test(paymentMethodId) ||
+    !/^[A-Z]{2,10}$/u.test(identificationType) ||
+    !/^\d{5,20}$/u.test(identificationNumber) ||
+    (issuerId && !/^\d{1,20}$/u.test(issuerId))
+  )
+    return { error: 'Confira os dados do cartão e do titular.', status: 400 }
+  const plan = await paidPlan(db, body?.planCode)
+  if (!plan) return { error: 'Escolha um plano.', status: 400 }
+  const cycle = 'monthly'
+  const trainer = (await db.query('SELECT email FROM trainers WHERE id=$1', [trainerId])).rows[0]
+  const amountCents = saasAmount(plan, cycle)
+  const intentId = `saas_${crypto.randomUUID().replace(/-/gu, '')}`
+  await db.query(
+    `INSERT INTO saas_payment_intents (id,trainer_id,plan_code,cycle,amount_cents,method) VALUES ($1,$2,$3,$4,$5,'card')`,
+    [intentId, trainerId, plan.code, cycle, amountCents],
+  )
+  try {
+    const payment = await mercadoPago('/v1/payments', env, {
+      method: 'POST',
+      headers: { 'X-Idempotency-Key': intentId },
+      body: JSON.stringify({
+        transaction_amount: amountCents / 100,
+        token,
+        description: `FARISA ${plan.name} — ${SAAS_CYCLES[cycle].label}`,
+        installments: 1,
+        payment_method_id: paymentMethodId,
+        ...(issuerId ? { issuer_id: issuerId } : {}),
+        payer: {
+          email: trainer.email,
+          identification: { type: identificationType, number: identificationNumber },
+        },
+        external_reference: intentId,
+        statement_descriptor: 'FARISA',
+        metadata: { intent_id: intentId, trainer_id: trainerId, kind: 'saas' },
+      }),
+    })
+    const status = String(payment.status || 'pending')
+    await db.query('UPDATE saas_payment_intents SET provider_reference=$2, status=$3 WHERE id=$1', [
+      intentId,
+      String(payment.id || ''),
+      status === 'approved' ? 'pending' : status,
+    ])
+    if (status === 'approved')
+      await approveSaasPayment(
+        db,
+        { id: intentId, trainer_id: trainerId, plan_code: plan.code, cycle, amount_cents: amountCents, status: 'pending' },
+        payment,
+      )
+    return { data: { status, statusDetail: String(payment.status_detail || ''), paymentId: String(payment.id || '') } }
+  } catch (error) {
+    await db.query("UPDATE saas_payment_intents SET status='failed' WHERE id=$1", [intentId])
+    return { error: error.message, status: 502 }
+  }
+}
+
 // Pagamento aprovado: ativa/renova o plano. Renovar antes de vencer soma o
 // período ao vencimento atual.
 export async function approveSaasPayment(db, intent, payment) {

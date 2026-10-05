@@ -2,10 +2,13 @@
 // "Criar conta"), página "Minha assinatura" e avisos de vencimento.
 import {
   fetchBilling,
+  fetchBillingCardConfig,
+  payBillingCard,
   fetchSaasPlans,
   registerTrainerAccount,
   startBillingCheckout,
 } from './api-client.js'
+import { openSecureCardForm } from './mercado-pago-card.js'
 import { createQrCodeImage } from './pix.js'
 import { showToast } from './utils.js'
 
@@ -150,7 +153,30 @@ function checkoutBox(root) {
       }
     }
     pix.addEventListener('click', () => pay('pix', pix))
-    card.addEventListener('click', () => pay('card', card))
+    // Cartão: formulário seguro dentro do site (o mesmo do aluno).
+    card.addEventListener('click', async () => {
+      card.disabled = true
+      result.replaceChildren(el('p', 'support-muted', 'Abrindo o formulário seguro do cartão…'))
+      try {
+        await openSecureCardForm(
+          (path, body) =>
+            path === 'payments/card-config'
+              ? fetchBillingCardConfig(plan.code)
+              : payBillingCard({ ...body, planCode: plan.code }),
+          {
+            onApproved: () => {
+              showToast('Pagamento aprovado. Assinatura atualizada.')
+              void load()
+            },
+          },
+        )
+        result.replaceChildren()
+      } catch (error) {
+        result.replaceChildren(el('p', 'saas-warn', error.message))
+      } finally {
+        card.disabled = false
+      }
+    })
     actions.append(pix, card)
     section.append(el('p', 'support-muted', 'Cada pagamento libera 1 mês. Renovar antes de vencer soma o mês ao prazo atual.'), actions, result)
   }

@@ -292,6 +292,12 @@ export function fetchBilling() {
 export function startBillingCheckout(data) {
   return request("/billing/checkout", { method: "POST", body: JSON.stringify(data), timeoutMs: 20000 });
 }
+export function fetchBillingCardConfig(planCode) {
+  return request(`/billing/card-config?plan=${encodeURIComponent(planCode)}`, { timeoutMs: 20000 });
+}
+export function payBillingCard(data) {
+  return request("/billing/card", { method: "POST", body: JSON.stringify(data), timeoutMs: 30000 });
+}
 export async function registerTrainerAccount(data) {
   const result = await request("/auth/register", { method: "POST", body: JSON.stringify(data) });
   if (!result?.token) throw new Error("Não foi possível criar a conta.");
