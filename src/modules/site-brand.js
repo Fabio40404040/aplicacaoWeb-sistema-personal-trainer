@@ -191,11 +191,42 @@ function applyBadge(site) {
   document.querySelector('.public-footer')?.append(badge)
 }
 
+// Página de demonstração (/p/demo): mostra fotos de exemplo, uma feminina e
+// uma masculina, alternando, com o aviso "Sua foto aqui".
+const EXAMPLE_PHOTOS = ['/landing/exemplo-f.webp', '/landing/exemplo-m.webp']
+function applyExamplePhoto(site) {
+  const screen = document.querySelector('[data-public-screen]')
+  const athlete = screen?.querySelector('.public-hero-athlete')
+  if (!screen || !athlete || site.slug !== 'demo' || site.hero?.cutoutUrl) return
+  EXAMPLE_PHOTOS.forEach((url) => {
+    new Image().src = url // já deixa as duas carregadas
+  })
+  let index = 0
+  const show = () => screen.style.setProperty('--hero-cutout', `url("${EXAMPLE_PHOTOS[index]}")`)
+  show()
+  screen.classList.add('has-hero-cutout', 'has-example-photo')
+  const badge = document.createElement('span')
+  badge.className = 'hero-photo-badge'
+  badge.textContent = 'Sua foto aqui'
+  screen.querySelector('.public-hero')?.append(badge)
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  window.setInterval(() => {
+    if (document.visibilityState !== 'visible') return
+    athlete.classList.add('is-swapping')
+    window.setTimeout(() => {
+      index = (index + 1) % EXAMPLE_PHOTOS.length
+      show()
+      athlete.classList.remove('is-swapping')
+    }, 350)
+  }, 4000)
+}
+
 export function applySite(site) {
   applyBadge(site)
   applyAccent(site.accent)
   const brand = applyBrand(site)
   applyHero(site)
+  applyExamplePhoto(site)
   applyPlans(site)
   applyContact(site, brand)
 }

@@ -1515,3 +1515,37 @@ html[data-site-loading] body {
 html[data-site-loading] [data-public-screen] {
   visibility: hidden;
 }
+
+/* Página de demonstração: fotos de exemplo alternando e o aviso "Sua foto aqui". */
+.public-screen.has-example-photo .public-hero-athlete {
+  transition: opacity 0.35s ease;
+}
+.public-screen.has-example-photo .public-hero-athlete.is-swapping {
+  opacity: 0;
+}
+.hero-photo-badge {
+  position: absolute;
+  z-index: 3;
+  top: 108px;
+  left: calc(50% + 150px);
+  padding: 7px 14px;
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: rgba(13, 20, 33, 0.78);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .hero-photo-badge {
+    top: 82px;
+    left: auto;
+    right: 12px;
+    font-size: 0.8rem;
+  }
+  /* No celular a foto e o fundo são camadas do mesmo bloco: sem apagar o fundo. */
+  .public-screen.has-example-photo .public-hero-athlete.is-swapping {
+    opacity: 1;
+  }
+}
