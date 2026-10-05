@@ -32,7 +32,9 @@ const billingCycleLabels = {
   annual: 'anual',
   permanent: 'permanente',
 }
-const consultingPrices = { basic: 4, premium: 6, athlete: 8 }
+// Preços em reais. Valores padrão; a página do personal (site-brand.js) troca
+// pelos preços que ele definiu em "Meu site" (evento farisa:site-plans).
+const consultingPrices = { ready: 2, basic: 4, premium: 6, athlete: 8 }
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -136,6 +138,19 @@ function enhanceRegistration() {
         billingCycle.querySelector('select').value = 'quarterly'
     }
   }
+  // "Treinos Prontos" mostra o preço do personal no próprio nome da opção.
+  function paintReadyOption() {
+    const option = plan.querySelector('option[value="ready"]')
+    if (option) option.textContent = `Treinos Prontos — ${money.format(consultingPrices.ready)} — acesso permanente`
+  }
+  paintReadyOption()
+  window.addEventListener('farisa:site-plans', (event) => {
+    ;(event.detail || []).forEach((item) => {
+      if (item.code in consultingPrices) consultingPrices[item.code] = Number(item.priceCents) / 100
+    })
+    paintReadyOption()
+    updateContractOptions()
+  })
   plan.querySelector('select').addEventListener('change', updateContractOptions)
   const requestedPlan = new URLSearchParams(location.hash.split('?')[1] || '').get('plan')
   if ([...plan.querySelector('select').options].some((option) => option.value === requestedPlan))

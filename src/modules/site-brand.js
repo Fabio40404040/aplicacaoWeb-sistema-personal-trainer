@@ -89,6 +89,9 @@ function applyHero(site) {
   screen.classList.add('has-hero-photo')
 }
 
+let sitePlans = null
+export const currentSitePlans = () => sitePlans
+
 function applyPlans(site) {
   const plans = new Map((site.plans || []).map((plan) => [plan.code, plan]))
   document.querySelectorAll('a[href^="#cadastro-aluno?plan="]').forEach((link) => {
@@ -108,6 +111,9 @@ function applyPlans(site) {
   document.querySelectorAll('select[name="planCode"]').forEach((select) => {
     if (select.selectedOptions[0]?.disabled) select.value = [...select.options].find((option) => !option.disabled)?.value || ''
   })
+  // O pré-cadastro (plano e período) usa os mesmos preços dos cartões.
+  sitePlans = site.plans || []
+  window.dispatchEvent(new CustomEvent('farisa:site-plans', { detail: sitePlans }))
 }
 
 function applyContact(site, brand) {
