@@ -169,15 +169,26 @@ function initCarousel() {
   const dotsBox = root?.querySelector('[data-carousel-dots]')
   if (!track || !dotsBox) return
   const slides = [...track.children]
+  // Cópia da primeira tela no fim: depois da última, segue em frente em vez de voltar.
+  const clone = slides[0].cloneNode(true)
+  clone.setAttribute('aria-hidden', 'true')
+  track.append(clone)
+  const stops = [...slides, clone]
   let current = 0
   // Depois de um toque ou clique, espera um pouco e volta a girar sozinho.
   let pausedUntil = 0
   const pause = () => {
     pausedUntil = Date.now() + 10000
   }
+  const left = (index) => stops[index].offsetLeft - track.offsetLeft
   const go = (index, smooth = true) => {
-    current = (index + slides.length) % slides.length
-    track.scrollTo({ left: slides[current].offsetLeft - track.offsetLeft, behavior: smooth ? 'smooth' : 'auto' })
+    if (current === slides.length) {
+      track.scrollTo({ left: 0, behavior: 'instant' })
+      current = 0
+      if (index > slides.length) index = 1
+    }
+    current = index < 0 ? slides.length - 1 : Math.min(index, slides.length)
+    track.scrollTo({ left: left(current), behavior: smooth ? 'smooth' : 'instant' })
   }
   const dots = slides.map((slide, index) => {
     const dot = document.createElement('button')
@@ -190,16 +201,24 @@ function initCarousel() {
     dotsBox.append(dot)
     return dot
   })
-  const paint = () => dots.forEach((dot, index) => dot.setAttribute('aria-current', String(index === current)))
+  const paint = () => dots.forEach((dot, index) => dot.setAttribute('aria-current', String(index === current % slides.length)))
   // A posição real manda (o visitante pode arrastar com o dedo).
   let frame = 0
+  let settle = 0
   track.addEventListener('scroll', () => {
     cancelAnimationFrame(frame)
     frame = requestAnimationFrame(() => {
       const index = Math.round(track.scrollLeft / Math.max(1, track.clientWidth))
-      if (index !== current && slides[index]) current = index
+      if (index !== current && stops[index]) current = index
       paint()
     })
+    // Parou na cópia: troca pela primeira de verdade, sem o visitante perceber.
+    clearTimeout(settle)
+    settle = setTimeout(() => {
+      if (Math.round(track.scrollLeft / Math.max(1, track.clientWidth)) !== slides.length) return
+      track.scrollTo({ left: 0, behavior: 'instant' })
+      current = 0
+    }, 250)
   })
   ;['pointerdown', 'touchstart', 'keydown'].forEach((type) => root.addEventListener(type, pause, { passive: true }))
   track.addEventListener('keydown', (event) => {
