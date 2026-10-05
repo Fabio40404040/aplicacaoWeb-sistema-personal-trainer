@@ -4,7 +4,7 @@
 // para aquele personal (0 = sem limite). Quando o Ilimitado vence, o personal
 // volta sozinho para o Grátis.
 import { createSession, hashPassword, isStrongPassword } from '../lib/session.js'
-import { mercadoPago, officialPaymentForIntent } from './payments.js'
+import { antifraud, mercadoPago, officialPaymentForIntent } from './payments.js'
 
 export const SAAS_CYCLES = {
   monthly: { label: 'Mensal', months: 1, factor: 1 },
@@ -273,19 +273,26 @@ export async function saasCardPayment(env, db, trainerId, body) {
     `INSERT INTO saas_payment_intents (id,trainer_id,plan_code,cycle,amount_cents,method) VALUES ($1,$2,$3,$4,$5,'card')`,
     [intentId, trainerId, plan.code, cycle, amountCents],
   )
+  const extra = antifraud(body, {
+    id: plan.code,
+    title: `FARISA ${plan.name} — ${SAAS_CYCLES[cycle].label}`,
+    amountCents,
+  })
   try {
     const payment = await mercadoPago('/v1/payments', env, {
       method: 'POST',
-      headers: { 'X-Idempotency-Key': intentId },
+      headers: { 'X-Idempotency-Key': intentId, ...extra.headers },
       body: JSON.stringify({
         transaction_amount: amountCents / 100,
         token,
+        additional_info: extra.additionalInfo,
         description: `FARISA ${plan.name} — ${SAAS_CYCLES[cycle].label}`,
         installments: 1,
         payment_method_id: paymentMethodId,
         ...(issuerId ? { issuer_id: issuerId } : {}),
         payer: {
           email: trainer.email,
+          ...extra.person,
           identification: { type: identificationType, number: identificationNumber },
         },
         external_reference: intentId,

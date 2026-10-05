@@ -55,6 +55,36 @@ export async function mercadoPago(path, env, options = {}) {
   return data
 }
 
+// Dados extras que o antifraude do Mercado Pago usa para aprovar mais
+// pagamentos legítimos: nome do titular, item comprado e aparelho.
+export function antifraud(body, item) {
+  const name = String(body?.cardholderName || '')
+    .replace(/[^\p{L}\s.'-]/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, 80)
+  const [first, ...rest] = name.split(' ')
+  const person = first ? { first_name: first, ...(rest.length ? { last_name: rest.join(' ') } : {}) } : {}
+  const deviceId = String(body?.deviceId || '')
+  return {
+    person,
+    headers: /^[A-Za-z0-9:_.-]{8,150}$/u.test(deviceId) ? { 'X-meli-session-id': deviceId } : {},
+    additionalInfo: {
+      items: [
+        {
+          id: String(item.id),
+          title: String(item.title).slice(0, 120),
+          description: String(item.title).slice(0, 120),
+          category_id: 'services',
+          quantity: 1,
+          unit_price: item.amountCents / 100,
+        },
+      ],
+      ...(first ? { payer: person } : {}),
+    },
+  }
+}
+
 function checkoutSettings(method) {
   if (method === 'pix') {
     return {
@@ -380,19 +410,22 @@ export async function createCardPayment(db, accountId, platformEnv, body) {
   const apiUrl = String(
     env.PUBLIC_API_URL || 'https://farisa-coach-api.SEU-SUBDOMINIO.workers.dev',
   ).replace(/\/$/u, '')
+  const extra = antifraud(body, { id: row.planCode, title: `${row.planName} — FARISA Personal`, amountCents })
   try {
     const payment = await mercadoPago('/v1/payments', env, {
       method: 'POST',
-      headers: { 'X-Idempotency-Key': intentId },
+      headers: { 'X-Idempotency-Key': intentId, ...extra.headers },
       body: JSON.stringify({
         transaction_amount: amountCents / 100,
         token,
+        additional_info: extra.additionalInfo,
         description: `${row.planName} — FARISA Personal`,
         installments,
         payment_method_id: paymentMethodId,
         ...(issuerId ? { issuer_id: issuerId } : {}),
         payer: {
           email: row.email,
+          ...extra.person,
           identification: { type: identificationType, number: identificationNumber },
         },
         external_reference: intentId,
