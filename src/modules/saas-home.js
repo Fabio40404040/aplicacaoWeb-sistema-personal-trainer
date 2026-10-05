@@ -207,7 +207,7 @@ function initCarousel() {
   window.setInterval(() => {
     if (Date.now() < pausedUntil || document.visibilityState !== 'visible') return
     go(current + 1)
-  }, 4500)
+  }, 3500)
 }
 
 export function initSaasHome() {
