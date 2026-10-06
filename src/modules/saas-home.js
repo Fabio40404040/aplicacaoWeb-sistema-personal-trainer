@@ -21,7 +21,8 @@ const NAV = [
   ['#demonstracao', 'Demonstração'],
   ['#recursos', 'Recursos'],
   ['#planos', 'Planos'],
-  ['#entrar-aluno', 'Área do Aluno'],
+  // Abre a conta de aluno de exemplo (o aluno de verdade entra pela página do personal dele).
+  ['#demonstracao', 'Ver como aluno', 'student'],
   ['/personal/#acesso-farisa', 'Entrar'],
 ]
 
@@ -37,23 +38,34 @@ function buildHome() {
   const desktop = document.querySelector('.public-desktop-nav')
   const mobile = document.querySelector('[data-public-menu]')
   desktop?.replaceChildren(
-    ...NAV.map(([href, label]) => {
+    ...NAV.map(([href, label, demo]) => {
       const link = document.createElement('a')
       link.href = href
       link.textContent = label
+      if (demo) link.dataset.demoLink = demo
       return link
     }),
   )
   mobile?.replaceChildren(
-    ...NAV.map(([href, label], index) => {
+    ...NAV.map(([href, label, demo], index) => {
       const link = document.createElement('a')
       const number = document.createElement('span')
       link.href = href
+      if (demo) link.dataset.demoLink = demo
       number.textContent = String(index + 1).padStart(2, '0')
       link.append(number, label)
       return link
     }),
   )
+  // A tela de login do aluno continua no endereço direto (#entrar-aluno), com
+  // o aviso de que o caminho certo é a página do personal.
+  const login = document.querySelector('[data-student-form="login"]')
+  if (login && !login.querySelector('.saas-student-note')) {
+    const note = document.createElement('p')
+    note.className = 'saas-student-note'
+    note.textContent = 'É aluno? Entre pela página do seu personal: use o link que ele enviou para você.'
+    login.querySelector('h1')?.after(note)
+  }
   document.querySelectorAll('[data-public-screen] .brand-name').forEach((node) => {
     node.textContent = 'Plataforma'
   })
@@ -109,6 +121,12 @@ async function fillContact() {
 
 function initDemoButtons() {
   const status = document.querySelector('[data-demo-status]')
+  // Itens do menu que abrem a demonstração: mesmo efeito do botão da seção.
+  document.querySelectorAll('[data-demo-link]').forEach((link) => {
+    link.addEventListener('click', () => {
+      document.querySelector(`[data-demo="${link.dataset.demoLink}"]`)?.click()
+    })
+  })
   document.querySelectorAll('[data-demo]').forEach((button) => {
     button.addEventListener('click', async () => {
       const kind = button.dataset.demo

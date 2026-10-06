@@ -1549,3 +1549,12 @@ html[data-site-loading] [data-public-screen] {
     opacity: 1;
   }
 }
+
+.saas-student-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--site-line, rgba(255, 255, 255, 0.16));
+  border-radius: 10px;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
