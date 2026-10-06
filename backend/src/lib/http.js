@@ -1,7 +1,15 @@
 export function json(data, status = 200, headers = {}) {
   return new Response(data === null ? null : JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', ...headers },
+    // Respostas da API: o navegador não adivinha o tipo, não guarda em cache
+    // (têm dados de conta) e não vaza o endereço para outros sites.
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      ...headers,
+    },
   })
 }
 

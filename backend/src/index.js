@@ -718,6 +718,8 @@ export default {
         Object.entries(cors).forEach(([name, value]) =>
           headers.set(name, value),
         );
+        // Arquivos enviados por usuários nunca são interpretados como outro tipo.
+        headers.set("X-Content-Type-Options", "nosniff");
         return new Response(result.body, { status: result.status, headers });
       }
       if (result?.error)

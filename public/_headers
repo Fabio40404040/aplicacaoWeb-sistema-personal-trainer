@@ -4,6 +4,7 @@
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self "https://www.mercadopago.com.br" "https://sdk.mercadopago.com")
   Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self'
 
 /sw.js
   Cache-Control: no-cache
