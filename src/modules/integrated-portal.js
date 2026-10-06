@@ -34,7 +34,7 @@ const billingCycleLabels = {
 }
 // Preços em reais. Valores padrão; a página do personal (site-brand.js) troca
 // pelos preços que ele definiu em "Meu site" (evento farisa:site-plans).
-const consultingPrices = { ready: 2, basic: 4, premium: 6, athlete: 8 }
+const consultingPrices = { ready: 49.9, basic: 99.9, premium: 149.9, athlete: 199.9 }
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -92,7 +92,7 @@ function enhanceRegistration() {
   const password = form.querySelector('input[name="password"]')?.closest('label')
   const plan = field(
     'Plano desejado',
-    `<select name="planCode"><option value="ready">Treinos Prontos — R$ 2,00 — acesso permanente</option><option value="basic" selected>Consultoria Básica</option><option value="premium">Consultoria Premium</option><option value="athlete">Performance Atleta</option></select>`,
+    `<select name="planCode"><option value="ready">Treinos Prontos — R$ 49,90 — acesso permanente</option><option value="basic" selected>Consultoria Básica</option><option value="premium">Consultoria Premium</option><option value="athlete">Performance Atleta</option></select>`,
   )
   const billingCycle = field(
     'Período da consultoria',
