@@ -157,6 +157,9 @@ async function handle(request, env) {
     } catch {
       // corpo inválido: a rota responde o erro normal
     }
+  // Contas de demonstração são públicas: ninguém redefine a senha delas.
+  if (route.endsWith("auth/forgot") && isDemoEmail(email))
+    return { error: "Esta é uma conta de demonstração: a senha dela não pode ser redefinida.", status: 403 };
   const { account, ip } = attemptKeys(request, route, email);
   // Sem e-mail/conta não existe chave "por conta": vale só a do aparelho.
   const keys = String(email || "").trim() ? [account, ip] : [ip];
