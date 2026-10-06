@@ -135,30 +135,45 @@ const LIMITED_ROUTES = {
   "student/auth/forgot": "forgot",
   "admin/auth/forgot": "forgot",
   "auth/register": "forgot",
+  // Cadastro de aluno e cartão: barra robô criando contas e testando cartões.
+  "student/auth/register": "signup",
+  "student/payments/card": "card",
+  "billing/card": "card",
 };
+// [por conta, por aparelho/rede] a cada 15 minutos.
+const ATTEMPT_LIMITS = { login: [8, 40], forgot: [5, 20], signup: [3, 8], card: [5, 12] };
 async function handle(request, env) {
   const route = new URL(request.url).pathname.replace(/^\/api\/?/u, "").replace(/\/+$/u, "");
   const kind = request.method === "POST" ? LIMITED_ROUTES[route] : null;
   if (!kind || !env.DB) return handleRoutes(request, env);
   let email = "";
-  try {
-    email = (await request.clone().json())?.email || "";
-  } catch {
-    // corpo inválido: a rota responde o erro normal
-  }
+  if (kind === "card") {
+    // No cartão a "conta" é quem está logado (o corpo não traz e-mail).
+    email = (await readSession(request, env))?.sub || "";
+  } else
+    try {
+      email = (await request.clone().json())?.email || "";
+    } catch {
+      // corpo inválido: a rota responde o erro normal
+    }
   const { account, ip } = attemptKeys(request, route, email);
-  const keys = [account, ip];
-  const limits = kind === "login" ? [8, 40] : [5, 20];
+  // Sem e-mail/conta não existe chave "por conta": vale só a do aparelho.
+  const keys = String(email || "").trim() ? [account, ip] : [ip];
+  const limits = ATTEMPT_LIMITS[kind];
   const blocked = await withDb(env, async (db) =>
-    (await isBlocked(db, [account], limits[0])) || (await isBlocked(db, [ip], limits[1])),
+    (keys.length > 1 && (await isBlocked(db, [account], limits[0]))) || (await isBlocked(db, [ip], limits[1])),
   );
   if (blocked)
     return {
-      error: "Muitas tentativas. Aguarde 15 minutos e tente de novo.",
+      error:
+        kind === "card"
+          ? "Muitas tentativas de pagamento com cartão. Aguarde 15 minutos ou pague com Pix."
+          : "Muitas tentativas. Aguarde 15 minutos e tente de novo.",
       status: 429,
     };
   const result = await handleRoutes(request, env);
-  const failed = kind === "forgot" || [400, 401, 403].includes(result?.status);
+  // Login só conta os erros; o resto conta toda tentativa.
+  const failed = kind !== "login" || [400, 401, 403].includes(result?.status);
   await withDb(env, (db) =>
     failed ? addAttempt(db, keys) : clearAttempts(db, [account]),
   );
