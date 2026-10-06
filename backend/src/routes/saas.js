@@ -42,7 +42,8 @@ export async function saasPlans(db, { includeInactive = false } = {}) {
   }
 }
 
-// Situação da assinatura de um personal.
+// Situação da assinatura de um personal. Pré-cadastro feito pelo próprio aluno
+// e ainda não pago não ocupa vaga: assim cadastro falso não trava o plano.
 export async function saasState(db, trainerId) {
   const read = async () =>
     (
@@ -50,7 +51,9 @@ export async function saasState(db, trainerId) {
         `SELECT t.saas_plan_code AS "planCode", t.saas_cycle AS "cycle", t.saas_expires_at AS "expiresAt",
            t.saas_student_limit AS "customLimit",
            p.name AS "planName", p.student_limit AS "planLimit", p.price_cents AS "priceCents",
-           (SELECT COUNT(*) FROM students s WHERE s.trainer_id=t.id) AS "students"
+           (SELECT COUNT(*) FROM students s WHERE s.trainer_id=t.id
+              AND NOT (s.account_id IS NOT NULL AND s.access_status='pending' AND s.payment_status='pending')
+           ) AS "students"
          FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id=$1`,
         [trainerId],
       )
