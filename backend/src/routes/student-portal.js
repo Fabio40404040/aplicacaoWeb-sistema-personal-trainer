@@ -42,6 +42,26 @@ async function gifSchemaReady(db) {
   }
 }
 
+async function privacyPending(db, accountId) {
+  try {
+    const row = (
+      await db.query('SELECT privacy_accepted_at AS at FROM student_accounts WHERE id=$1', [accountId])
+    ).rows[0]
+    return Boolean(row) && !row.at
+  } catch {
+    return false // sem a migração 026
+  }
+}
+
+export async function acceptPrivacy(db, accountId) {
+  await db.query(
+    `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version='2026-10'
+     WHERE id=$1 AND privacy_accepted_at IS NULL`,
+    [accountId],
+  )
+  return { data: { accepted: true } }
+}
+
 export async function studentPortal(db, accountId, version) {
   const withGifs = await gifSchemaReady(db);
   let withVideoLink = true;
@@ -76,6 +96,8 @@ export async function studentPortal(db, accountId, version) {
   const features = featuresFor(account);
   const accessActive = hasCurrentAccess(account);
   const response = {
+    // Conta criada pelo personal: o aluno ainda não aceitou os Termos.
+    privacyPending: await privacyPending(db, accountId),
     id: account.id,
     name: account.name,
     email: account.email,
@@ -252,8 +274,8 @@ export async function submitCheckin(db, accountId, body) {
       profile.id,
       energy,
       sleep,
-      body.pain || null,
-      body.notes || null,
+      String(body.pain ?? '').slice(0, 500) || null,
+      String(body.notes ?? '').slice(0, 2000) || null,
     ],
   );
   return { data: result.rows[0], status: 201 };

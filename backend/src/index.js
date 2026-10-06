@@ -1,6 +1,6 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
-import { readSession } from "./lib/session.js";
+import { isRevoked, readSession, revokeSession, sessionSignature } from "./lib/session.js";
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
 import {
   adminAuditLog,
@@ -60,8 +60,9 @@ import {
   listResource,
   updateResource,
 } from "./routes/resources.js";
-import { paymentWebhook, updateStudentAccess } from "./routes/access.js";
+import { updateStudentAccess } from "./routes/access.js";
 import {
+  acceptPrivacy,
   changePlan,
   requestPlan,
   studentPortal,
@@ -160,12 +161,18 @@ async function handle(request, env) {
   // Contas de demonstração são públicas: ninguém redefine a senha delas.
   if (route.endsWith("auth/forgot") && isDemoEmail(email))
     return { error: "Esta é uma conta de demonstração: a senha dela não pode ser redefinida.", status: 403 };
-  const { account, ip } = attemptKeys(request, route, email);
+  const { account: accountOnly, ip } = attemptKeys(request, route, email);
+  // No login a trava "por conta" vale por conta + aparelho: quem erra a senha
+  // de propósito bloqueia só a si mesmo, não o dono da conta. A conta inteira
+  // só trava com muitas tentativas vindas de vários lugares.
+  const account = kind === "login" ? `${accountOnly}|${ip}` : accountOnly;
   // Sem e-mail/conta não existe chave "por conta": vale só a do aparelho.
   const keys = String(email || "").trim() ? [account, ip] : [ip];
   const limits = ATTEMPT_LIMITS[kind];
   const blocked = await withDb(env, async (db) =>
-    (keys.length > 1 && (await isBlocked(db, [account], limits[0]))) || (await isBlocked(db, [ip], limits[1])),
+    (keys.length > 1 && (await isBlocked(db, [account], limits[0]))) ||
+    (await isBlocked(db, [ip], limits[1])) ||
+    (kind === "login" && keys.length > 1 && (await isBlocked(db, [accountOnly], 30))),
   );
   if (blocked)
     return {
@@ -179,7 +186,9 @@ async function handle(request, env) {
   // Login só conta os erros; o resto conta toda tentativa.
   const failed = kind !== "login" || [400, 401, 403].includes(result?.status);
   await withDb(env, (db) =>
-    failed ? addAttempt(db, keys) : clearAttempts(db, [account]),
+    failed
+      ? addAttempt(db, kind === "login" && keys.length > 1 ? [...keys, accountOnly] : keys)
+      : clearAttempts(db, [account]),
   );
   return result;
 }
@@ -219,8 +228,6 @@ async function handleRoutes(request, env) {
     return withDb(env, (db) => payoutOAuthCallback(request, env, db));
   if (request.method === "POST" && route === "payments/mercadopago/webhook")
     return withDb(env, (db) => mercadoPagoWebhook(request, env, db));
-  if (request.method === "POST" && route === "payments/webhook")
-    return withDb(env, (db) => paymentWebhook(request, env, db));
   if (
     request.method === "POST" &&
     ["student/auth/forgot", "student/auth/reset"].includes(route)
@@ -267,6 +274,15 @@ async function handleRoutes(request, env) {
 
   const session = await readSession(request, env);
   if (!session) return { error: "Sessão inválida ou expirada.", status: 401 };
+  // "Sair" encerra a sessão aqui também: o token deixa de valer na hora.
+  const signature = sessionSignature(request);
+  if (env.DB && (await withDb(env, (db) => isRevoked(db, signature))))
+    return { error: "Sessão inválida ou expirada.", status: 401 };
+  if (request.method === "POST" && ["auth/logout", "student/auth/logout", "admin/auth/logout"].includes(route)) {
+    // Demonstração e acesso de suporte são sessões compartilhadas/temporárias.
+    if (!isDemoEmail(session.email)) await withDb(env, (db) => revokeSession(db, signature, session.exp));
+    return { data: { ok: true } };
+  }
   // Contas de demonstração (abertas a qualquer visitante): só leitura.
   if (isDemoEmail(session.email) && !["GET", "HEAD"].includes(request.method)) return demoReadOnly;
   if (segments[0] === "admin" || session.role === "admin") {
@@ -347,6 +363,8 @@ async function handleRoutes(request, env) {
           ? { data }
           : { error: "Conta não encontrada.", status: 401 };
       }
+      if (request.method === "POST" && route === "student/privacy-accept")
+        return acceptPrivacy(db, session.sub);
       if (request.method === "POST" && route === "student/profile")
         return updateStudentProfile(db, session.sub, await readJson(request));
       if (request.method === "GET" && route === "student/booking")

@@ -1,3 +1,4 @@
+import { ensurePrivacyAccepted } from './privacy-consent.js'
 import { showToast } from './utils.js'
 // Área do aluno: foto/perfil e central de notificações (sininho) no topo
 // do painel do aluno.
@@ -379,6 +380,7 @@ export function renderStudentExtras(data, { request, reload }) {
   })
   bar.querySelector('[data-student-chip-name]').textContent = data.name || 'Aluno'
   center?.update(studentNotifications(data))
+  ensurePrivacyAccepted(data, options)
 }
 
 export function hideStudentExtras() {

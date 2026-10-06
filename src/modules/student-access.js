@@ -975,6 +975,8 @@ export function initStudentAccess() {
     .querySelector("[data-student-logout]")
     .addEventListener("click", () => {
       generation++;
+      // Encerra a sessão também no servidor (o token deixa de valer).
+      void studentRequest("auth/logout", {}).catch(() => {});
       sessionStorage.removeItem(TOKEN_KEY);
       hideStudentExtras();
       hasRendered = false;

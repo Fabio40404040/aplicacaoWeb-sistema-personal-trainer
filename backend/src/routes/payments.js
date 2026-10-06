@@ -642,10 +642,33 @@ export async function mercadoPagoWebhook(request, env, db) {
     return { error: 'Cobrança não encontrada.', status: 404 }
   }
   if (payment.status !== 'approved') {
-    await db.query(
-      `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
-      [intent.id, String(payment.status || 'pending')],
-    )
+    // Dinheiro devolvido ou contestado depois de aprovado: o acesso sai junto.
+    const reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'
+    const queries = [
+      {
+        sql: `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
+        values: [intent.id, String(payment.status || 'pending')],
+      },
+    ]
+    if (reversed)
+      queries.push(
+        {
+          sql: `UPDATE students SET access_status='paused', payment_status='refunded', status='Pausado',
+                  access_expires_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND trainer_id=$2`,
+          values: [intent.student_id, intent.trainer_id],
+        },
+        {
+          sql: `INSERT INTO access_history (trainer_id,student_id,action,plan_code,details) VALUES ($1,$2,$3,$4,$5)`,
+          values: [
+            intent.trainer_id,
+            intent.student_id,
+            'payment_reversed',
+            intent.plan_code,
+            payment.status === 'charged_back' ? 'Pagamento contestado no cartão' : 'Pagamento estornado',
+          ],
+        },
+      )
+    await db.batch(queries)
     return { data: { accepted: true } }
   }
   try {

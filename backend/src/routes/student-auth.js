@@ -97,11 +97,13 @@ export async function studentAuth(request, env, db, action) {
     )
     account = result.rows[0]
     try {
-      await db.query(
-        `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version='2026-10'
-         WHERE lower(email)=lower($1)`,
-        [email.trim()],
-      )
+      // Só a conta criada agora recebe o aceite (nunca a de outra pessoa com o mesmo e-mail).
+      if (account)
+        await db.query(
+          `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version='2026-10'
+           WHERE id=$1`,
+          [account.id],
+        )
     } catch {
       /* sem a migração 026 */
     }

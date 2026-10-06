@@ -884,6 +884,8 @@ function init() {
     if (getToken() && !document.hidden && !document.querySelector('dialog[open]')) void loadTickets()
   }, 60_000)
   $('[data-admin-logout]').addEventListener('click', () => {
+    // Encerra a sessão também no servidor.
+    if (getToken()) void api('/admin/auth/logout', { method: 'POST', body: '{}' }).catch(() => {})
     setToken(null)
     showLogin('Você saiu da área do administrador.')
   })
@@ -899,12 +901,33 @@ function init() {
         method: 'POST',
         body: JSON.stringify(Object.fromEntries(new FormData(form))),
       })
+      // Segunda etapa: o servidor enviou um código para o e-mail.
+      if (result.needCode) {
+        const code = form.querySelector('[data-admin-code]')
+        code.hidden = false
+        code.querySelector('input').required = true
+        code.querySelector('input').focus()
+        button.textContent = 'Confirmar código'
+        status.textContent = result.message
+        return
+      }
       setToken(result.token)
       form.reset()
+      form.querySelector('[data-admin-code]').hidden = true
+      form.querySelector('[data-admin-code] input').required = false
+      button.textContent = 'Entrar'
       status.textContent = ''
       await showPanel()
     } catch (error) {
       status.textContent = error.message
+      // Código errado ou vencido: volta à primeira etapa para pedir outro.
+      const code = form.querySelector('[data-admin-code]')
+      if (!code.hidden) {
+        code.hidden = true
+        code.querySelector('input').required = false
+        code.querySelector('input').value = ''
+        button.textContent = 'Entrar'
+      }
     } finally {
       button.disabled = false
     }

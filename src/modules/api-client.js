@@ -286,6 +286,10 @@ export function replySupportTicket(id, body) {
   return request(`/support/tickets/${id}`, { method: "POST", body: JSON.stringify({ body }) });
 }
 // Assinatura da plataforma (planos dos personais).
+// "Sair": avisa o servidor para o token deixar de valer (não espera a resposta).
+export function logoutRemote() {
+  if (sessionStorage.getItem(TOKEN_KEY)) void request("/auth/logout", { method: "POST", body: "{}" }).catch(() => {});
+}
 export function fetchBilling() {
   return request("/billing", { timeoutMs: 20000 });
 }

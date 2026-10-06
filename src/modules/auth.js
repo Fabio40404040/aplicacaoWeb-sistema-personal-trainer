@@ -1,4 +1,4 @@
-import { clearApiSession, login, syncRemoteData } from './api-client.js'
+import { clearApiSession, login, logoutRemote, syncRemoteData } from './api-client.js'
 
 const SESSION_KEY = 'farisa-coach-session-v2'
 // Em /personal/ (FARISA Painel) só existem o login e o painel do personal: as
@@ -146,6 +146,7 @@ export function initAuth() {
   })
 
   document.querySelector('[data-logout]').addEventListener('click', () => {
+    logoutRemote()
     sessionStorage.removeItem(SESSION_KEY)
     clearApiSession()
     if (isPainel()) {

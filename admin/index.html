@@ -82,6 +82,7 @@
         </div>
         <label class="field"><span>E-mail</span><input type="email" name="email" autocomplete="username" required /></label>
         <label class="field"><span>Senha</span><input type="password" name="password" autocomplete="current-password" required /></label>
+        <label class="field" data-admin-code hidden><span>Código enviado ao seu e-mail</span><input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6 dígitos" /></label>
         <button class="link-button admin-link" type="button" data-admin-go="esqueci">Esqueci a senha</button>
         <button class="button button--primary button--large" type="submit">Entrar</button>
         <button class="button button--secondary admin-install-button" type="button" data-admin-install hidden>Instalar o FARISA Admin</button>

@@ -7,8 +7,60 @@ import { createSession, hashPassword, verifyPassword } from '../lib/session.js'
 import { sendNoticeEmail } from '../lib/recovery-email.js'
 import { readJson } from '../lib/http.js'
 
+// Segunda etapa do login: código de 6 dígitos enviado ao e-mail do administrador.
+const CODE_MINUTES = 10
+async function codeHash(env, adminId, code) {
+  const data = new TextEncoder().encode(`${adminId}:${code}:${env.SESSION_SECRET || ''}`)
+  return [...new Uint8Array(await crypto.subtle.digest('SHA-256', data))]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+// Devolve 'ok', 'sent' (código enviado agora), 'wrong' ou 'skip' (sem e-mail
+// configurado ou sem a migração 034: entra só com a senha, como antes).
+async function secondStep(env, db, admin, code) {
+  const now = Math.floor(Date.now() / 1000)
+  let row
+  try {
+    row = (await db.query('SELECT code_hash, expires_at, attempts FROM admin_login_codes WHERE admin_id=$1', [admin.id]))
+      .rows[0]
+  } catch {
+    return 'skip'
+  }
+  const typed = String(code || '').replace(/\D/gu, '')
+  if (typed) {
+    if (!row || Number(row.expires_at) < now || Number(row.attempts) >= 5) return 'wrong'
+    if (row.code_hash !== (await codeHash(env, admin.id, typed))) {
+      await db.query('UPDATE admin_login_codes SET attempts=attempts+1 WHERE admin_id=$1', [admin.id])
+      return 'wrong'
+    }
+    await db.query('DELETE FROM admin_login_codes WHERE admin_id=$1', [admin.id])
+    return 'ok'
+  }
+  const fresh = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0')
+  let response = null
+  try {
+    response = await sendNoticeEmail(env, {
+      to: admin.email,
+      subject: `${fresh} é o seu código de acesso ao FARISA Admin`,
+      html: `<p>Olá, ${admin.name || 'administrador'}.</p><p>Seu código de acesso é:</p><p style="font-size:28px;font-weight:700;letter-spacing:4px">${fresh}</p><p>Ele vale por ${CODE_MINUTES} minutos. Se não foi você que tentou entrar, troque a sua senha.</p>`,
+    })
+  } catch {
+    response = null
+  }
+  if (!response?.ok) {
+    console.error('[admin] não foi possível enviar o código de acesso; entrando só com a senha')
+    return 'skip'
+  }
+  await db.query(
+    `INSERT INTO admin_login_codes (admin_id, code_hash, expires_at, attempts) VALUES ($1,$2,$3,0)
+     ON CONFLICT(admin_id) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0`,
+    [admin.id, await codeHash(env, admin.id, fresh), now + CODE_MINUTES * 60],
+  )
+  return 'sent'
+}
+
 export async function adminLogin(request, env, db) {
-  const { email, password } = await readJson(request)
+  const { email, password, code } = await readJson(request)
   if (typeof email !== 'string' || typeof password !== 'string')
     return { error: 'Credenciais inválidas.', status: 400 }
   let admin
@@ -27,6 +79,13 @@ export async function adminLogin(request, env, db) {
   }
   if (!admin || !(await verifyPassword(password, admin.password_hash)))
     return { error: 'E-mail ou senha incorretos.', status: 401 }
+  const step = await secondStep(env, db, admin, code)
+  if (step === 'sent')
+    return {
+      data: { needCode: true, message: `Enviamos um código de 6 dígitos para o seu e-mail. Ele vale por ${CODE_MINUTES} minutos.` },
+    }
+  if (step === 'wrong')
+    return { error: 'Código incorreto ou vencido. Entre de novo com a senha para receber outro.', status: 401 }
   await db.query('UPDATE platform_admins SET last_login_at=CURRENT_TIMESTAMP WHERE id=$1', [
     admin.id,
   ])

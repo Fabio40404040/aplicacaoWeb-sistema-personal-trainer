@@ -406,7 +406,16 @@ export async function saasWebhook(db, payment) {
   ).rows[0]
   if (!intent) return false
   if (payment.status === 'approved') await approveSaasPayment(db, intent, payment)
-  else await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, String(payment.status || 'pending')])
+  else {
+    // Estorno ou contestação de uma assinatura já aprovada: volta para o Grátis.
+    const reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'
+    await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, String(payment.status || 'pending')])
+    if (reversed)
+      await db.query(
+        `UPDATE trainers SET saas_plan_code=$2, saas_cycle=NULL, saas_expires_at=NULL WHERE id=$1 AND saas_plan_code=$3`,
+        [intent.trainer_id, FREE_PLAN, intent.plan_code],
+      )
+  }
   return true
 }
 

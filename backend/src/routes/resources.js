@@ -21,7 +21,8 @@ const configs = {
       FROM students WHERE trainer_id=$1 ORDER BY created_at DESC`,
     insert: `INSERT INTO students (trainer_id,name,email,goal,status,assessment_date) VALUES ($1,$2,$3,$4,$5,$6)
       RETURNING id,name,email,goal,status,assessment_date AS "assessmentDate"`,
-    update: `UPDATE students SET name=$3,email=$4,goal=$5,assessment_date=$7,updated_at=CURRENT_TIMESTAMP
+    // Aluno com conta de login: o e-mail é dele e só ele muda (o personal não assume a conta).
+    update: `UPDATE students SET name=$3,email=CASE WHEN account_id IS NULL THEN $4 ELSE email END,goal=$5,assessment_date=$7,updated_at=CURRENT_TIMESTAMP
       WHERE id=$2 AND trainer_id=$1 RETURNING id`,
     values: (b) => [
       b.name,
@@ -305,9 +306,9 @@ export async function updateResource(db, resource, trainerId, id, body) {
     const [studentResult] = await db.batch([
       { sql: config.update, values },
       {
-        sql: `UPDATE student_accounts SET name=$3,email=$4
+        sql: `UPDATE student_accounts SET name=$3
           WHERE id=(SELECT account_id FROM students WHERE id=$2 AND trainer_id=$1)`,
-        values: [trainerId, id, body.name, body.email],
+        values: [trainerId, id, body.name],
       },
     ]);
     return studentResult.rows[0] || null;

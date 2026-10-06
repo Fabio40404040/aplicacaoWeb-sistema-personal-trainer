@@ -114,3 +114,32 @@ export async function hashPassword(password) {
   )
   return `pbkdf2$${iterations}$${base64url(salt)}$${base64url(new Uint8Array(bits))}`
 }
+
+// ---------- "Sair": sessões encerradas (migração 034)
+export function sessionSignature(request) {
+  return String(request.headers.get('Authorization') || '').replace(/^Bearer\s+/u, '').split('.')[1] || ''
+}
+export async function isRevoked(db, signature) {
+  if (!signature) return false
+  try {
+    return Boolean((await db.query('SELECT 1 AS x FROM revoked_sessions WHERE signature=$1', [signature])).rows[0])
+  } catch {
+    return false // sem a migração 034
+  }
+}
+export async function revokeSession(db, signature, expiresAt) {
+  if (!signature) return
+  const now = Math.floor(Date.now() / 1000)
+  try {
+    await db.batch([
+      {
+        sql: 'INSERT INTO revoked_sessions (signature, expires_at) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+        values: [signature, Number(expiresAt) || now + 43200],
+      },
+      // Tokens já vencidos não precisam mais ficar na lista.
+      { sql: 'DELETE FROM revoked_sessions WHERE expires_at < $1', values: [now] },
+    ])
+  } catch {
+    // sem a migração 034: sair continua funcionando só no navegador
+  }
+}

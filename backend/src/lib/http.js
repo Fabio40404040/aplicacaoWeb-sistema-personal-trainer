@@ -25,8 +25,19 @@ export function corsHeaders(request, env) {
   }
 }
 
+// Nenhum campo de texto passa de 10 mil caracteres (imagens em data: ficam de
+// fora: têm limite próprio em cada rota). Evita inchar o banco com texto gigante.
+const MAX_TEXT = 10_000
+function clamp(value, depth = 0) {
+  if (typeof value === 'string')
+    return value.length > MAX_TEXT && !value.startsWith('data:') ? value.slice(0, MAX_TEXT) : value
+  if (!value || typeof value !== 'object' || depth > 12) return value
+  if (Array.isArray(value)) return value.map((item) => clamp(item, depth + 1))
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, clamp(item, depth + 1)]))
+}
+
 export async function readJson(request) {
   const type = request.headers.get('Content-Type') || ''
   if (!type.includes('application/json')) throw new Error('Envie o corpo como JSON.')
-  return request.json()
+  return clamp(await request.json())
 }
