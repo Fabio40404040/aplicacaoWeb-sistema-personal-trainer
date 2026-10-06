@@ -298,16 +298,45 @@ export async function adminDeleteTrainer(env, db, admin, id, body) {
       cursor = page.truncated ? page.cursor : undefined
     } while (cursor)
   }
+  // As contas de login dos alunos não têm ligação automática com o personal:
+  // apaga junto (LGPD) e libera os e-mails para novo cadastro. A última linha
+  // também limpa contas que ficaram órfãs de exclusões antigas.
   // ON DELETE CASCADE apaga alunos, fichas, avaliações, agenda etc.
-  await db.query('DELETE FROM trainers WHERE id=$1', [id])
+  let removedAccounts = 0
+  try {
+    removedAccounts = Number(
+      (
+        await db.query(
+          `SELECT COUNT(*) AS total FROM student_accounts WHERE trainer_id=$1
+             OR id IN (SELECT account_id FROM students WHERE trainer_id=$1 AND account_id IS NOT NULL)`,
+          [id],
+        )
+      ).rows[0]?.total || 0,
+    )
+  } catch {
+    // só para o registro
+  }
+  await db.batch([
+    {
+      sql: `DELETE FROM student_accounts WHERE trainer_id=$1
+              OR id IN (SELECT account_id FROM students WHERE trainer_id=$1 AND account_id IS NOT NULL)`,
+      values: [id],
+    },
+    { sql: 'DELETE FROM trainers WHERE id=$1', values: [id] },
+    {
+      sql: `DELETE FROM student_accounts WHERE trainer_id IS NOT NULL
+              AND trainer_id NOT IN (SELECT id FROM trainers)`,
+      values: [],
+    },
+  ])
   await audit(
     db,
     admin,
     'trainer_deleted',
     { type: 'trainer', id, label: trainer.email },
-    `${text(body?.reason, 300) || 'sem motivo informado'} · ${removedFiles} arquivo(s) removido(s)`,
+    `${text(body?.reason, 300) || 'sem motivo informado'} · ${removedFiles} arquivo(s) e ${removedAccounts} conta(s) de aluno removido(s)`,
   )
-  return { data: { deleted: true, removedFiles } }
+  return { data: { deleted: true, removedFiles, removedAccounts } }
 }
 
 // Entrar no painel do personal para dar suporte. Exige motivo e fica no registro.
