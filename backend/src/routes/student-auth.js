@@ -1,3 +1,4 @@
+import { seatProblem } from './saas.js'
 import { trainerIdForSlug, trainerSellsPlan } from './site.js'
 import { readJson } from '../lib/http.js'
 import { createSession, hashPassword, isStrongPassword, verifyPassword } from '../lib/session.js'
@@ -48,6 +49,8 @@ export async function studentAuth(request, env, db, action) {
           : 'O cadastro ainda não foi habilitado pelo personal.',
         status: siteSlug ? 404 : 503,
       }
+    const noSeat = await seatProblem(db, { trainerId: trainer.id })
+    if (noSeat) return { error: noSeat, status: 403 }
     const planCode = PLAN_CODES.has(body.planCode) ? body.planCode : 'basic'
     if (!(await trainerSellsPlan(db, trainer.id, planCode)))
       return { error: 'Este plano não está disponível com este personal. Escolha outro plano.', status: 400 }

@@ -92,6 +92,31 @@ export async function saasState(db, trainerId) {
   }
 }
 
+// Limite do plano também vale para quem chega pelo link do personal. Devolve
+// a mensagem de "sem vaga" ou '' quando pode seguir. Com accountId, só barra
+// o aluno que ainda não ocupa vaga (pré-cadastro não pago): renovação passa.
+export const NO_SEAT =
+  'Este personal está com todas as vagas preenchidas no momento. Fale com ele para liberar uma vaga.'
+export async function seatProblem(db, { trainerId, accountId }) {
+  try {
+    if (accountId) {
+      const student = (
+        await db.query(
+          `SELECT s.trainer_id AS "trainerId", s.access_status AS "accessStatus", s.payment_status AS "paymentStatus"
+           FROM student_accounts a JOIN students s ON s.id=a.student_id WHERE a.id=$1 LIMIT 1`,
+          [accountId],
+        )
+      ).rows[0]
+      if (!student || student.accessStatus !== 'pending' || student.paymentStatus !== 'pending') return ''
+      trainerId = student.trainerId
+    }
+    const state = await saasState(db, trainerId)
+    return state?.studentLimit && state.students >= state.studentLimit ? NO_SEAT : ''
+  } catch {
+    return ''
+  }
+}
+
 // ---------- cadastro do personal (plano Grátis)
 export async function registerTrainer(env, db, body) {
   const name = String(body?.name || '').trim().slice(0, 120)

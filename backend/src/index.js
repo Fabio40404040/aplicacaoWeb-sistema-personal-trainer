@@ -30,6 +30,7 @@ import {
   saasCardPayment,
   saasPlans,
   saasState,
+  seatProblem,
   startSaasCheckout,
 } from "./routes/saas.js";
 import { adminRecovery } from "./routes/admin-recovery.js";
@@ -366,6 +367,14 @@ async function handleRoutes(request, env) {
         return changePlan(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/plan-request")
         return requestPlan(db, session.sub, await readJson(request));
+      // Personal com o plano cheio: aluno novo não paga até abrir vaga.
+      if (
+        request.method === "POST" &&
+        ["student/payments/checkout", "student/payments/pix", "student/payments/card", "student/payments/manual-paid"].includes(route)
+      ) {
+        const noSeat = await seatProblem(db, { accountId: session.sub });
+        if (noSeat) return { error: noSeat, status: 403 };
+      }
       if (request.method === "POST" && route === "student/payments/checkout")
         return createCheckout(db, session.sub, env, await readJson(request));
       if (request.method === "GET" && route === "student/payments/options")
