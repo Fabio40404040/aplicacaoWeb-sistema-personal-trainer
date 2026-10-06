@@ -12,6 +12,11 @@ export const isDemoSession = () => {
 }
 
 // Sai da demonstração e vai para o cadastro do personal.
+// Sai da demonstração e volta para a vitrine da plataforma.
+export function leaveDemoToHome() {
+  KEYS.forEach((key) => sessionStorage.removeItem(key))
+  location.href = '/#demonstracao'
+}
 export function leaveDemoToSignup() {
   KEYS.forEach((key) => sessionStorage.removeItem(key))
   location.href = '/personal/#ativar-personal'

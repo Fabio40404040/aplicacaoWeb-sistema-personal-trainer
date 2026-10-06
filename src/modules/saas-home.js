@@ -1,7 +1,7 @@
 // Página principal = vitrine da plataforma para personais. O <head> marca
 // html[data-home="saas"] antes de pintar; aqui a página do personal sai do
 // DOM, o menu vira o da plataforma e os botões de demonstração funcionam.
-import { leaveDemoToSignup } from './demo-invite.js'
+import { leaveDemoToHome, leaveDemoToSignup } from './demo-invite.js'
 
 const API_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/u, '')
 const DEMO_KEY = 'farisa-demo'
@@ -177,8 +177,31 @@ function demoBanner() {
     event.preventDefault()
     leaveDemoToSignup() // sai da demonstração antes de ir para o cadastro
   })
-  bar.append(text, link)
+  const back = document.createElement('a')
+  back.href = '/'
+  back.textContent = 'Voltar à FARISA'
+  back.addEventListener('click', (event) => {
+    event.preventDefault()
+    leaveDemoToHome()
+  })
+  bar.append(text, link, back)
   document.body.append(bar)
+  // Na conta de aluno de exemplo, "Voltar ao site" e "Sair" levam de volta à
+  // vitrine (e não à página do personal de demonstração).
+  if (kind === 'student')
+    document
+      .querySelectorAll('[data-student-screen] a.brand, [data-student-logout]')
+      .forEach((node) => {
+        node.addEventListener(
+          'click',
+          (event) => {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            leaveDemoToHome()
+          },
+          true,
+        )
+      })
 }
 
 // Carrossel do topo: página do personal → painel → app do aluno. Troca devagar
