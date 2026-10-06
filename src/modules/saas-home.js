@@ -66,6 +66,8 @@ function buildHome() {
     note.textContent = 'É aluno? Entre pela página do seu personal: use o link que ele enviou para você.'
     login.querySelector('h1')?.after(note)
   }
+  // Na vitrine não existe cadastro de aluno (é na página do personal).
+  document.querySelectorAll('a[href^="#cadastro-aluno"]').forEach((link) => link.remove())
   document.querySelectorAll('[data-public-screen] .brand-name').forEach((node) => {
     node.textContent = 'Plataforma'
   })

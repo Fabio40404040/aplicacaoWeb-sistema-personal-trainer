@@ -40,6 +40,13 @@ export async function studentAuth(request, env, db, action) {
     const siteSlug = typeof body.site === 'string' ? body.site.trim().toLowerCase() : ''
     if (siteSlug && !/^[a-z0-9-]{3,30}$/u.test(siteSlug))
       return { error: 'Página do personal não encontrada. Abra de novo o link que ele enviou.', status: 404 }
+    // Pela página principal (vitrine) ninguém vira aluno: o cadastro é sempre
+    // na página de um personal, para o aluno cair com o personal certo.
+    if (!siteSlug)
+      return {
+        error: 'O cadastro de aluno é feito pela página do seu personal. Abra o link que ele enviou para você.',
+        status: 400,
+      }
     const trainerId = await trainerIdForSlug(db, siteSlug)
     const trainer = trainerId ? { id: trainerId } : null
     if (!trainer)
