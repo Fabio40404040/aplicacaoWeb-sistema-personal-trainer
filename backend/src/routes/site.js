@@ -2,7 +2,7 @@
 // personal personaliza marca, cor, banner, contato, redes e preços dos planos.
 // Endereço: /p/<slug>. O site principal (/) mostra a página do dono.
 const ACCENTS = ['blue', 'green', 'red', 'orange', 'purple', 'pink', 'teal', 'gold']
-const RESERVED = new Set(['admin', 'personal', 'api', 'p', 'assets', 'icons', 'banners', 'docs', 'farisa', 'suporte', 'site', 'app', 'login'])
+const RESERVED = new Set(['admin', 'personal', 'api', 'p', 'assets', 'icons', 'banners', 'docs', 'farisa', 'suporte', 'site', 'app', 'login', 'demo'])
 const HERO_PATTERN = /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/u
 const MAX_HERO_CHARS = 950_000
 const CUTOUT_PATTERN = /^data:image\/(png|webp);base64,[A-Za-z0-9+/=]+$/u

@@ -49,6 +49,14 @@ export async function studentAuth(request, env, db, action) {
           : 'O cadastro ainda não foi habilitado pelo personal.',
         status: siteSlug ? 404 : 503,
       }
+    // A página de demonstração é aberta a todos: ninguém se cadastra nela de
+    // verdade (os dados ficariam visíveis a qualquer visitante).
+    if (trainer.id === 'demo-trainer' || siteSlug === 'demo')
+      return {
+        error:
+          'Esta é uma página de demonstração: o cadastro fica desativado aqui. Para ver a área do aluno, volte à página inicial e toque em "Ver como o aluno usa".',
+        status: 403,
+      }
     const noSeat = await seatProblem(db, { trainerId: trainer.id })
     if (noSeat) return { error: noSeat, status: 403 }
     const planCode = PLAN_CODES.has(body.planCode) ? body.planCode : 'basic'
