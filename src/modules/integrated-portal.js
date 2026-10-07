@@ -472,7 +472,7 @@ function renderWorkoutPrescriptionBuilder(form) {
     row.className = 'workout-prescription-row'
     row.dataset.workoutPrescription = ''
     row.dataset.exerciseId = current.exerciseId
-    row.innerHTML = `<header><span></span><strong></strong><button class="remove-exercise-button" type="button" aria-label="Remover exercício">Remover</button></header><input name="prescriptionSession" type="hidden"><div class="field-grid field-grid--three"><label class="field"><span>Séries</span><input name="prescriptionSets" type="number" min="1" max="20" required></label><label class="field"><span>Repetições ou tempo</span><input name="prescriptionRepetitions" maxlength="40" required></label><label class="field"><span>Intervalo (segundos)</span><input name="prescriptionRestSeconds" type="number" min="0" max="1800" required></label></div><label class="field"><span>Observação individual</span><input name="prescriptionNotes" maxlength="500" placeholder="Ex.: cadência controlada, última série até a falha"></label>`
+    row.innerHTML = `<header><span></span><strong></strong><button class="remove-exercise-button" type="button" aria-label="Remover exercício">Remover</button></header><input name="prescriptionSession" type="hidden"><div class="field-grid field-grid--three"><label class="field"><span>Séries</span><input name="prescriptionSets" type="number" min="1" max="20" required></label><label class="field"><span>Repetições ou tempo</span><input name="prescriptionRepetitions" maxlength="40" required></label><label class="field"><span>Intervalo (segundos)</span><input name="prescriptionRestSeconds" type="number" min="0" max="1800" required></label></div><label class="field"><span>Carga</span><input name="prescriptionLoad" maxlength="20" placeholder="Ex.: 20 kg (o aluno também pode ajustar)"><small class="prescription-load-note" data-load-note hidden></small></label><label class="field"><span>Observação individual</span><input name="prescriptionNotes" maxlength="500" placeholder="Ex.: cadência controlada, última série até a falha"></label>`
     row.querySelector('header span').textContent = String(index + 1).padStart(2, '0')
     row.querySelector('header strong').textContent =
       `${exercise?.name || 'Exercício'} · ${exercise?.group || 'Grupo muscular'}`
@@ -481,6 +481,19 @@ function renderWorkoutPrescriptionBuilder(form) {
     row.querySelector('[name="prescriptionRepetitions"]').value = current.repetitions || '10-12'
     row.querySelector('[name="prescriptionRestSeconds"]').value = current.restSeconds ?? 60
     row.querySelector('[name="prescriptionNotes"]').value = current.notes || ''
+    row.querySelector('[name="prescriptionLoad"]').value = current.load || ''
+    // Quem mexeu na carga por último (o aluno ajusta pela área dele).
+    if (current.load && current.loadBy) {
+      const note = row.querySelector('[data-load-note]')
+      const date = current.loadAt ? new Date(current.loadAt) : null
+      const when =
+        date && !Number.isNaN(date.getTime())
+          ? ` em ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
+          : ''
+      note.textContent = current.loadBy === 'student' ? `Ajustada pelo aluno${when}.` : `Definida por você${when}.`
+      note.classList.toggle('is-student', current.loadBy === 'student')
+      note.hidden = false
+    }
     row.querySelectorAll('input').forEach((input) => {
       input.addEventListener('input', () => {
         Object.assign(current, {
@@ -488,6 +501,7 @@ function renderWorkoutPrescriptionBuilder(form) {
           repetitions: row.querySelector('[name="prescriptionRepetitions"]').value,
           restSeconds: row.querySelector('[name="prescriptionRestSeconds"]').value,
           notes: row.querySelector('[name="prescriptionNotes"]').value,
+          load: row.querySelector('[name="prescriptionLoad"]').value,
         })
       })
     })

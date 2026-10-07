@@ -1,3 +1,4 @@
+import { loadReady, loadText } from "./resources.js";
 import { trainerPlans } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
@@ -60,6 +61,23 @@ export async function acceptPrivacy(db, accountId) {
     [accountId],
   )
   return { data: { accepted: true } }
+}
+
+// Aluno ajusta a carga de um exercício da própria ficha (publicada).
+export async function studentSetLoad(db, accountId, workoutId, body) {
+  if (!(await loadReady(db))) return { error: "A carga ainda não está disponível. Fale com o personal.", status: 503 };
+  const load = loadText(body?.load);
+  const row = (
+    await db.query(
+      `UPDATE workout_exercises SET load=$3, load_by=$4, load_at=$5
+       WHERE workout_id=$1 AND exercise_id=$2 AND workout_id IN (
+         SELECT w.id FROM workouts w JOIN student_accounts a ON a.student_id=w.student_id
+         WHERE a.id=$6 AND w.published_at IS NOT NULL)
+       RETURNING load, load_by AS "loadBy", load_at AS "loadAt"`,
+      [workoutId, String(body?.exerciseId || ""), load || null, load ? "student" : null, load ? new Date().toISOString() : null, accountId],
+    )
+  ).rows[0];
+  return row ? { data: row } : { error: "Exercício não encontrado na sua ficha.", status: 404 };
 }
 
 export async function studentPortal(db, accountId, version) {
@@ -198,6 +216,7 @@ export async function studentPortal(db, accountId, version) {
   }
 
   if (features.includes("workouts")) {
+    const withLoad = await loadReady(db);
     const workouts = await db.query(
       `SELECT id, name, goal, duration, progress, published_at AS "publishedAt"
        FROM workouts WHERE student_id=$1 AND published_at IS NOT NULL ORDER BY created_at DESC`,
@@ -212,12 +231,13 @@ export async function studentPortal(db, accountId, version) {
              e.thumbnail_url AS "thumbnailUrl", e.animation_clip AS "animationClip",
              ${gifColumn}
              we.position, we.sets, we.repetitions, we.rest_seconds AS "restSeconds", we.notes,
+             ${withLoad ? 'we.load, we.load_by AS "loadBy", we.load_at AS "loadAt",' : ""}
              we.session_label AS "sessionLabel"
            FROM workout_exercises we JOIN exercises e ON e.id=we.exercise_id
            WHERE we.workout_id=$1 AND e.is_active=1 ORDER BY we.position`,
           [workout.id],
         )
-      ).rows;
+      ).rows.map((exercise) => ({ ...exercise, workoutId: workout.id, loadEditable: withLoad }));
     }
   }
   if (features.includes("assessments")) {

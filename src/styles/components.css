@@ -4890,3 +4890,13 @@ dialog.demo-invite::backdrop {
 .onboarding--done .button {
   justify-self: start;
 }
+
+/* Ficha: aviso de quem ajustou a carga */
+.prescription-load-note {
+  color: var(--ink-700);
+  font-size: 0.8rem;
+}
+.prescription-load-note.is-student {
+  color: #b45309;
+  font-weight: 700;
+}

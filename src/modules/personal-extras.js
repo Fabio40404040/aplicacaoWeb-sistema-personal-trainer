@@ -175,6 +175,34 @@ function trainerNotifications() {
   const byId = new Map(students.map((student) => [String(student.id), student]))
   const items = []
 
+  // Alunos que ajustaram a carga de algum exercício nos últimos 7 dias.
+  ;(data.workouts || []).forEach((workout) => {
+    let list = workout.exercisePrescriptions
+    if (!Array.isArray(list)) {
+      try {
+        list = JSON.parse(workout.exercisePrescriptionsJson || '[]')
+      } catch {
+        list = []
+      }
+    }
+    const changed = list.filter(
+      (item) => item.loadBy === 'student' && item.loadAt && now - new Date(item.loadAt) < 7 * 86_400_000,
+    )
+    if (!changed.length) return
+    const latest = changed.map((item) => item.loadAt).sort().pop()
+    items.push({
+      id: `carga:${workout.id}:${latest}`,
+      tone: 'info',
+      icon: '🏋️',
+      title: `${workout.student || 'Aluno'} ajustou ${changed.length === 1 ? 'a carga de 1 exercício' : `a carga de ${changed.length} exercícios`}`,
+      detail: `${workout.name} · ${changed
+        .slice(0, 3)
+        .map((item) => `${item.name}: ${item.load}`)
+        .join(' · ')}`,
+      href: '#treinos',
+    })
+  })
+
   // Um aluno tentou entrar pela página e o plano estava cheio (últimos 7 dias).
   const blockedDay = window.farisaBilling?.seatBlockedAt
   if (blockedDay)

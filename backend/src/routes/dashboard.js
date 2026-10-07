@@ -35,6 +35,7 @@ async function videoLinkReady(db) {
 }
 
 import { trainerProfile } from "./profile.js";
+import { loadReady } from "./resources.js";
 
 // A foto do aluno (student_accounts.avatar) chegou na migração 018.
 async function studentAvatarReady(db) {
@@ -60,6 +61,7 @@ export async function dashboard(db, trainerId) {
   const gifColumn =
     (withGifs ? ',gif_id AS "gifId"' : "") +
     (withVideoLink ? ',video_id AS "videoId"' : "");
+  const loadJson = (await loadReady(db)) ? "'load',we.load,'loadBy',we.load_by,'loadAt',we.load_at," : "";
   const gifJson =
     (withGifs ? "'gifId',e.gif_id," : "") +
     (withVideoLink ? "'videoId',e.video_id," : "");
@@ -106,7 +108,7 @@ export async function dashboard(db, trainerId) {
          'instructions',e.instructions,'difficulty',e.difficulty,'mediaType',e.media_type,
          'mediaUrl',e.media_url,'thumbnailUrl',e.thumbnail_url,${gifJson}'position',we.position,
          'sets',we.sets,'repetitions',we.repetitions,'restSeconds',we.rest_seconds,'notes',we.notes,
-         'sessionLabel',we.session_label
+         ${loadJson}'sessionLabel',we.session_label
        )) FROM workout_exercises we JOIN exercises e ON e.id=we.exercise_id
        WHERE we.workout_id=w.id ORDER BY we.position),'[]') AS "exercisePrescriptionsJson"
        FROM workouts w JOIN students s ON s.id=w.student_id WHERE w.trainer_id=$1 ORDER BY w.created_at DESC`,

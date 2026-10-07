@@ -89,6 +89,7 @@ function handleWorkout(form) {
         repetitions: row.querySelector('[name="prescriptionRepetitions"]').value.trim(),
         restSeconds: row.querySelector('[name="prescriptionRestSeconds"]').value,
         notes: row.querySelector('[name="prescriptionNotes"]').value.trim(),
+        load: row.querySelector('[name="prescriptionLoad"]')?.value,
       }))
   if (!savedPrescriptions.length)
     throw new Error('Escolha pelo menos um exercício para salvar a ficha.')
@@ -111,6 +112,8 @@ function handleWorkout(form) {
       repetitions: String(prescription.repetitions || '10-12').trim(),
       restSeconds: String(prescription.restSeconds ?? '60'),
       notes: String(prescription.notes || '').trim(),
+      // Carga: o servidor guarda quem alterou por último (aluno ou personal).
+      load: String(prescription.load || '').trim(),
     }
   })
   const record = {

@@ -396,6 +396,57 @@ function matchingUploadedVideo(exercise, videos) {
 // para ampliar), nome, séries / repetições / descanso e os atalhos
 // "▶ Ver vídeo" (abre o MP4 em tela cheia) e "Ver instruções".
 const DEFAULT_INSTRUCTIONS = "Siga a orientação do personal.";
+
+// Carga do exercício: o aluno anota o peso que está usando e salva. O
+// personal vê a mudança na ficha e também pode ajustar.
+function loadEditor(exercise) {
+  const box = element("form", "student-load");
+  box.noValidate = true;
+  const label = element("label", "");
+  const input = element("input");
+  input.type = "text";
+  input.inputMode = "decimal";
+  input.maxLength = 20;
+  input.placeholder = "ex.: 20 kg";
+  input.value = exercise.load || "";
+  input.setAttribute("aria-label", `Carga de ${exercise.name}`);
+  label.append(element("span", "", "Carga"), input);
+  const save = element("button", "", "Salvar");
+  save.type = "submit";
+  save.hidden = true;
+  const note = element("small", "");
+  const describe = () => {
+    if (!exercise.load) return "Anote o peso que você está usando.";
+    const date = exercise.loadAt ? new Date(exercise.loadAt) : null;
+    const when = date && !Number.isNaN(date.getTime()) ? ` em ${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}` : "";
+    return exercise.loadBy === "trainer" ? `Definida pelo personal${when}.` : `Atualizada por você${when}.`;
+  };
+  note.textContent = describe();
+  input.addEventListener("input", () => {
+    save.hidden = input.value.trim() === (exercise.load || "");
+  });
+  box.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    save.disabled = true;
+    note.textContent = "Salvando…";
+    try {
+      const result = await studentRequest(`workouts/${exercise.workoutId}/load`, {
+        exerciseId: exercise.id,
+        load: input.value,
+      });
+      Object.assign(exercise, { load: result.load || "", loadBy: result.loadBy, loadAt: result.loadAt });
+      input.value = exercise.load;
+      save.hidden = true;
+      note.textContent = describe();
+    } catch (error) {
+      note.textContent = error.message;
+    } finally {
+      save.disabled = false;
+    }
+  });
+  box.append(label, save, note);
+  return box;
+}
 function exerciseCard(exercise, uploadedVideos) {
   const card = element("li", "student-exercise-card");
   const video = matchingUploadedVideo(exercise, uploadedVideos);
@@ -437,6 +488,7 @@ function exerciseCard(exercise, uploadedVideos) {
   if (exercise.repetitions) chip(`${exercise.repetitions} reps`);
   if (Number(exercise.restSeconds)) chip(`descanso ${exercise.restSeconds}s`);
   body.append(chips);
+  if (exercise.loadEditable && exercise.workoutId) body.append(loadEditor(exercise));
 
   const links = element("div", "student-exercise-links");
   if (video) {

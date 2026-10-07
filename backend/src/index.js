@@ -64,6 +64,7 @@ import {
   deleteResource,
   listResource,
   updateResource,
+  trainerSetLoad,
 } from "./routes/resources.js";
 import { updateStudentAccess } from "./routes/access.js";
 import {
@@ -71,6 +72,7 @@ import {
   changePlan,
   studentPortal,
   submitCheckin,
+  studentSetLoad,
 } from "./routes/student-portal.js";
 import {
   cardPaymentConfig,
@@ -427,6 +429,9 @@ async function handleRoutes(request, env) {
         segments[3] === "cancel"
       )
         return cancelStudentBooking(db, session.sub, segments[2], env);
+      // Aluno ajusta a carga de um exercício da ficha dele.
+      if (request.method === "POST" && segments[1] === "workouts" && segments[2] && segments[3] === "load")
+        return studentSetLoad(db, session.sub, segments[2], await readJson(request));
       if (request.method === "POST" && route === "student/checkins")
         return submitCheckin(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/account/delete")
@@ -503,6 +508,8 @@ async function handleRoutes(request, env) {
     // Assinatura da plataforma (planos dos personais).
     if (request.method === "GET" && route === "billing")
       return billingInfo(env, db, session.sub);
+    if (request.method === "POST" && segments[0] === "workouts" && segments[1] && segments[2] === "load")
+      return trainerSetLoad(db, session.sub, segments[1], await readJson(request));
     if (request.method === "POST" && route === "auth/resend-verification")
       return resendVerification(db, session.sub);
     if (request.method === "GET" && route === "onboarding") return onboarding(db, session.sub);

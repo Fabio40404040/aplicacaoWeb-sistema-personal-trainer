@@ -142,7 +142,32 @@ const configs = {
   },
 };
 
+// A coluna de carga existe? (migração 037). Sem ela, tudo segue como antes.
+export async function loadReady(db) {
+  try {
+    await db.query("SELECT load FROM workout_exercises LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+export const loadText = (value) =>
+  String(value ?? "")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 20);
+
 async function saveWorkoutExercises(db, trainerId, workoutId, body) {
+  const withLoad = await loadReady(db);
+  // Salvar a ficha regrava os exercícios: a carga de cada um é preservada.
+  const previous = new Map();
+  if (withLoad)
+    (
+      await db.query(
+        `SELECT exercise_id AS id, load, load_by AS "loadBy", load_at AS "loadAt" FROM workout_exercises WHERE workout_id=$1`,
+        [workoutId],
+      )
+    ).rows.forEach((row) => previous.set(String(row.id), row));
   const prescriptions = Array.isArray(body.exercisePrescriptions)
     ? body.exercisePrescriptions
         .filter((item) => item && item.exerciseId)
@@ -168,9 +193,16 @@ async function saveWorkoutExercises(db, trainerId, workoutId, body) {
       values: [workoutId],
     },
   ];
-  prescriptions.forEach((prescription, index) =>
+  prescriptions.forEach((prescription, index) => {
+    const before = previous.get(String(prescription.exerciseId));
+    // Sem o campo na tela (versão antiga aberta) mantém o que estava.
+    const load = prescription.load === undefined ? before?.load || "" : loadText(prescription.load);
+    const changed = load !== (before?.load || "");
     queries.push({
-      sql: `INSERT INTO workout_exercises (workout_id,exercise_id,position,sets,repetitions,rest_seconds,notes,session_label)
+      sql: withLoad
+        ? `INSERT INTO workout_exercises (workout_id,exercise_id,position,sets,repetitions,rest_seconds,notes,session_label,load,load_by,load_at)
+      SELECT $1,id,$2,$3,$4,$5,$6,$7,$10,$11,$12 FROM exercises WHERE id=$8 AND trainer_id=$9`
+        : `INSERT INTO workout_exercises (workout_id,exercise_id,position,sets,repetitions,rest_seconds,notes,session_label)
       SELECT $1,id,$2,$3,$4,$5,$6,$7 FROM exercises WHERE id=$8 AND trainer_id=$9`,
       values: [
         workoutId,
@@ -186,13 +218,36 @@ async function saveWorkoutExercises(db, trainerId, workoutId, body) {
           : "A",
         prescription.exerciseId,
         trainerId,
+        ...(withLoad
+          ? [
+              load || null,
+              changed ? (load ? "trainer" : null) : before?.loadBy || null,
+              changed ? (load ? new Date().toISOString() : null) : before?.loadAt || null,
+            ]
+          : []),
       ],
-    }),
-  );
+    });
+  });
   await db.batch(queries);
 }
 
+// Personal ajusta a carga de um exercício sem abrir a ficha inteira.
+export async function trainerSetLoad(db, trainerId, workoutId, body) {
+  if (!(await loadReady(db))) return { error: "A carga ainda não está disponível. Fale com o suporte.", status: 503 };
+  const load = loadText(body?.load);
+  const row = (
+    await db.query(
+      `UPDATE workout_exercises SET load=$3, load_by=$4, load_at=$5
+       WHERE workout_id=$1 AND exercise_id=$2 AND workout_id IN (SELECT id FROM workouts WHERE trainer_id=$6)
+       RETURNING load, load_by AS "loadBy", load_at AS "loadAt"`,
+      [workoutId, String(body?.exerciseId || ""), load || null, load ? "trainer" : null, load ? new Date().toISOString() : null, trainerId],
+    )
+  ).rows[0];
+  return row ? { data: row } : { error: "Exercício não encontrado nesta ficha.", status: 404 };
+}
+
 export async function listResource(db, resource, trainerId) {
+  const loadJson = resource === "workouts" && (await loadReady(db)) ? "'load',we.load,'loadBy',we.load_by,'loadAt',we.load_at," : "";
   if (resource === "workouts")
     return (
       await db.query(
@@ -202,7 +257,7 @@ export async function listResource(db, resource, trainerId) {
       'exerciseId',e.id,'name',e.name,'group',e.muscle_group,'equipment',e.equipment,
       'instructions',e.instructions,'difficulty',e.difficulty,'position',we.position,
       'sets',we.sets,'repetitions',we.repetitions,'restSeconds',we.rest_seconds,'notes',we.notes,
-      'sessionLabel',we.session_label
+      ${loadJson}'sessionLabel',we.session_label
     )) FROM workout_exercises we JOIN exercises e ON e.id=we.exercise_id
     WHERE we.workout_id=w.id ORDER BY we.position),'[]') AS "exercisePrescriptionsJson"
     FROM workouts w JOIN students s ON s.id=w.student_id WHERE w.trainer_id=$1 ORDER BY w.created_at DESC`,
