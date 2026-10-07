@@ -432,27 +432,41 @@
   font-size: 0.82rem;
 }
 .student-water-goal-form {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.student-water-goal-form label {
+  display: grid;
+  gap: 4px;
+  color: #dce9f8;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 .student-water-goal-form input {
-  width: 96px;
-  padding: 6px 10px;
+  width: 100%;
+  padding: 8px 10px;
   border: 1px solid var(--tool-line);
   border-radius: 8px;
   background: #0f1826;
   color: #fff;
   font: inherit;
 }
-.student-water-goal-form button {
-  padding: 6px 12px;
+.student-water-goal-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.student-water-goal-buttons button:first-child {
+  padding: 8px 18px;
   border: 0;
   border-radius: 8px;
   background: #1557f0;
   color: #fff;
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
 }

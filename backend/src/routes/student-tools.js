@@ -84,8 +84,15 @@ export async function studentTools(db, studentId, workoutIds = [], latestWeightK
         dayOffset(-8),
       ])
     ).rows;
+    // Tamanhos do copo e da garrafa: só depois da migração 040.
+    let sizesReady = true;
     const prefs = (
-      await db.query(`SELECT water_goal_ml AS "goalMl" FROM student_tool_prefs WHERE student_id=$1`, [studentId])
+      await db
+        .query(`SELECT water_goal_ml AS "goalMl", cup_ml AS "cupMl", bottle_ml AS "bottleMl" FROM student_tool_prefs WHERE student_id=$1`, [studentId])
+        .catch(() => {
+          sizesReady = false;
+          return db.query(`SELECT water_goal_ml AS "goalMl" FROM student_tool_prefs WHERE student_id=$1`, [studentId]);
+        })
     ).rows[0];
     const loadHistory = {};
     for (const workoutId of workoutIds.slice(0, 20)) {
@@ -105,6 +112,9 @@ export async function studentTools(db, studentId, workoutIds = [], latestWeightK
       water: {
         goalMl: Number(prefs?.goalMl) || defaultGoal(latestWeightKg),
         customGoal: Boolean(prefs?.goalMl),
+        sizesReady,
+        cupMl: Number(prefs?.cupMl) || 200,
+        bottleMl: Number(prefs?.bottleMl) || 500,
         days: Object.fromEntries(water.map((row) => [row.day, Number(row.ml) || 0])),
       },
       loadHistory,
@@ -150,6 +160,22 @@ export async function setWater(db, accountId, body) {
       [student.id, goal],
     );
     result.goalMl = goal;
+  }
+  if (body?.cupMl !== undefined || body?.bottleMl !== undefined) {
+    const cup = Math.round(Number(body.cupMl));
+    const bottle = Math.round(Number(body.bottleMl));
+    if (!(cup >= 50 && cup <= 3000) || !(bottle >= 50 && bottle <= 3000))
+      return { error: "O copo e a garrafa devem ter entre 50 ml e 3 litros.", status: 400 };
+    try {
+      await db.query(
+        `INSERT INTO student_tool_prefs (student_id, cup_ml, bottle_ml) VALUES ($1,$2,$3)
+         ON CONFLICT (student_id) DO UPDATE SET cup_ml=excluded.cup_ml, bottle_ml=excluded.bottle_ml`,
+        [student.id, cup, bottle],
+      );
+    } catch {
+      return { error: "Ainda não dá para mudar o tamanho do copo e da garrafa.", status: 503 };
+    }
+    Object.assign(result, { cupMl: cup, bottleMl: bottle });
   }
   if (body?.ml !== undefined) {
     const day = String(body?.day || "");

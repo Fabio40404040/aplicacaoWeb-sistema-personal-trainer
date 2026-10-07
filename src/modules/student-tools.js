@@ -446,56 +446,91 @@ export function waterCard(tools, request) {
     push({ day: today, ml: total });
   };
 
-  [
-    ["🥛 Copo", 200],
-    ["🧴 Garrafa", 500],
-  ].forEach(([text, ml]) => {
-    const button = el("button", "student-water-add");
-    button.type = "button";
-    button.append(el("strong", "", `+${ml} ml`), el("span", "", text));
-    button.addEventListener("click", () => {
-      steps.push(ml);
-      setTotal(total + ml);
+  const sizes = { cup: Number(tools.water?.cupMl) || 200, bottle: Number(tools.water?.bottleMl) || 500 };
+  const sizesEditable = Boolean(tools.water?.sizesReady);
+  const sizeLabel = (ml) => (ml >= 1000 ? litres(ml) : `${ml} ml`);
+  const renderActions = () => {
+    actions.replaceChildren();
+    [
+      ["🥛 Copo", "cup"],
+      ["🧴 Garrafa", "bottle"],
+    ].forEach(([text, key]) => {
+      const ml = sizes[key];
+      const button = el("button", "student-water-add");
+      button.type = "button";
+      button.append(el("strong", "", `+${sizeLabel(ml)}`), el("span", "", text));
+      button.addEventListener("click", () => {
+        steps.push(ml);
+        setTotal(total + ml);
+      });
+      actions.append(button);
     });
-    actions.append(button);
-  });
+  };
   const undo = el("button", "student-link-button", "Desfazer último");
   undo.type = "button";
   undo.addEventListener("click", () => {
-    const last = steps.pop() || 200;
+    const last = steps.pop() || sizes.cup;
     setTotal(total - last);
   });
 
   const renderGoal = () => {
     goalRow.replaceChildren();
-    goalRow.append(el("span", "", `Meta diária: ${litres(goal)}`));
+    goalRow.append(
+      el(
+        "span",
+        "",
+        `Meta: ${litres(goal)} · Copo: ${sizeLabel(sizes.cup)} · Garrafa: ${sizeLabel(sizes.bottle)}`,
+      ),
+    );
     const change = el("button", "student-link-button", "alterar");
     change.type = "button";
     change.addEventListener("click", () => {
       const form = el("form", "student-water-goal-form");
-      const input = el("input");
-      input.type = "number";
-      input.min = "500";
-      input.max = "8000";
-      input.step = "100";
-      input.value = String(goal);
-      input.setAttribute("aria-label", "Meta diária em ml");
+      const numberField = (text, value, min, max, step) => {
+        const label = el("label");
+        const input = el("input");
+        Object.assign(input, { type: "number", min: String(min), max: String(max), step: String(step), value: String(value), required: true });
+        input.inputMode = "numeric";
+        label.append(el("span", "", text), input);
+        form.append(label);
+        return input;
+      };
+      const goalInput = numberField("Meta do dia (ml)", goal, 500, 8000, 50);
+      const cupInput = sizesEditable ? numberField("Copo (ml)", sizes.cup, 50, 3000, 10) : null;
+      const bottleInput = sizesEditable ? numberField("Garrafa (ml)", sizes.bottle, 50, 3000, 10) : null;
+      const buttons = el("div", "student-water-goal-buttons");
       const ok = el("button", "", "Salvar");
       ok.type = "submit";
-      form.append(input, el("span", "", "ml"), ok);
+      const cancel = el("button", "student-link-button", "Cancelar");
+      cancel.type = "button";
+      cancel.addEventListener("click", renderGoal);
+      buttons.append(ok, cancel);
+      form.append(buttons);
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        const value = Math.round(Number(input.value));
+        const value = Math.round(Number(goalInput.value));
         if (!(value >= 500 && value <= 8000)) {
           status.textContent = "A meta deve ficar entre 500 ml e 8 litros.";
           return;
         }
+        const payload = {};
+        if (sizesEditable) {
+          const cup = Math.round(Number(cupInput.value));
+          const bottle = Math.round(Number(bottleInput.value));
+          if (!(cup >= 50 && cup <= 3000) || !(bottle >= 50 && bottle <= 3000)) {
+            status.textContent = "O copo e a garrafa devem ter entre 50 ml e 3 litros.";
+            return;
+          }
+          if (cup !== sizes.cup || bottle !== sizes.bottle) Object.assign(payload, { cupMl: cup, bottleMl: bottle });
+          Object.assign(sizes, { cup, bottle });
+        }
+        if (value !== goal) payload.goalMl = value;
         goal = value;
-        push({ goalMl: goal });
+        if (Object.keys(payload).length) push(payload);
         render();
       });
       goalRow.replaceChildren(form);
-      input.focus();
+      (cupInput || goalInput).focus();
     });
     goalRow.append(change);
   };
@@ -531,6 +566,7 @@ export function waterCard(tools, request) {
           ? "Comece o dia com um copo d’água."
           : `Faltam ${litres(goal - total)} para a meta.`;
     undo.hidden = total === 0;
+    renderActions();
     renderGoal();
     renderWeek();
   }
