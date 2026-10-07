@@ -8,6 +8,7 @@ import {
   registerTrainerAccount,
   startBillingCheckout,
 } from './api-client.js'
+import { accountCard, paintEmailBanner, paintOnboarding, storageLine } from './account-extras.js'
 import { openSecureCardForm } from './mercado-pago-card.js'
 import { createQrCodeImage } from './pix.js'
 import { showToast } from './utils.js'
@@ -218,6 +219,8 @@ function render() {
       usage.append(el('small', '', `${state.students} de ${state.studentLimit} alunos no plano`), bar)
     } else usage.append(el('small', '', `${state.students} aluno(s) · sem limite`))
     summary.append(usage)
+    const storage = storageLine(billing.storage)
+    if (storage) summary.append(storage)
   }
   root.append(summary)
   if (billing.pending?.length)
@@ -229,6 +232,7 @@ function render() {
       'support-muted saas-legal',
       'Pagamento mensal, sem renovação automática. Se não renovar, a conta volta para o plano Grátis e nada é apagado. Você pode cancelar em até 7 dias da contratação com reembolso (CDC, art. 49). Dúvidas: Falar com o suporte.',
     ),
+    accountCard(),
   )
 }
 
@@ -264,6 +268,8 @@ async function load() {
     choice.plan = billing.plans.find((plan) => !plan.isFree)?.code || null
   }
   paintAlerts()
+  paintEmailBanner(billing.email)
+  void paintOnboarding()
   if (location.hash === '#assinatura') render()
 }
 

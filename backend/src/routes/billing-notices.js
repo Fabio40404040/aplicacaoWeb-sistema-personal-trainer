@@ -3,6 +3,7 @@
 // para o Grátis. Cada aviso sai uma vez só (tabela saas_notices, migração 035).
 import { isDemoEmail } from '../lib/demo.js'
 import { sendNoticeEmail } from '../lib/recovery-email.js'
+import { runStudentNotices } from './account-emails.js'
 
 const DAY = 86_400_000
 const money = (cents) => (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -152,7 +153,8 @@ export async function runBillingNotices(env, db, { force = false } = {}) {
           sent.week += 1
       }
     }
-    return { sent }
+    // Mesma rodada: alunos com o acesso para vencer.
+    return { sent, students: await runStudentNotices(db) }
   } catch (error) {
     console.error('[assinatura] avisos não processados', error?.message)
     return { error: true }

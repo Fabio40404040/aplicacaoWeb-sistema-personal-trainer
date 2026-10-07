@@ -662,3 +662,8 @@
   background: #fee2e2;
   color: #991b1b;
 }
+
+.admin-errors {
+  margin-top: 16px;
+  padding: 12px;
+}

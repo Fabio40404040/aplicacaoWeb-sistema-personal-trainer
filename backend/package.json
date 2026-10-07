@@ -14,7 +14,8 @@
     "demo:reset:remote": "wrangler d1 execute DB --remote --file=demo/demo-seed.sql",
     "demo:remover:local": "wrangler d1 execute DB --local --file=scripts/remover-demo.sql",
     "demo:remover:remote": "wrangler d1 execute DB --remote --file=scripts/remover-demo.sql",
-    "agendador:deploy": "wrangler deploy --config ../agendador/wrangler.jsonc"
+    "agendador:deploy": "wrangler deploy --config ../agendador/wrangler.jsonc",
+    "db:backup": "wrangler d1 export DB --remote --output=../backups/farisa-backup.sql"
   },
   "dependencies": {},
   "devDependencies": {

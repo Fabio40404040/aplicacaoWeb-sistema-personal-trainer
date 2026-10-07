@@ -849,6 +849,31 @@ function paintAudit() {
 async function renderAudit() {
   auditRows = (await api('/admin/audit').catch(() => [])) || []
   paintAudit()
+  void renderErrors()
+}
+// Erros do servidor (os 100 mais recentes). Fica fechado; abre ao clicar.
+async function renderErrors() {
+  const box = $('[data-admin-errors]')
+  const rows = (await api('/admin/errors').catch(() => [])) || []
+  box.hidden = false
+  const details = el('details', 'support-folder')
+  const summary = el('summary')
+  summary.append(el('span', '', 'Erros do sistema'), el('small', '', String(rows.length)))
+  details.append(summary)
+  if (!rows.length) details.append(el('p', 'admin-billing-note', 'Nenhum erro registrado. Quando o servidor falhar em alguma ação, aparece aqui.'))
+  rows.forEach((row) => {
+    const item = el('div', 'admin-billing-row')
+    const text = el('div')
+    const when = toDate(row.createdAt)
+    text.append(
+      el('strong', '', row.message || 'Erro'),
+      el('small', '', [when ? when.toLocaleString('pt-BR') : '', row.route].filter(Boolean).join(' · ')),
+    )
+    item.append(text)
+    item.title = row.detail || ''
+    details.append(item)
+  })
+  box.replaceChildren(details)
 }
 function initAuditFilters() {
   const chips = $('[data-audit-type]')

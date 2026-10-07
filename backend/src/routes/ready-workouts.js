@@ -1,3 +1,4 @@
+import { mediaQuotaProblem } from './account-self.js'
 const MAX_PDF_BYTES = 15 * 1024 * 1024
 
 const selectFields = `id,name,goal,level,duration,muscle_groups AS "muscleGroups",description,
@@ -39,6 +40,8 @@ export async function uploadReadyWorkout(request, env, db, trainerId) {
     return { error: 'Selecione um arquivo PDF válido.', status: 400 }
   if (!file.size || file.size > MAX_PDF_BYTES)
     return { error: 'O PDF deve ter no máximo 15 MB.', status: 400 }
+  const noSpace = await mediaQuotaProblem(db, trainerId, file.size)
+  if (noSpace) return { error: noSpace, status: 403 }
 
   const name = String(form.get('name') || '').trim()
   const goal = String(form.get('goal') || '').trim()

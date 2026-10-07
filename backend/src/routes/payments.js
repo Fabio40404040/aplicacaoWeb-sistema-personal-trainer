@@ -1,3 +1,4 @@
+import { notifyPixToCheck, notifyStudentPayment } from './account-emails.js'
 import { NOT_CONFIGURED, pixBrCode, resolvePay } from './payout.js'
 import { withTrainerPrice } from './site.js'
 
@@ -344,6 +345,7 @@ export async function manualPixPaid(db, accountId, body) {
     [String(body?.intentId || ''), accountId],
   )
   if (!result.rows[0]) return { error: 'Cobrança não encontrada. Gere o Pix de novo.', status: 404 }
+  await notifyPixToCheck(db, result.rows[0].id)
   return { data: { status: 'in_review' } }
 }
 
@@ -557,6 +559,8 @@ async function approvePayment(db, intent, payment, paymentId, provider = 'mercad
   } catch {
     // sem a migração 025
   }
+  // Recibo para o aluno e aviso para o personal.
+  await notifyStudentPayment(db, intent)
 }
 
 export async function officialPaymentForIntent(intent, env) {

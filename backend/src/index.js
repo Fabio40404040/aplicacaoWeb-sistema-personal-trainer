@@ -1,6 +1,9 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { runBillingNotices } from "./routes/billing-notices.js";
+import { resendVerification, verifyEmailPage } from "./routes/account-emails.js";
+import { deleteOwnAccount, exportAccount, onboarding } from "./routes/account-self.js";
+import { useEnv } from "./lib/notify.js";
 import { isRevoked, readSession, revokeSession, sessionSignature } from "./lib/session.js";
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
 import {
@@ -258,6 +261,9 @@ async function handleRoutes(request, env) {
   // Avisos de vencimento da assinatura. Pode ser chamado por um agendador
   // externo, se um dia houver. É seguro deixar aberto: roda no máximo a cada
   // 6 horas e cada aviso sai uma vez só.
+  // Link de confirmação que vai no e-mail de boas-vindas.
+  if (request.method === "GET" && route === "public/verify-email")
+    return withDb(env, (db) => verifyEmailPage(db, new URL(request.url).searchParams.get("token")));
   if (request.method === "POST" && route === "public/cron")
     return withDb(env, async (db) => {
       await runBillingNotices(env, db);
@@ -338,6 +344,14 @@ async function handleRoutes(request, env) {
             `${body.planCode} até ${body.expiresAt || "sem vencimento"}`);
         return result;
       }
+      if (request.method === "GET" && route === "admin/errors")
+        return {
+          data: (
+            await db
+              .query(`SELECT id, created_at AS "createdAt", route, message, detail FROM error_log ORDER BY id DESC LIMIT 100`)
+              .catch(() => ({ rows: [] }))
+          ).rows,
+        };
       if (request.method === "GET" && route === "admin/billing")
         return { data: await adminBilling(db) };
       if (request.method === "GET" && route === "admin/audit")
@@ -474,6 +488,12 @@ async function handleRoutes(request, env) {
     // Assinatura da plataforma (planos dos personais).
     if (request.method === "GET" && route === "billing")
       return billingInfo(env, db, session.sub);
+    if (request.method === "POST" && route === "auth/resend-verification")
+      return resendVerification(db, session.sub);
+    if (request.method === "GET" && route === "onboarding") return onboarding(db, session.sub);
+    if (request.method === "GET" && route === "account/export") return exportAccount(db, session.sub);
+    if (request.method === "POST" && route === "account/delete")
+      return deleteOwnAccount(env, db, session, await readJson(request));
     if (request.method === "GET" && route === "billing/card-config")
       return saasCardConfig(env, db, session.sub, new URL(request.url).searchParams.get("plan"));
     if (request.method === "POST" && route === "billing/card")
@@ -739,6 +759,7 @@ async function handleRoutes(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const cors = corsHeaders(request, env);
+    useEnv(env);
     // O Pages não tem tarefa agendada: os avisos de assinatura saem quando
     // alguém abre a vitrine, a página de um personal ou "Minha assinatura"
     // (no máximo uma rodada a cada 6 horas).
@@ -767,6 +788,21 @@ export default {
       return json(result?.data ?? null, result?.status || 200, cors);
     } catch (error) {
       console.error(error);
+      // Fica registrado para o admin ver (guarda só os 500 mais recentes).
+      if (env.DB)
+        await withDb(env, (db) =>
+          db.batch([
+            {
+              sql: "INSERT INTO error_log (route, message, detail) VALUES ($1,$2,$3)",
+              values: [
+                `${request.method} ${new URL(request.url).pathname}`.slice(0, 200),
+                String(error?.message || error).slice(0, 500),
+                String(error?.stack || "").slice(0, 2000),
+              ],
+            },
+            { sql: "DELETE FROM error_log WHERE id <= (SELECT MAX(id) FROM error_log) - 500", values: [] },
+          ]),
+        ).catch(() => {});
       return json(
         { error: "Não foi possível concluir a solicitação." },
         500,

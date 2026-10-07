@@ -6,6 +6,8 @@
 import { createSession, hashPassword, isStrongPassword } from '../lib/session.js'
 import { antifraud, mercadoPago, officialPaymentForIntent } from './payments.js'
 import { sendSaasReceipt } from './billing-notices.js'
+import { emailStatus, sendTrainerWelcome } from './account-emails.js'
+import { mediaUsage } from './account-self.js'
 
 export const SAAS_CYCLES = {
   monthly: { label: 'Mensal', months: 1, factor: 1 },
@@ -151,6 +153,13 @@ export async function registerTrainer(env, db, body) {
       String(body?.cref || '').trim().slice(0, 30) || null,
     ],
   )
+  // Conta nova ainda não confirmou o e-mail (as antigas contam como confirmadas).
+  try {
+    await db.query('UPDATE trainers SET email_verified_at=NULL WHERE id=$1', [trainer.id])
+  } catch {
+    // sem a migração 036
+  }
+  await sendTrainerWelcome(db, trainer)
   return {
     data: {
       token: await createSession(trainer, env),
@@ -167,6 +176,9 @@ export async function billingInfo(env, db, trainerId) {
     data: {
       state: await saasState(db, trainerId),
       plans: await saasPlans(db),
+      // E-mail confirmado? e quanto do espaço de vídeos/PDFs já foi usado.
+      email: await emailStatus(db, trainerId),
+      storage: await mediaUsage(db, trainerId),
       pending: (
         await db.query(
           `SELECT id, plan_code AS "planCode", cycle, amount_cents AS "amountCents", method, status,

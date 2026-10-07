@@ -1,3 +1,4 @@
+import { mediaQuotaProblem } from "./account-self.js";
 const MAX_VIDEO_BYTES = 90 * 1024 * 1024;
 
 const selectFields = `id,name,muscle_group AS "group",equipment,difficulty,instructions,
@@ -35,6 +36,8 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
     return { error: "Selecione um arquivo MP4 válido.", status: 400 };
   if (!file.size || file.size > MAX_VIDEO_BYTES)
     return { error: "O vídeo MP4 deve ter no máximo 90 MB.", status: 400 };
+  const noSpace = await mediaQuotaProblem(db, trainerId, file.size);
+  if (noSpace) return { error: noSpace, status: 403 };
 
   const name = String(form.get("name") || "").trim();
   const group = String(form.get("group") || "").trim();

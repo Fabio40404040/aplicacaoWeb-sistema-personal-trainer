@@ -1,3 +1,4 @@
+import { notifyNewStudent, sendStudentWelcome } from './account-emails.js'
 import { seatProblem } from './saas.js'
 import { trainerIdForSlug, trainerSellsPlan } from './site.js'
 import { readJson } from '../lib/http.js'
@@ -164,6 +165,15 @@ export async function studentAuth(request, env, db, action) {
           account.id,
           student.id,
         ])
+        // Conta nova: e-mail ainda não confirmado; boas-vindas ao aluno e aviso ao personal.
+        try {
+          await db.query('UPDATE student_accounts SET email_verified_at=NULL WHERE id=$1', [account.id])
+        } catch {
+          // sem a migração 036
+        }
+        await sendStudentWelcome(db, account, trainer.id)
+        const planName = (await db.query('SELECT name FROM plans WHERE code=$1', [planCode])).rows[0]?.name
+        await notifyNewStudent(db, trainer.id, account, planName).catch(() => {})
       } catch (error) {
         await db.query('DELETE FROM student_accounts WHERE id=$1', [account.id])
         throw error

@@ -30,3 +30,6 @@ backend/.wrangler-dist
 
 # Arquivos de trabalho do Claude
 Claude outputs/
+
+# Cópias do banco (têm dados pessoais): nunca vão para o GitHub.
+backups/

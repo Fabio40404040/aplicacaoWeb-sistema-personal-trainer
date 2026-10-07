@@ -338,11 +338,9 @@ export async function adminResetTrainerPassword(db, admin, id) {
   return { data: { temporaryPassword: password } }
 }
 
-export async function adminDeleteTrainer(env, db, admin, id, body) {
-  const trainer = await trainerById(db, id)
-  if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
-  if (String(body?.confirmEmail || '').trim().toLowerCase() !== trainer.email.toLowerCase())
-    return { error: 'Digite o e-mail do personal para confirmar a exclusão.', status: 400 }
+// Apaga um personal por completo: arquivos no R2, contas de login dos alunos e
+// todos os dados (usado pelo admin e pelo próprio personal).
+export async function removeTrainer(env, db, id) {
   // Arquivos (GIFs, vídeos, PDFs) do personal no R2.
   let removedFiles = 0
   if (env.MEDIA) {
@@ -388,6 +386,15 @@ export async function adminDeleteTrainer(env, db, admin, id, body) {
       values: [],
     },
   ])
+  return { removedFiles, removedAccounts }
+}
+
+export async function adminDeleteTrainer(env, db, admin, id, body) {
+  const trainer = await trainerById(db, id)
+  if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
+  if (String(body?.confirmEmail || '').trim().toLowerCase() !== trainer.email.toLowerCase())
+    return { error: 'Digite o e-mail do personal para confirmar a exclusão.', status: 400 }
+  const { removedFiles, removedAccounts } = await removeTrainer(env, db, id)
   await audit(
     db,
     admin,

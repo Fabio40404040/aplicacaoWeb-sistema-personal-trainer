@@ -290,6 +290,10 @@ export function replySupportTicket(id, body) {
 export function logoutRemote() {
   if (sessionStorage.getItem(TOKEN_KEY)) void request("/auth/logout", { method: "POST", body: "{}" }).catch(() => {});
 }
+// Rotas da própria conta do personal (primeiros passos, e-mail, exportar, excluir).
+export function accountRequest(path, options = {}) {
+  return request(path, options);
+}
 export function fetchBilling() {
   return request("/billing", { timeoutMs: 20000 });
 }
