@@ -2,6 +2,7 @@
 // a cor, o banner, o contato e os preços do personal dono do endereço:
 //   /            → site do dono
 //   /p/<slug>    → página de um personal (o cadastro do aluno cai para ele)
+import { showNotFound } from './not-found.js'
 import { setWhatsappContact } from './whatsapp.js'
 
 const API_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/u, '')
@@ -246,7 +247,7 @@ export async function initSiteBrand() {
   try {
     const response = await fetch(`${API_URL}/api/public/site${slug ? `/${slug}` : ''}`)
     if (response.status === 404 && slug) {
-      location.replace('/') // endereço que não existe: volta ao site principal
+      showNotFound('trainer') // endereço de personal que não existe
       return
     }
     if (!response.ok) return

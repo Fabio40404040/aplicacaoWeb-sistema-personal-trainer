@@ -29,6 +29,7 @@ import { initAgendaSettings } from './modules/agenda-settings.js'
 import { initWhatsappFloat } from './modules/whatsapp.js'
 import { initExerciseHub } from './modules/exercise-hub.js'
 import { initPlanPreview } from './modules/plan-preview.js'
+import { initNotFound } from './modules/not-found.js'
 
 function initialize(name, initializer) {
   try {
@@ -42,6 +43,7 @@ function initialize(name, initializer) {
 
 // Os acessos ficam independentes dos demais recursos do painel. Assim, uma
 // incompatibilidade em outro módulo não impede o aluno de entrar ou ver erros.
+initialize('página não encontrada', initNotFound)
 initialize('separação de credenciais', initCredentialSeparation)
 initialize('controles de senha', initPasswordControls)
 initialize('acesso do aluno', initStudentAccess)

@@ -131,7 +131,7 @@ function exportCsv(rows) {
     ),
   ]
   // BOM para o Excel abrir os acentos certos.
-  const blob = new Blob([`﻿${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
+  const blob = new Blob([`\uFEFF${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = `${words.file}-${periodLabel().toLowerCase().replace(/[^a-z0-9à-ú]+/giu, '-')}.csv`

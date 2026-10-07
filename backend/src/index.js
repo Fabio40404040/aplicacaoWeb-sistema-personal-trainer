@@ -69,14 +69,12 @@ import { updateStudentAccess } from "./routes/access.js";
 import {
   acceptPrivacy,
   changePlan,
-  requestPlan,
   studentPortal,
   submitCheckin,
 } from "./routes/student-portal.js";
 import {
   cardPaymentConfig,
   createCardPayment,
-  createCheckout,
   createPixPayment,
   mercadoPagoWebhook,
   reconcileStudentPayments,
@@ -264,6 +262,29 @@ async function handleRoutes(request, env) {
   // Link de confirmação que vai no e-mail de boas-vindas.
   if (request.method === "GET" && route === "public/verify-email")
     return withDb(env, (db) => verifyEmailPage(db, new URL(request.url).searchParams.get("token")));
+  // Modo "só observar" da política de segurança: o navegador avisa aqui o que
+  // seria bloqueado. Fica em Admin → Registro de ações → Erros do sistema.
+  if (request.method === "POST" && route === "public/csp-report") {
+    const body = await request.json().catch(() => ({}));
+    const report = body?.["csp-report"] || (Array.isArray(body) ? body[0]?.body : body) || {};
+    const blocked = String(report["blocked-uri"] || report.blockedURL || "").slice(0, 200);
+    const directive = String(report["effective-directive"] || report["violated-directive"] || report.effectiveDirective || "").slice(0, 80);
+    if (blocked && directive)
+      await withDb(env, async (db) => {
+        const message = `CSP: ${directive} bloquearia ${blocked.replace(/[?#].*$/u, "")}`;
+        // Um registro por combinação: não enche a lista com repetidos.
+        const seen = (await db.query("SELECT 1 AS x FROM error_log WHERE route='CSP' AND message=$1 LIMIT 1", [message])).rows[0];
+        if (!seen)
+          await db.batch([
+            {
+              sql: "INSERT INTO error_log (route, message, detail) VALUES ('CSP',$1,$2)",
+              values: [message, String(report["document-uri"] || report.documentURL || "").slice(0, 300)],
+            },
+            { sql: "DELETE FROM error_log WHERE id <= (SELECT MAX(id) FROM error_log) - 500", values: [] },
+          ]);
+      }).catch(() => {});
+    return new Response(null, { status: 204 });
+  }
   if (request.method === "POST" && route === "public/cron")
     return withDb(env, async (db) => {
       await runBillingNotices(env, db);
@@ -412,18 +433,14 @@ async function handleRoutes(request, env) {
         return deleteStudentAccount(env, db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/plan-change")
         return changePlan(db, session.sub, await readJson(request));
-      if (request.method === "POST" && route === "student/plan-request")
-        return requestPlan(db, session.sub, await readJson(request));
       // Personal com o plano cheio: aluno novo não paga até abrir vaga.
       if (
         request.method === "POST" &&
-        ["student/payments/checkout", "student/payments/pix", "student/payments/card", "student/payments/manual-paid"].includes(route)
+        ["student/payments/pix", "student/payments/card", "student/payments/manual-paid"].includes(route)
       ) {
         const noSeat = await seatProblem(db, { accountId: session.sub });
         if (noSeat) return { error: noSeat, status: 403 };
       }
-      if (request.method === "POST" && route === "student/payments/checkout")
-        return createCheckout(db, session.sub, env, await readJson(request));
       if (request.method === "GET" && route === "student/payments/options")
         return paymentOptions(db, session.sub, env);
       if (request.method === "POST" && route === "student/payments/manual-paid")
@@ -483,8 +500,6 @@ async function handleRoutes(request, env) {
           status: 403,
         };
     }
-    if (request.method === "GET" && route === "session")
-      return { data: { support: session.support || null } };
     // Assinatura da plataforma (planos dos personais).
     if (request.method === "GET" && route === "billing")
       return billingInfo(env, db, session.sub);
@@ -520,18 +535,6 @@ async function handleRoutes(request, env) {
       return { error: "Rota não encontrada.", status: 404 };
     }
     const saas = await saasState(db, session.sub);
-    // Assinatura vencida: o painel fica só para consulta (os alunos continuam
-    // com acesso). Suporte, perfil e pagamento seguem liberados.
-    if (
-      saas?.status === "expired" &&
-      !session.support &&
-      request.method !== "GET" &&
-      !["support", "profile", "billing"].includes(segments[0])
-    )
-      return {
-        error: "Sua assinatura da plataforma venceu. Renove em Minha assinatura para voltar a editar.",
-        status: 402,
-      };
     if (request.method === "GET" && route === "support/access") return supportAccess(db, session.sub);
     if (request.method === "GET" && route === "support/tickets")
       return trainerTickets(db, session.sub);

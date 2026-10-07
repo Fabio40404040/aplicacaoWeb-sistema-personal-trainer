@@ -175,6 +175,18 @@ function trainerNotifications() {
   const byId = new Map(students.map((student) => [String(student.id), student]))
   const items = []
 
+  // Um aluno tentou entrar pela página e o plano estava cheio (últimos 7 dias).
+  const blockedDay = window.farisaBilling?.seatBlockedAt
+  if (blockedDay)
+    items.push({
+      id: `vaga:${blockedDay}`,
+      tone: 'warn',
+      icon: '🚪',
+      title: 'Um aluno tentou se cadastrar e não havia vaga',
+      detail: 'Seu plano está cheio. Abra uma vaga ou assine o Ilimitado para não perder alunos.',
+      href: '#assinatura',
+    })
+
   // Agenda de hoje e de amanhã.
   ;(data.appointments || [])
     .filter((item) => item.status === 'scheduled')
@@ -392,6 +404,7 @@ export function initPersonalExtras() {
     center?.update(trainerNotifications())
   }
   window.addEventListener('farisa:data-changed', refresh)
+  window.addEventListener('farisa:billing-loaded', refresh)
   // A agenda muda com o relógio (atendimento que já passou, virada do dia).
   window.setInterval(refresh, 5 * 60_000)
   refresh()

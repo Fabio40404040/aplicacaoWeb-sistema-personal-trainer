@@ -281,50 +281,6 @@ export async function submitCheckin(db, accountId, body) {
   return { data: result.rows[0], status: 201 };
 }
 
-export async function requestPlan(db, accountId, body) {
-  const planCode = String(body?.planCode || "");
-  const channel = ["webapp", "whatsapp", "pix", "card_whatsapp"].includes(
-    body?.paymentChannel,
-  )
-    ? body.paymentChannel
-    : "whatsapp";
-  const plan = (
-    await db.query(
-      'SELECT code, access_type AS "accessType" FROM plans WHERE code=$1 AND active=1',
-      [planCode],
-    )
-  ).rows[0];
-  if (!plan) return { error: "Plano inválido.", status: 400 };
-  const billingCycle =
-    plan.accessType === "permanent"
-      ? "permanent"
-      : ["monthly", "quarterly", "semiannual", "annual"].includes(
-            body?.billingCycle,
-          )
-        ? body.billingCycle
-        : "quarterly";
-  await db.batch([
-    {
-      sql: `UPDATE student_accounts SET requested_plan_code=$2, requested_payment_channel=$3, requested_billing_cycle=$4 WHERE id=$1`,
-      values: [accountId, planCode, channel, billingCycle],
-    },
-    {
-      sql: `UPDATE students SET plan_code=$2, access_type=$3, billing_cycle=$4, access_status='pending', payment_status='pending',
-            payment_method=$5, updated_at=CURRENT_TIMESTAMP
-            WHERE id=(SELECT student_id FROM student_accounts WHERE id=$1)`,
-      values: [accountId, planCode, plan.accessType, billingCycle, channel],
-    },
-  ]);
-  return {
-    data: {
-      message:
-        channel === "webapp"
-          ? "Plano solicitado. O pagamento online será liberado quando o provedor for conectado."
-          : "Plano solicitado. Combine o pagamento com o personal pelo WhatsApp.",
-    },
-  };
-}
-
 // Planos que o personal do aluno vende, com os preços dele.
 async function planOptions(db, trainerId) {
   const plans = await trainerPlans(db, trainerId);

@@ -1,70 +1,56 @@
-# FARISA Personal — Cloudflare Workers + D1
+# FARISA — API (Cloudflare Pages Functions + D1 + R2)
 
-O backend usa Cloudflare D1 (SQLite), sem PostgreSQL ou Hyperdrive. HTML, CSS e JavaScript continuam separados no frontend.
+A API roda como Pages Function (`functions/api/[[path]].js` chama `backend/src/index.js`), no mesmo endereço do site, em `/api`. Banco: Cloudflare D1 (`farisa-coach`). Arquivos (vídeos, PDFs, GIFs): Cloudflare R2 (`farisa-personal-media`).
 
-## Testar localmente
+`backend/wrangler.jsonc` serve só para rodar a API no computador e aplicar migrações; a publicação é feita pelo Pages (arquivo `wrangler.jsonc` da pasta principal).
 
-1. Na pasta backend, execute npm install.
-2. No primeiro npm run dev, uma chave de sessão aleatória local será criada automaticamente em .dev.vars, sem substituir uma configuração existente.
-3. Execute npm run db:migrate:local.
-4. Execute npm run dev. O Worker escuta na porta 8787.
-5. Na raiz do projeto, execute npm run dev. O Vite encaminha /api para o Worker local.
+## Rodar no computador
 
-O banco local é persistido pelo Wrangler em .wrangler/state. Não é o banco de produção.
-
-## Publicar na Cloudflare
-
-1. Autentique o Wrangler com npx wrangler login.
-2. Crie o banco com npx wrangler d1 create farisa-coach.
-3. Em wrangler.jsonc, substitua database_id pelo ID retornado. O binding deve continuar DB.
-4. Execute npm run db:migrate:remote.
-5. Cadastre as chaves de produção com `npx wrangler secret put SESSION_SECRET` e `npx wrangler secret put BREVO_API_KEY`.
-6. Ajuste ALLOWED_ORIGIN para a origem HTTPS do frontend.
-7. Execute npm run deploy.
-8. Defina VITE_API_URL com a URL do Worker antes de compilar/publicar o frontend.
-
-Não publique com o ID composto por zeros. Nenhum banco remoto é criado pelos comandos locais.
-
-## Primeiro personal
-
-Gere o hash com node scripts/hash-password.mjs SUA_SENHA e insira no D1:
-
-```sql
-INSERT INTO trainers (name, email, password_hash)
-VALUES ('Fábio Santos', 'contato@farisa.example', 'COLE_AQUI_O_HASH_GERADO');
+```bash
+npm install
+npm run db:migrate:local
+npm run dev        # porta 8787
 ```
 
-O registro do aluno é separado da conta do personal. Tokens de aluno não acessam a administração. A vinculação autorizada entre contas de aluno e fichas de treino ainda está pendente; o painel mostra a espera por liberação.
+O banco local fica em `.wrangler/state` e não tem relação com o do site publicado. Copie `.dev.vars.example` para `.dev.vars` e preencha o que for testar; sem a chave da Brevo, os e-mails não saem e o "esqueci a senha" mostra o link na tela.
 
-## Recuperação de senha
+## Segredos em produção
 
-O aluno e o personal possuem fluxos separados de recuperação. O Worker envia os links pela API HTTPS de e-mails transacionais do Brevo.
+Cadastre em Pages → Settings → Variables and Secrets (ou `npx wrangler pages secret put NOME`). Depois de cadastrar, publique de novo para valer.
 
-No ambiente local, copie as variáveis de `.dev.vars.example` para `.dev.vars`: use uma chave de API do Brevo em `BREVO_API_KEY`, um remetente validado em `EMAIL_FROM` e, opcionalmente, `BREVO_FROM_NAME` e `BREVO_REPLY_TO`. O nome antigo `BREVO_FROM_EMAIL` continua aceito por compatibilidade. Sem provedor configurado, o desenvolvimento local mostra um botão com o link para facilitar o teste, mas não envia e-mail.
+| Segredo | Para quê |
+| --- | --- |
+| `SESSION_SECRET` | Assina as sessões (e, por reserva, protege os dados de recebimento) |
+| `BREVO_API_KEY` | Envio de e-mails |
+| `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_PUBLIC_KEY` | Conta Mercado Pago da plataforma (assinaturas) |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Confere os avisos de pagamento do Mercado Pago |
+| `MERCADO_PAGO_CLIENT_ID`, `MERCADO_PAGO_CLIENT_SECRET` | Conexão da conta Mercado Pago de cada personal |
 
-Para produção, valide o remetente ou domínio no Brevo, configure `EMAIL_FROM`, ajuste `PUBLIC_SITE_URL` para a URL HTTPS publicada e cadastre `BREVO_API_KEY` como secret do Worker. Nunca coloque a chave do Brevo no frontend ou no repositório.
+Variáveis (não secretas, em `wrangler.jsonc` da pasta principal): `PUBLIC_SITE_URL`, `PUBLIC_API_URL`, `ALLOWED_ORIGIN`, `EMAIL_FROM`, `BREVO_FROM_NAME`, `SESSION_TTL_SECONDS`.
 
-Os tokens expiram em 30 minutos, são armazenados somente como hash e consumidos em um batch transacional D1. A troca de senha invalida as sessões anteriores da respectiva conta. Configure limitação de requisições na Cloudflare antes de disponibilizar os endpoints publicamente.
+## Contas e acesso
+
+- **Personal:** cria a própria conta na vitrine (plano Grátis). Tabela `trainers`.
+- **Aluno:** se cadastra pela página do personal (`/p/<endereço>`) ou é criado por ele. Tabelas `student_accounts` (login) e `students` (ficha).
+- **Administrador:** tabela `platform_admins`, separada. Criar ou trocar a senha: `npm run admin` (na pasta principal). O login pede a senha e um código enviado por e-mail.
+- **Demonstração:** contas de `backend/demo/demo-seed.sql`, sempre somente leitura no servidor.
+
+Sessão de aluno não acessa o painel; sessão de personal só vê os próprios dados; sessão de administrador não abre o painel nem a área do aluno (só pelo "acesso de suporte", com motivo e registro).
+
+## Pagamentos
+
+- **Alunos → personal:** na conta Mercado Pago que o personal conectar (OAuth) ou pela chave Pix dele (conferência manual). O valor é sempre calculado no servidor.
+- **Personal → plataforma (Ilimitado):** Pix ou cartão na conta da plataforma, um mês por pagamento.
+- Aviso do Mercado Pago: `POST /api/payments/mercadopago/webhook` (com assinatura). Estorno ou contestação tira o acesso.
+
+## E-mails
+
+Enviados pela Brevo (`lib/recovery-email.js`, `lib/notify.js`): redefinição de senha, boas-vindas com confirmação de e-mail, novo aluno, Pix para conferir, pagamento confirmado, plano vencendo e recibo da assinatura. Os avisos de vencimento rodam por `POST /api/public/cron`, chamado duas vezes por dia pelo worker da pasta `agendador`.
 
 ## Migrações
 
-As migrações ficam em migrations-d1 e são aplicadas pelo Wrangler.
+Ficam em `migrations-d1`, numeradas em ordem. Para criar uma mudança de banco, adicione o próximo número e rode `npm run db:migrate:remote` (na pasta principal) antes de publicar. Nunca edite uma migração que já foi aplicada.
 
-Documentação: https://developers.cloudflare.com/d1/get-started/ e https://developers.brevo.com/docs/send-a-transactional-email
+## Proteções
 
-## Área do administrador (/admin)
-
-A área do dono da plataforma fica numa página separada: `/admin/#acesso-farisa`, no site publicado e no `npm run dev`. Ela tem login próprio e não aparece no painel dos personais nem no site público.
-
-- A conta de administrador fica na tabela `platform_admins` (migração 021), separada das contas de personal.
-- Criar ou trocar a senha do administrador: `npm run admin` (na pasta principal). O script pede nome, e-mail e senha e grava no computador, no site ou nos dois.
-- As rotas `/api/admin/*` só aceitam sessão de administrador. Sessão de personal ou aluno recebe 403, e a sessão de administrador não abre o painel do personal nem a área do aluno.
-- Hoje a página lista os personais cadastrados com alunos, alunos com acesso, fichas, cadastro e último acesso.
-
-## Recuperação de senha
-
-"Esqueci a senha" funciona para personal e aluno. No site publicado, o e-mail sai pela Brevo: cadastre o segredo `BREVO_API_KEY` no Cloudflare. `EMAIL_FROM` precisa ser um remetente validado na Brevo.
-
-## Remoção da antiga conta de demonstração
-
-`npm run demo:remover` (na pasta principal) apaga a conta `demo@farisa.example`, os alunos fictícios e tudo deles, no banco do computador e no do site publicado (`scripts/remover-demo.sql`). As outras contas não são tocadas.
+Limite de tentativas em login, cadastro, redefinição de senha e cartão (`lib/rate-limit.js`); "Sair" invalida o token (`revoked_sessions`); textos limitados a 10 mil caracteres; erros do servidor ficam em `error_log` (Admin → Registro de ações → Erros do sistema).

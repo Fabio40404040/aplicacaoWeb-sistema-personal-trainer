@@ -1,39 +1,70 @@
-# FARISA Personal
+# FARISA
 
-Painel administrativo responsivo para profissionais de Educação Física que atuam com musculação, com login, gestão de alunos, fichas de treino, biblioteca de exercícios, avaliação física completa e acompanhamento de evolução. A prescrição nutricional não faz parte do sistema e pode ser conduzida por nutricionista parceiro.
+Plataforma (SaaS) para personal trainers: cada personal tem a própria página, com a marca dele, a área do aluno, fichas de treino com vídeo e GIF, avaliação física, agenda e recebimento dos alunos direto na conta dele.
 
-## Rodar o projeto
+- **Vitrine da plataforma:** `/` (para personais conhecerem e criarem a conta).
+- **Página de cada personal:** `/p/<endereço>` (site dele + área do aluno).
+- **Painel do personal:** `/personal/`.
+- **Administração (dono da plataforma):** `/admin/`.
+
+## Planos
+
+Dois planos para o personal: **Grátis** (permanente, com limite de alunos e de espaço) e **Ilimitado** (mensal, pago por Pix ou cartão, sem renovação automática). Os valores e limites são editados em Admin → Planos.
+
+## Rodar no computador
 
 ```bash
 npm install
+npm --prefix backend install
+npm run db:migrate:local
 npm run dev
 ```
 
-O comando `npm run dev` prepara o banco local e inicia automaticamente a interface e a API. O site abre na porta 5173 e a API usa a porta 8787. Pressione `Ctrl+C` para encerrar os dois serviços.
+O site abre na porta 5173 e a API na 8787. `Ctrl+C` encerra os dois.
 
-O acesso do personal usa uma conta profissional armazenada no Cloudflare D1. A tela de ativação de novas contas está preparada, mas permanece desativada. O cadastro e login do aluno também usam Cloudflare Workers + D1. O Vite encaminha `/api` para esse serviço. Para uma API publicada em outro domínio, informe sua URL em `VITE_API_URL` antes de compilar.
+## Publicar
 
-A recuperação de senha do aluno e do personal usa links temporários gerados pelo Worker e enviados pelo Brevo. As variáveis e as etapas de publicação estão descritas em `backend/README.md`.
+A publicação é automática: todo `git push` na branch `main` publica o site na Cloudflare Pages.
 
-## Adicionar à tela inicial
+```bash
+npm run db:migrate:remote   # só quando houver arquivo novo em backend/migrations-d1
+git add -A && git commit -m "o que mudou" && git push
+```
 
-O site inclui um manifesto PWA, ícones para Android e iPhone e uma página de aviso quando estiver offline. No Android, use o botão **Adicionar à tela inicial** quando aparecer. No iPhone, abra a versão publicada em HTTPS no Safari e escolha **Compartilhar → Adicionar à Tela de Início**. O endereço `localhost` funciona apenas no próprio computador; para instalar no celular, publique o site em HTTPS. Contas, treinos e avaliações exigem conexão com a API e não são armazenados no cache offline.
+Se o primeiro comando der o erro **7403**, o login da Cloudflare expirou:
+
+```bash
+npx --prefix backend wrangler logout
+npm run wrangler:login
+```
+
+## Comandos úteis
+
+| Comando | O que faz |
+| --- | --- |
+| `npm run dev` | Site e API no computador |
+| `npm run build` | Monta o site em `dist/` |
+| `npm test` | Testes automáticos (rode depois do build) |
+| `npm run db:migrate:remote` | Aplica as mudanças de banco no site publicado |
+| `npm run backup` | Baixa uma cópia do banco para `backups/` (fora do GitHub) |
+| `npm run agendador:publicar` | Publica o agendador dos avisos diários (só quando ele mudar) |
+| `npm run admin` | Cria o administrador ou troca a senha dele |
+| `npm run senha` | Troca a senha de um personal |
+| `npm run demo:reset:remote` | Recria a conta de demonstração da vitrine |
 
 ## Estrutura
 
-- `index.html`: toda a marcação da interface, incluindo formulários e templates.
-- `src/styles`: tokens visuais, base, layout, componentes e responsividade.
-- `src/modules`: autenticação, rotas, estado, API e regras da interface.
-- `src/main.js`: apenas importa e inicializa os módulos.
-- `src/assets`: fontes e demais recursos locais.
-- `public`: favicon, manifesto, ícones e página offline da PWA.
-- `backend`: Cloudflare Worker, banco D1 e instruções de implantação na Cloudflare.
+- `index.html`: vitrine, página do personal, área do aluno e painel (uma página só).
+- `admin/index.html` + `src/admin`: administração.
+- `src/modules`, `src/styles`: telas e estilos.
+- `public`: ícones, banners, manifestos, Termos e Política de Privacidade.
+- `functions/api`: a API (chama `backend/src`). `functions/p`: título e prévia de compartilhamento da página de cada personal.
+- `backend/src`: rotas da API. `backend/migrations-d1`: mudanças do banco, em ordem.
+- `agendador`: worker que chama o site duas vezes por dia (avisos de vencimento).
+- `tests`: testes automáticos.
 
-## Verificação
+## Chaves e segredos
 
-```bash
-npm run lint
-npm run build
-```
+Chaves reais ficam **somente** nos Secrets da Cloudflare (Pages → Settings → Variables and Secrets). Nunca no código, no GitHub ou em conversas. No computador, ficam em `backend/.dev.vars` (ignorado pelo git).
 
-As etapas específicas da API estão em `backend/README.md`.
+Detalhes da API, dos segredos e dos e-mails: `backend/README.md`.

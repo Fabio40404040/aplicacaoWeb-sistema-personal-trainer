@@ -1,5 +1,5 @@
+import { seatProblem } from './saas.js'
 import { withTrainerPrice } from './site.js'
-import { safeEqual } from '../lib/session.js'
 const BILLING_CYCLES = {
   monthly: { days: 30, months: 1, discount: 1 },
   quarterly: { days: 90, months: 3, discount: 0.95 },
@@ -62,6 +62,12 @@ export async function updateStudentAccess(db, trainerId, studentId, body) {
     : 'paid'
   const paymentMethod = String(body?.paymentMethod || (paymentStatus === 'waived' ? 'courtesy' : 'manual'))
   const active = accessStatus === 'active' && ['paid', 'waived'].includes(paymentStatus)
+  // Liberar um pré-cadastro (que ainda não ocupa vaga) com o plano cheio não passa.
+  if (active && currentStudent.accountId && (await seatProblem(db, { accountId: currentStudent.accountId })))
+    return {
+      error: 'Seu plano está com todas as vagas preenchidas. Para liberar este aluno, abra uma vaga ou assine o Ilimitado em Minha assinatura.',
+      status: 403,
+    }
   const expiresAt = active ? expiryFor(plan, body?.expiresAt, billingCycle) : null
   const updated = (
     await db.query(

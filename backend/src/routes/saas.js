@@ -114,7 +114,13 @@ export async function seatProblem(db, { trainerId, accountId }) {
       trainerId = student.trainerId
     }
     const state = await saasState(db, trainerId)
-    return state?.studentLimit && state.students >= state.studentLimit ? NO_SEAT : ''
+    const full = Boolean(state?.studentLimit && state.students >= state.studentLimit)
+    // Fica anotado (uma vez por dia) para o personal ver no sininho.
+    if (full)
+      await db
+        .query(`INSERT INTO saas_notices (trainer_id, kind, ref) VALUES ($1,'seat-blocked',date('now')) ON CONFLICT DO NOTHING`, [trainerId])
+        .catch(() => {})
+    return full ? NO_SEAT : ''
   } catch {
     return ''
   }
@@ -178,6 +184,11 @@ export async function billingInfo(env, db, trainerId) {
       plans: await saasPlans(db),
       // E-mail confirmado? e quanto do espaço de vídeos/PDFs já foi usado.
       email: await emailStatus(db, trainerId),
+      // Último dia (até 7 dias atrás) em que um aluno foi barrado por falta de vaga.
+      seatBlockedAt: await db
+        .query(`SELECT MAX(ref) AS day FROM saas_notices WHERE trainer_id=$1 AND kind='seat-blocked' AND ref >= date('now','-7 day')`, [trainerId])
+        .then((result) => result.rows[0]?.day || null)
+        .catch(() => null),
       storage: await mediaUsage(db, trainerId),
       pending: (
         await db.query(
@@ -240,26 +251,8 @@ export async function startSaasCheckout(env, db, trainerId, body) {
         },
       }
     }
-    const siteUrl = String(env.PUBLIC_SITE_URL || '').replace(/\/$/u, '')
-    const preference = await mercadoPago('/checkout/preferences', env, {
-      method: 'POST',
-      body: JSON.stringify({
-        items: [{ id: plan.code, title: description, currency_id: 'BRL', quantity: 1, unit_price: amountCents / 100 }],
-        payer: { name: trainer.name, email: trainer.email },
-        payment_methods: { installments: cycle === 'monthly' ? 1 : 12, excluded_payment_types: [{ id: 'ticket' }] },
-        external_reference: intentId,
-        back_urls: {
-          success: `${siteUrl}/personal/#assinatura`,
-          pending: `${siteUrl}/personal/#assinatura`,
-          failure: `${siteUrl}/personal/#assinatura`,
-        },
-        auto_return: 'approved',
-        statement_descriptor: 'FARISA',
-        metadata: { intent_id: intentId, trainer_id: trainerId, kind: 'saas' },
-      }),
-    })
-    await db.query('UPDATE saas_payment_intents SET provider_reference=$2 WHERE id=$1', [intentId, preference.id])
-    return { data: { method, checkoutUrl: preference.init_point } }
+    // Cartão é pago pelo formulário dentro do site (billing/card).
+    throw new Error('Para pagar com cartão, use o botão "Pagar com cartão" em Minha assinatura.')
   } catch (error) {
     await db.query("UPDATE saas_payment_intents SET status='failed' WHERE id=$1", [intentId])
     return { error: error.message, status: 502 }

@@ -267,6 +267,9 @@ async function load() {
   if (!choice.plan) {
     choice.plan = billing.plans.find((plan) => !plan.isFree)?.code || null
   }
+  // O sininho usa isto para avisar quando um aluno ficou sem vaga.
+  window.farisaBilling = billing
+  window.dispatchEvent(new Event('farisa:billing-loaded'))
   paintAlerts()
   paintEmailBanner(billing.email)
   void paintOnboarding()

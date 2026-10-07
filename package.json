@@ -21,7 +21,8 @@
     "demo:remover": "npm --prefix backend run demo:remover:local && npm --prefix backend run demo:remover:remote",
     "wrangler:login": "npm --prefix backend exec -- wrangler login",
     "agendador:publicar": "npm --prefix backend run agendador:deploy",
-    "backup": "npm --prefix backend run db:backup"
+    "backup": "npm --prefix backend run db:backup",
+    "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

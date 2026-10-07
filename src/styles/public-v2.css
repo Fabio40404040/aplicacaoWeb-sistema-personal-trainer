@@ -1558,3 +1558,38 @@ html[data-site-loading] [data-public-screen] {
   font-size: 0.86rem;
   line-height: 1.4;
 }
+
+/* Página não encontrada */
+.not-found {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #0b1220;
+  color: #e2e8f0;
+}
+.not-found > div {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  max-width: 440px;
+  padding: 36px 28px;
+  border-radius: 20px;
+  background: #162033;
+  text-align: center;
+}
+.not-found span {
+  color: #7dd3fc;
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.not-found h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.not-found p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
