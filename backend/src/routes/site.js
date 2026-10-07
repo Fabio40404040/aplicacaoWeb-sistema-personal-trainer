@@ -54,7 +54,8 @@ function cleanReferrals(body) {
   if (whatsapp === undefined) return { error: 'Confira o WhatsApp do nutricionista: informe DDD + número.' }
   const link = webLink(nutritionist.link)
   const appLink = webLink(app.link)
-  if (link === undefined || appLink === undefined) return { error: 'Confira os links das indicações (ex.: instagram.com/perfil).' }
+  const appLinkIos = webLink(app.linkIos)
+  if (link === undefined || appLink === undefined || appLinkIos === undefined) return { error: 'Confira os links das indicações (ex.: instagram.com/perfil).' }
   const value = {
     nutritionist: {
       name: clean(nutritionist.name, 80),
@@ -63,7 +64,7 @@ function cleanReferrals(body) {
       link,
       note: clean(nutritionist.note, 240),
     },
-    app: { name: clean(app.name, 60), link: appLink, note: clean(app.note, 240) },
+    app: { name: clean(app.name, 60), link: appLink, linkIos: appLinkIos, note: clean(app.note, 240) },
   }
   if (!value.nutritionist.name) value.nutritionist = null
   if (!value.app.name) value.app = null
@@ -81,7 +82,10 @@ export function referralsOf(row) {
 export async function trainerReferrals(db, trainerId) {
   if (!trainerId) return null
   try {
-    return referralsOf((await db.query('SELECT referrals FROM trainer_site WHERE trainer_id=$1', [trainerId])).rows[0])
+    const row = (await db.query('SELECT referrals, instagram FROM trainer_site WHERE trainer_id=$1', [trainerId])).rows[0]
+    const value = referralsOf(row)
+    // Instagram do personal: para o aluno tirar dúvidas com ele.
+    return value ? { ...value, instagram: row.instagram || null } : null
   } catch {
     return null // sem a migração 039
   }

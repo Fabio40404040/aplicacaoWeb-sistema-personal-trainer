@@ -799,3 +799,24 @@
   text-align: center;
   text-decoration: none;
 }
+.student-referral p.student-referral-warning {
+  padding: 10px 12px;
+  border: 1px solid #6b4e0c;
+  border-radius: 10px;
+  background: #33270a;
+  color: #fde68a;
+  font-size: 0.82rem;
+}
+.student-referral-ios {
+  color: var(--tool-muted);
+  font-size: 0.8rem;
+}
+.student-referral-contact {
+  margin: 0;
+  color: #dce9f8;
+  font-size: 0.86rem;
+}
+.student-referral-contact a {
+  color: #9cc3ff;
+  font-weight: 700;
+}

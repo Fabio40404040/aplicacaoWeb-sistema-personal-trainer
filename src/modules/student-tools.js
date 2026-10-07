@@ -836,12 +836,31 @@ export function referralsCard(referrals, studentName) {
     head.append(which);
     box.append(head);
     if (app.note) box.append(el("p", "", app.note));
-    if (safeLink(app.link)) {
-      const actions = el("div", "student-referral-actions");
-      actions.append(linkButton("Abrir o app", safeLink(app.link), false));
-      box.append(actions);
-    }
+    // Aviso fixo: indicar um app de registro não é prescrever dieta.
+    box.append(
+      el(
+        "p",
+        "student-referral-warning",
+        "⚠️ É só uma ferramenta de registro, não uma dieta montada por mim. Para um plano alimentar individualizado, procure um(a) nutricionista.",
+      ),
+    );
+    const actions = el("div", "student-referral-actions");
+    const android = safeLink(app.link);
+    const ios = safeLink(app.linkIos);
+    if (android) actions.append(linkButton(ios ? "Android" : /play\.google\.com/iu.test(android) ? "Baixar no Android" : "Abrir o app", android, false));
+    if (ios) actions.append(linkButton("iPhone", ios, false));
+    if (actions.childElementCount) box.append(actions);
+    if (!ios) box.append(el("small", "student-referral-ios", `iPhone: busque “${app.name}” na App Store.`));
     card.append(box);
+  }
+  if (/^[A-Za-z0-9._]{1,60}$/u.test(String(referrals.instagram || ""))) {
+    const contact = el("p", "student-referral-contact", "Dúvidas? Fale com seu personal no Instagram: ");
+    const profile = el("a", "", `@${referrals.instagram}`);
+    profile.href = `https://instagram.com/${referrals.instagram}`;
+    profile.target = "_blank";
+    profile.rel = "noopener noreferrer";
+    contact.append(profile);
+    card.append(contact);
   }
   card.append(el("small", "student-tool-hint", "O plano alimentar é feito pelo nutricionista. O personal cuida do seu treino."));
   return card;

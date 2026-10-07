@@ -493,14 +493,31 @@ function referralsCard(form) {
   const appGrid = el('div', 'field-grid')
   appGrid.append(
     field('App de alimentação (nome)', 'refAppName', app.name, { maxLength: 60, placeholder: 'Ex.: nome do app que você recomenda' }),
-    field('Link do app', 'refAppLink', app.link, { maxLength: 200, placeholder: 'Link da loja ou do site' }),
+    field('Link do app (Android ou site)', 'refAppLink', app.link, { maxLength: 200, placeholder: 'Link da Play Store ou do site' }),
+    field('Link para iPhone (opcional)', 'refAppLinkIos', app.linkIos, { maxLength: 200, placeholder: 'Link da App Store' }),
+  )
+  // Sugestão pronta: preenche os campos; o personal confere e salva.
+  const suggest = el('button', 'button button--secondary', 'Usar sugestão: FatSecret (gratuito)')
+  suggest.type = 'button'
+  suggest.addEventListener('click', () => {
+    form.elements.refAppName.value = 'FatSecret'
+    form.elements.refAppLink.value = 'https://play.google.com/store/apps/details?id=com.fatsecret.android'
+    form.elements.refAppNote.value =
+      'Indico o app FatSecret (gratuito) para você registrar sua alimentação e acompanhar as calorias.'
+  })
+  const warning = el(
+    'p',
+    'support-muted',
+    'O aluno sempre vê este aviso junto do app: "⚠️ É só uma ferramenta de registro, não uma dieta montada por mim. Para um plano alimentar individualizado, procure um(a) nutricionista." Sem link para iPhone, aparece a orientação de buscar o app na App Store. Seu Instagram (em Contato e redes sociais) também aparece para o aluno tirar dúvidas.',
   )
   card.append(
     who,
     reach,
     field('Recado sobre o nutricionista', 'refNutriNote', nutritionist.note, { maxLength: 240, placeholder: 'Ex.: meus alunos têm desconto na primeira consulta' }),
     appGrid,
+    suggest,
     field('Recado sobre o app', 'refAppNote', app.note, { maxLength: 240, placeholder: 'Ex.: use para anotar as refeições e me mostre no check-in' }),
+    warning,
   )
   form.append(card)
 }
@@ -560,7 +577,7 @@ function render() {
                     link: values.refNutriLink,
                     note: values.refNutriNote,
                   },
-                  app: { name: values.refAppName, link: values.refAppLink, note: values.refAppNote },
+                  app: { name: values.refAppName, link: values.refAppLink, linkIos: values.refAppLinkIos, note: values.refAppNote },
                 },
               }
             : {}),
