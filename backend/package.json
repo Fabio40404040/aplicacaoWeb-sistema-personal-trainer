@@ -13,7 +13,8 @@
     "demo:reset:local": "wrangler d1 execute DB --local --file=demo/demo-seed.sql",
     "demo:reset:remote": "wrangler d1 execute DB --remote --file=demo/demo-seed.sql",
     "demo:remover:local": "wrangler d1 execute DB --local --file=scripts/remover-demo.sql",
-    "demo:remover:remote": "wrangler d1 execute DB --remote --file=scripts/remover-demo.sql"
+    "demo:remover:remote": "wrangler d1 execute DB --remote --file=scripts/remover-demo.sql",
+    "agendador:deploy": "wrangler deploy --config ../agendador/wrangler.jsonc"
   },
   "dependencies": {},
   "devDependencies": {

@@ -1,0 +1,12 @@
+{
+  // Agendador da FARISA: um worker mínimo que "toca a campainha" do site duas
+  // vezes por dia, para os e-mails de vencimento da assinatura saírem no horário
+  // mesmo sem ninguém visitar o site. Não acessa o banco nem guarda segredo.
+  // Publicar (uma vez só):  npm run agendador:publicar
+  "name": "farisa-agendador",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-12",
+  // 11:00 e 23:00 UTC = 08:00 e 20:00 em Fortaleza/Brasília.
+  "triggers": { "crons": ["0 11 * * *", "0 23 * * *"] },
+  "vars": { "SITE_URL": "https://aplicacaoweb-sistema-personal-trainer.pages.dev" },
+}

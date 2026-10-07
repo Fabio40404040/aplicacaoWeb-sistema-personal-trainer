@@ -19,7 +19,8 @@
     "demo:reset:local": "npm --prefix backend run demo:reset:local",
     "demo:reset:remote": "npm --prefix backend run demo:reset:remote",
     "demo:remover": "npm --prefix backend run demo:remover:local && npm --prefix backend run demo:remover:remote",
-    "wrangler:login": "npm --prefix backend exec -- wrangler login"
+    "wrangler:login": "npm --prefix backend exec -- wrangler login",
+    "agendador:publicar": "npm --prefix backend run agendador:deploy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
