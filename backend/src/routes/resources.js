@@ -1,3 +1,4 @@
+import { recordLoad } from "./student-tools.js";
 import { hashPassword, isStrongPassword } from "../lib/session.js";
 
 // Só links https:// ou caminhos do próprio site (bloqueia "javascript:").
@@ -193,11 +194,13 @@ async function saveWorkoutExercises(db, trainerId, workoutId, body) {
       values: [workoutId],
     },
   ];
+  const loadChanges = [];
   prescriptions.forEach((prescription, index) => {
     const before = previous.get(String(prescription.exerciseId));
     // Sem o campo na tela (versão antiga aberta) mantém o que estava.
     const load = prescription.load === undefined ? before?.load || "" : loadText(prescription.load);
     const changed = load !== (before?.load || "");
+    if (withLoad && changed && load) loadChanges.push([prescription.exerciseId, load, before]);
     queries.push({
       sql: withLoad
         ? `INSERT INTO workout_exercises (workout_id,exercise_id,position,sets,repetitions,rest_seconds,notes,session_label,load,load_by,load_at)
@@ -229,12 +232,21 @@ async function saveWorkoutExercises(db, trainerId, workoutId, body) {
     });
   });
   await db.batch(queries);
+  for (const [exerciseId, load, before] of loadChanges)
+    await recordLoad(db, workoutId, exerciseId, load, "trainer", before);
 }
 
 // Personal ajusta a carga de um exercício sem abrir a ficha inteira.
 export async function trainerSetLoad(db, trainerId, workoutId, body) {
   if (!(await loadReady(db))) return { error: "A carga ainda não está disponível. Fale com o suporte.", status: 503 };
   const load = loadText(body?.load);
+  const exerciseId = String(body?.exerciseId || "");
+  const before = (
+    await db.query(
+      `SELECT load, load_by AS "loadBy", load_at AS "loadAt" FROM workout_exercises WHERE workout_id=$1 AND exercise_id=$2`,
+      [workoutId, exerciseId],
+    )
+  ).rows[0];
   const row = (
     await db.query(
       `UPDATE workout_exercises SET load=$3, load_by=$4, load_at=$5
@@ -243,6 +255,7 @@ export async function trainerSetLoad(db, trainerId, workoutId, body) {
       [workoutId, String(body?.exerciseId || ""), load || null, load ? "trainer" : null, load ? new Date().toISOString() : null, trainerId],
     )
   ).rows[0];
+  if (row) await recordLoad(db, workoutId, exerciseId, load, "trainer", before);
   return row ? { data: row } : { error: "Exercício não encontrado nesta ficha.", status: 404 };
 }
 

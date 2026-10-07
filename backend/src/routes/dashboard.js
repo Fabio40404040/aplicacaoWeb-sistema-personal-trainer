@@ -1,3 +1,4 @@
+import { trainerToolsData } from "./student-tools.js";
 import { trainerPrices } from './site.js'
 async function withTrainerPrices(db, trainerId, plans) {
   const prices = await trainerPrices(db, trainerId)
@@ -202,6 +203,8 @@ export async function dashboard(db, trainerId) {
     workouts: workouts.rows,
     assessments: assessments.rows,
     checkins: checkins.rows,
+    // Recados dos alunos ao concluir o treino e evolução das cargas.
+    ...(await trainerToolsData(db, trainerId)),
     // Preços que este personal cobra (Meu site → Preços).
     plans: await withTrainerPrices(db, trainerId, plans.rows),
     appointments: appointments.rows,

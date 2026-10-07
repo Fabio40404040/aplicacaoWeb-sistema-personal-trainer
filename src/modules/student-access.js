@@ -6,6 +6,17 @@ import { createQrCodeImage } from "./pix.js";
 import { hideStudentExtras, renderStudentExtras } from "./student-extras.js";
 import { renderStudentAgenda } from "./student-agenda.js";
 import { cancelPlanChange, openPlanChange } from "./student-plan.js";
+import {
+  assessmentCard,
+  loadTrend,
+  progressCard,
+  restTimer,
+  trainingCalendarCard,
+  waterCard,
+} from "./student-tools.js";
+
+// Calendário, água e evolução da carga (vêm junto com os dados do aluno).
+let studentTools = null;
 
 // Recarrega a área do aluno (definido quando a área inicia).
 let reloadStudentPanel = async () => {};
@@ -399,7 +410,7 @@ const DEFAULT_INSTRUCTIONS = "Siga a orientação do personal.";
 
 // Carga do exercício: o aluno anota o peso que está usando e salva. O
 // personal vê a mudança na ficha e também pode ajustar.
-function loadEditor(exercise) {
+function loadEditor(exercise, onSaved) {
   const box = element("form", "student-load");
   box.noValidate = true;
   const label = element("label", "");
@@ -434,7 +445,9 @@ function loadEditor(exercise) {
         exerciseId: exercise.id,
         load: input.value,
       });
+      const previous = { load: exercise.load, loadBy: exercise.loadBy, loadAt: exercise.loadAt };
       Object.assign(exercise, { load: result.load || "", loadBy: result.loadBy, loadAt: result.loadAt });
+      onSaved?.(result, previous);
       input.value = exercise.load;
       save.hidden = true;
       note.textContent = describe();
@@ -488,7 +501,13 @@ function exerciseCard(exercise, uploadedVideos) {
   if (exercise.repetitions) chip(`${exercise.repetitions} reps`);
   if (Number(exercise.restSeconds)) chip(`descanso ${exercise.restSeconds}s`);
   body.append(chips);
-  if (exercise.loadEditable && exercise.workoutId) body.append(loadEditor(exercise));
+  const timer = restTimer(exercise);
+  if (timer) body.append(timer);
+  let trend = null;
+  if (exercise.loadEditable && exercise.workoutId) {
+    trend = loadTrend(exercise, studentTools);
+    body.append(loadEditor(exercise, trend.add));
+  }
 
   const links = element("div", "student-exercise-links");
   if (video) {
@@ -526,6 +545,7 @@ function exerciseCard(exercise, uploadedVideos) {
   }
   if (links.childElementCount) body.append(links);
   card.append(thumb, body);
+  if (trend) card.append(trend.node);
   if (details) card.append(details);
   return card;
 }
@@ -640,6 +660,7 @@ function renderReadyWorkoutLibrary(container, data) {
 }
 
 function renderPortal(container, data) {
+  studentTools = data.tools?.ready ? data.tools : null;
   // Faixa "Meu plano" em uma linha, ocupando a largura toda.
   const plan = element("article", "student-plan-strip student-card--wide");
   plan.append(
@@ -739,30 +760,16 @@ function renderPortal(container, data) {
     });
     container.append(workouts);
   }
-  if (data.access.features.includes("assessments")) {
-    const assessmentCard = article("Avaliação física");
-    if (!data.assessments.length)
-      addLine(assessmentCard, "Nenhuma avaliação foi publicada.");
-    data.assessments.forEach((a) =>
-      addLine(
-        assessmentCard,
-        `${a.protocol} · ${new Intl.DateTimeFormat("pt-BR").format(new Date(a.assessedAt))} · ${a.weightKg} kg · IMC ${a.bmi || "—"} · gordura ${a.bodyFatPercent ?? "—"}%`,
-      ),
+  if (studentTools) {
+    container.append(
+      trainingCalendarCard(studentTools, studentRequest),
+      waterCard(studentTools, studentRequest),
     );
-    container.append(assessmentCard);
   }
-  if (data.access.features.includes("progress")) {
-    const progress = article("Progresso");
-    if (data.assessments.length < 2)
-      addLine(progress, "O progresso aparecerá após a próxima reavaliação.");
-    else {
-      const latest = data.assessments[0],
-        oldest = data.assessments.at(-1),
-        change = (Number(latest.weightKg) - Number(oldest.weightKg)).toFixed(1);
-      addLine(progress, `Variação de peso entre avaliações: ${change} kg.`);
-    }
-    container.append(progress);
-  }
+  if (data.access.features.includes("assessments"))
+    container.append(assessmentCard(data.assessments));
+  if (data.access.features.includes("progress"))
+    container.append(progressCard(data.assessments));
   if (data.access.features.includes("checkins")) {
     const checkin = article("Check-in semanal");
     checkin.id = "student-checkin";
@@ -901,6 +908,8 @@ export function initStudentAccess() {
       ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)
     )
       return true;
+    // Cronômetro de descanso contando: não redesenha por cima dele.
+    if (container.querySelector(".student-rest.is-running")) return true;
     return [...container.querySelectorAll("form")].some((form) =>
       [...form.elements].some(
         (field) =>
@@ -948,7 +957,9 @@ export function initStudentAccess() {
       // digitando era apagado. Agora só redesenha se algo mudou de verdade e
       // se você não está no meio de um formulário, mantendo pastas abertas
       // e a posição da página.
-      const signature = JSON.stringify(data);
+      // Calendário e água guardam o próprio estado na tela: mudanças neles
+      // não precisam redesenhar a área inteira.
+      const signature = JSON.stringify({ ...data, tools: null });
       const changed = signature !== lastSignature;
       if (changed && (!hasRendered || !isEditing(container))) {
         const openFolders = hasRendered ? folderState(container) : null;

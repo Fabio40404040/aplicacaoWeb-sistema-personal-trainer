@@ -1,4 +1,5 @@
 import { loadReady, loadText } from "./resources.js";
+import { recordLoad, studentTools } from "./student-tools.js";
 import { trainerPlans } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
@@ -67,6 +68,13 @@ export async function acceptPrivacy(db, accountId) {
 export async function studentSetLoad(db, accountId, workoutId, body) {
   if (!(await loadReady(db))) return { error: "A carga ainda não está disponível. Fale com o personal.", status: 503 };
   const load = loadText(body?.load);
+  const exerciseId = String(body?.exerciseId || "");
+  const before = (
+    await db.query(
+      `SELECT load, load_by AS "loadBy", load_at AS "loadAt" FROM workout_exercises WHERE workout_id=$1 AND exercise_id=$2`,
+      [workoutId, exerciseId],
+    )
+  ).rows[0];
   const row = (
     await db.query(
       `UPDATE workout_exercises SET load=$3, load_by=$4, load_at=$5
@@ -77,6 +85,7 @@ export async function studentSetLoad(db, accountId, workoutId, body) {
       [workoutId, String(body?.exerciseId || ""), load || null, load ? "student" : null, load ? new Date().toISOString() : null, accountId],
     )
   ).rows[0];
+  if (row) await recordLoad(db, workoutId, exerciseId, load, "student", before);
   return row ? { data: row } : { error: "Exercício não encontrado na sua ficha.", status: 404 };
 }
 
@@ -246,6 +255,8 @@ export async function studentPortal(db, accountId, version) {
         `SELECT id, protocol, weight_kg AS "weightKg", height_cm AS "heightCm", bmi,
           body_fat_percent AS "bodyFatPercent", waist_cm AS "waistCm", hip_cm AS "hipCm", whr,
           blood_pressure AS "bloodPressure", resting_hr AS "restingHr", notes,
+          chest_cm AS "chestCm", arm_cm AS "armCm", thigh_cm AS "thighCm", calf_cm AS "calfCm",
+          push_ups AS "pushUps", plank_seconds AS "plankSeconds", sit_and_reach_cm AS "sitAndReachCm",
           assessed_at AS "assessedAt"
          FROM assessments WHERE student_id=$1 AND published_at IS NOT NULL ORDER BY assessed_at DESC`,
         [account.studentId],
@@ -261,6 +272,13 @@ export async function studentPortal(db, accountId, version) {
       )
     ).rows;
   }
+  // Calendário de treinos, água e evolução da carga.
+  response.tools = await studentTools(
+    db,
+    account.studentId,
+    response.workouts.map((workout) => workout.id),
+    response.assessments[0]?.weightKg,
+  );
   return response;
 }
 

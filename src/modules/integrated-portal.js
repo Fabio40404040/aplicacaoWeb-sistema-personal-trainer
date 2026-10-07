@@ -491,6 +491,23 @@ function renderWorkoutPrescriptionBuilder(form) {
           ? ` em ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
           : ''
       note.textContent = current.loadBy === 'student' ? `Ajustada pelo aluno${when}.` : `Definida por você${when}.`
+      // Evolução da carga deste exercício nesta ficha (a ficha é achada pela
+      // data da última mudança, que é única).
+      const listOf = (workout) => {
+        if (Array.isArray(workout.exercisePrescriptions)) return workout.exercisePrescriptions
+        try {
+          return JSON.parse(workout.exercisePrescriptionsJson || '[]')
+        } catch {
+          return []
+        }
+      }
+      const owner = (getData().workouts || []).find((workout) =>
+        listOf(workout).some(
+          (item) => String(item.exerciseId) === String(current.exerciseId) && item.loadAt === current.loadAt,
+        ),
+      )
+      const trail = (getData().loadHistory?.[`${owner?.id}:${current.exerciseId}`] || []).map((item) => item.load)
+      if (trail.length > 1) note.textContent += ` Evolução: ${trail.slice(-5).join(' → ')}.`
       note.classList.toggle('is-student', current.loadBy === 'student')
       note.hidden = false
     }

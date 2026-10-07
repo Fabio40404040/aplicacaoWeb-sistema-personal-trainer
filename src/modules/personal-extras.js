@@ -203,6 +203,22 @@ function trainerNotifications() {
     })
   })
 
+  // Recados que os alunos deixaram ao concluir o treino (últimos 7 dias).
+  ;(data.trainingNotes || [])
+    .filter((item) => item.note && now - new Date(item.createdAt) < 7 * 86_400_000)
+    .slice(0, 10)
+    .forEach((item) => {
+      const [, month, day] = String(item.day || '').split('-')
+      items.push({
+        id: `recado:${item.studentId}:${item.day}:${item.createdAt}`,
+        tone: 'info',
+        icon: '💬',
+        title: `${item.student || 'Aluno'} concluiu o treino${day ? ` de ${day}/${month}` : ''} e deixou um recado`,
+        detail: item.note,
+        href: '#alunos',
+      })
+    })
+
   // Um aluno tentou entrar pela página e o plano estava cheio (últimos 7 dias).
   const blockedDay = window.farisaBilling?.seatBlockedAt
   if (blockedDay)

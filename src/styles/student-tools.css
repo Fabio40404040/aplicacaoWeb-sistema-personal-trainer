@@ -1,0 +1,725 @@
+/* Ferramentas da área do aluno (tema escuro da área). */
+.student-tool {
+  --tool-accent: var(--site-blue, #3d8bfd);
+  --tool-soft: #172233;
+  --tool-line: #3b4f6b;
+  --tool-muted: #9fb3cc;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.student-tool h2 {
+  margin-bottom: 0;
+}
+.student-tool-status:empty {
+  display: none;
+}
+.student-tool-status {
+  margin: 0;
+  color: #dce9f8;
+  font-size: 0.85rem;
+}
+.student-tool-hint,
+.student-tool-empty {
+  margin: 0;
+  color: var(--tool-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.student-tool-empty {
+  font-size: 0.92rem;
+}
+.student-tool-subtitle {
+  color: var(--tool-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.student-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #9cc3ff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Cronômetro de descanso */
+.student-rest {
+  position: relative;
+  overflow: hidden;
+  justify-self: start;
+  align-self: flex-start;
+  min-width: min(170px, 100%);
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid #3b4f6b;
+  border-radius: 999px;
+  background: #172233;
+  color: #dce9f8;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+.student-rest-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: rgba(61, 139, 253, 0.38);
+  transition: width 0.25s linear;
+}
+.student-rest-label {
+  position: relative;
+  font-variant-numeric: tabular-nums;
+}
+.student-rest.is-running {
+  border-color: #3d8bfd;
+  color: #fff;
+}
+.student-rest.is-done {
+  border-color: #34d399;
+  background: #0f3d2e;
+  color: #d1fae5;
+}
+.student-rest.is-done .student-rest-fill {
+  display: none;
+}
+
+/* Evolução da carga */
+.student-trend {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #2c3d55;
+  border-radius: 10px;
+  background: #121c2b;
+}
+.student-trend[hidden] {
+  display: none;
+}
+.student-trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.student-trend-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.student-trend-text strong {
+  color: #fff;
+  font-size: 0.9rem;
+}
+.student-trend-text small {
+  flex-basis: 100%;
+  color: #9fb3cc;
+  font-size: 0.74rem;
+}
+.student-trend-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #24364d;
+  color: #cfe0f5;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+.student-trend-badge.is-up {
+  background: #0f3d2e;
+  color: #6ee7b7;
+}
+.student-trend-chart {
+  flex: 0 0 110px;
+  width: 110px;
+  height: 30px;
+}
+.student-trend-chart polyline {
+  stroke: #6ee7b7;
+}
+.student-trend-chart circle {
+  stroke: none;
+  fill: #6ee7b7;
+}
+.student-trend-list ul[hidden] {
+  display: none;
+}
+.student-trend-list ul {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.student-trend-list li {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  color: #dce9f8;
+  font-size: 0.8rem;
+}
+.student-trend-list li span,
+.student-trend-list li small {
+  color: #9fb3cc;
+}
+
+/* Calendário de treinos */
+.student-calendar-today {
+  display: grid;
+  gap: 10px;
+}
+.student-calendar-today.is-done {
+  justify-items: start;
+  padding: 12px 14px;
+  border: 1px solid #1f7a5a;
+  border-radius: 12px;
+  background: #0f3d2e;
+  color: #d1fae5;
+}
+.student-calendar-today.is-done small {
+  color: #a7f3d0;
+}
+.student-calendar-note {
+  display: grid;
+  gap: 10px;
+}
+.student-calendar-note[hidden] {
+  display: none;
+}
+.student-calendar-note label {
+  display: grid;
+  gap: 6px;
+  color: #dce9f8;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.student-calendar-note textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--tool-line);
+  border-radius: 10px;
+  background: #0f1826;
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+.student-calendar-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.student-calendar-stats div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: var(--tool-soft);
+  text-align: center;
+}
+.student-calendar-stats strong {
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.student-calendar-stats span {
+  color: var(--tool-muted);
+  font-size: 0.72rem;
+}
+.student-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.student-calendar-nav strong {
+  color: #fff;
+  font-size: 0.95rem;
+}
+.student-calendar-nav button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--tool-line);
+  border-radius: 50%;
+  background: var(--tool-soft);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.student-calendar-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.student-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+.student-calendar-weekday {
+  color: var(--tool-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+.student-calendar-day {
+  aspect-ratio: 1;
+  max-height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--tool-soft);
+  color: #dce9f8;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-calendar-day:disabled {
+  background: transparent;
+  color: #5d6f88;
+  cursor: default;
+}
+.student-calendar-day.is-today {
+  border-color: #fff;
+}
+.student-calendar-day.is-done,
+.student-calendar-day.is-done:disabled {
+  background: #10b981;
+  color: #04261b;
+}
+
+/* Água */
+.student-water-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.student-water-ring {
+  position: relative;
+  flex: 0 0 124px;
+  width: 124px;
+  height: 124px;
+}
+.student-water-ring svg {
+  width: 100%;
+  height: 100%;
+}
+.student-water-track,
+.student-water-bar {
+  fill: none;
+  stroke-width: 11;
+}
+.student-water-track {
+  stroke: #24364d;
+}
+.student-water-bar {
+  stroke: #38bdf8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease;
+}
+.student-water-ring.is-full .student-water-bar {
+  stroke: #34d399;
+}
+.student-water-value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.student-water-value strong {
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+.student-water-value span {
+  color: var(--tool-muted);
+  font-size: 0.72rem;
+}
+.student-water-side {
+  display: grid;
+  flex: 1;
+  gap: 10px;
+  justify-items: start;
+  min-width: 0;
+}
+.student-water-message {
+  margin: 0;
+  color: #dce9f8;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.student-water-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+.student-water-add {
+  display: grid;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 1px solid #1d6fa5;
+  border-radius: 12px;
+  background: #0f2c44;
+  color: #e0f2fe;
+  font: inherit;
+  cursor: pointer;
+}
+.student-water-add strong {
+  font-size: 0.95rem;
+}
+.student-water-add span {
+  color: #a5d8f5;
+  font-size: 0.74rem;
+}
+.student-water-add:active {
+  transform: scale(0.97);
+}
+.student-water-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.student-water-day {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+.student-water-day-bar {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 26px;
+  height: 46px;
+  border-radius: 6px;
+  background: #24364d;
+}
+.student-water-day-bar i {
+  position: absolute;
+  inset: auto 0 0 0;
+  border-radius: 6px 6px 0 0;
+  background: #38bdf8;
+}
+.student-water-day.is-full .student-water-day-bar i {
+  background: #34d399;
+}
+.student-water-day small {
+  color: var(--tool-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.student-water-day.is-today small {
+  color: #fff;
+}
+.student-water-goal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--tool-muted);
+  font-size: 0.82rem;
+}
+.student-water-goal-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.student-water-goal-form input {
+  width: 96px;
+  padding: 6px 10px;
+  border: 1px solid var(--tool-line);
+  border-radius: 8px;
+  background: #0f1826;
+  color: #fff;
+  font: inherit;
+}
+.student-water-goal-form button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #1557f0;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Avaliação física */
+.student-assessment-meta {
+  margin: 0;
+  color: var(--tool-muted);
+  font-size: 0.86rem;
+}
+.student-bmi {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1b2a40, #16202f);
+}
+.student-bmi-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+.student-bmi-head span {
+  color: var(--tool-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.student-bmi-head strong {
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+}
+.student-bmi-tag {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 800;
+}
+.student-bmi-tag.is-low {
+  background: #12345c;
+  color: #93c5fd;
+}
+.student-bmi-tag.is-ok {
+  background: #0f3d2e;
+  color: #6ee7b7;
+}
+.student-bmi-tag.is-warn {
+  background: #4a3508;
+  color: #fcd34d;
+}
+.student-bmi-tag.is-high {
+  background: #4c1717;
+  color: #fca5a5;
+}
+.student-bmi-scale {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  margin-top: 6px;
+}
+.student-bmi-scale i {
+  border-radius: 3px;
+}
+.student-bmi-scale i:first-child {
+  border-radius: 6px 3px 3px 6px;
+}
+.student-bmi-scale i:nth-child(4) {
+  border-radius: 3px 6px 6px 3px;
+}
+.student-bmi-scale .is-low {
+  background: #60a5fa;
+}
+.student-bmi-scale .is-ok {
+  background: #34d399;
+}
+.student-bmi-scale .is-warn {
+  background: #fbbf24;
+}
+.student-bmi-scale .is-high {
+  background: #f87171;
+}
+.student-bmi-scale b {
+  position: absolute;
+  top: -5px;
+  width: 6px;
+  height: 22px;
+  margin-left: -3px;
+  border: 2px solid #16202f;
+  border-radius: 4px;
+  background: #fff;
+  box-sizing: content-box;
+}
+.student-bmi-ticks {
+  position: relative;
+  height: 14px;
+}
+.student-bmi-ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  color: var(--tool-muted);
+  font-size: 0.7rem;
+}
+.student-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+.student-metric {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #2c3d55;
+  border-radius: 12px;
+  background: var(--tool-soft);
+}
+.student-metric-icon {
+  font-size: 1.05rem;
+}
+.student-metric-label {
+  color: var(--tool-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.student-metric-value {
+  grid-column: 1 / -1;
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+.student-metric-value small {
+  color: var(--tool-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.student-metric-delta {
+  grid-column: 1 / -1;
+  color: #9cc3ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.student-assessment-notes {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--tool-accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--tool-soft);
+}
+.student-assessment-notes span {
+  color: var(--tool-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.student-assessment-notes p {
+  margin: 0;
+  color: #dce9f8;
+  font-size: 0.9rem;
+  white-space: pre-line;
+}
+.student-assessment-older summary {
+  color: #9cc3ff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-assessment-older ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.student-assessment-older li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--tool-soft);
+  font-size: 0.84rem;
+}
+.student-assessment-older li span {
+  color: var(--tool-muted);
+}
+.student-assessment-older li strong {
+  color: #dce9f8;
+}
+
+/* Progresso */
+.student-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.student-progress-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #2c3d55;
+  border-radius: 12px;
+  background: var(--tool-soft);
+}
+.student-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.student-progress-head span {
+  color: var(--tool-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.student-progress-head strong {
+  color: #fff;
+  font-size: 1.05rem;
+}
+.student-progress-item small {
+  color: var(--tool-muted);
+  font-size: 0.74rem;
+}
+.student-progress-chart {
+  width: 100%;
+  height: auto;
+}
+.student-progress-line {
+  stroke: #60a5fa;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.student-progress-area {
+  stroke: none;
+  fill: rgba(96, 165, 250, 0.14);
+}
+.student-progress-dot {
+  fill: #60a5fa;
+  stroke: #172233;
+  stroke-width: 2;
+}
+.student-progress-value,
+.student-progress-date {
+  stroke: none;
+}
+.student-progress-value {
+  fill: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.student-progress-date {
+  fill: #9fb3cc;
+  font-size: 9.5px;
+}
+
+@media (max-width: 420px) {
+  .student-water-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .student-water-ring {
+    align-self: center;
+  }
+}

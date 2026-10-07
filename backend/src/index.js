@@ -74,6 +74,7 @@ import {
   submitCheckin,
   studentSetLoad,
 } from "./routes/student-portal.js";
+import { setTrainingDay, setWater } from "./routes/student-tools.js";
 import {
   cardPaymentConfig,
   createCardPayment,
@@ -432,6 +433,10 @@ async function handleRoutes(request, env) {
       // Aluno ajusta a carga de um exercício da ficha dele.
       if (request.method === "POST" && segments[1] === "workouts" && segments[2] && segments[3] === "load")
         return studentSetLoad(db, session.sub, segments[2], await readJson(request));
+      if (request.method === "POST" && route === "student/training-day")
+        return setTrainingDay(db, session.sub, await readJson(request));
+      if (request.method === "POST" && route === "student/water")
+        return setWater(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/checkins")
         return submitCheckin(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/account/delete")
