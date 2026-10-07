@@ -1,8 +1,12 @@
 // Aluno cuja conta foi criada pelo personal: no primeiro acesso ele precisa
 // aceitar os Termos de Uso e a Política de Privacidade (LGPD).
+import { isDemoSession } from './demo-invite.js'
+
 let box = null
 
 export function ensurePrivacyAccepted(data, { request, reload } = {}) {
+  // Na demonstração nada é salvo: o aceite não se aplica.
+  if (isDemoSession()) return
   if (!data?.privacyPending || !request || box?.open) return
   box?.remove()
   box = document.createElement('dialog')

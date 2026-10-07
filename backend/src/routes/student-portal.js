@@ -1,3 +1,4 @@
+import { isDemoEmail } from "../lib/demo.js";
 import { loadReady, loadText } from "./resources.js";
 import { recordLoad, studentTools } from "./student-tools.js";
 import { trainerLocked } from "./plan-access.js";
@@ -49,8 +50,10 @@ async function gifSchemaReady(db) {
 async function privacyPending(db, accountId) {
   try {
     const row = (
-      await db.query('SELECT privacy_accepted_at AS at FROM student_accounts WHERE id=$1', [accountId])
+      await db.query('SELECT privacy_accepted_at AS at, email FROM student_accounts WHERE id=$1', [accountId])
     ).rows[0]
+    // Conta de demonstração não salva nada: não pede o aceite.
+    if (isDemoEmail(row?.email)) return false
     return Boolean(row) && !row.at
   } catch {
     return false // sem a migração 026
