@@ -123,7 +123,10 @@ export async function dashboard(db, trainerId) {
        a.body_fat_percent || '%' AS fat, a.waist_cm || ' cm' AS waist, a.hip_cm || ' cm' AS hip,
        a.whr, a.protocol, a.blood_pressure AS "bloodPressure", a.resting_hr || ' bpm' AS "restingHR",
        a.restriction, a.parq, a.push_ups AS "pushUps", a.plank_seconds AS plank,
-       a.sit_and_reach_cm AS "sitAndReach", a.notes, a.published_at AS "publishedAt"
+       a.sit_and_reach_cm AS "sitAndReach", a.notes, a.published_at AS "publishedAt",
+       a.height_cm AS "heightCm", a.hip_cm AS "hipCm", a.resting_hr AS "restingHr",
+       a.chest_cm AS "chestCm", a.arm_cm AS "armCm", a.thigh_cm AS "thighCm", a.calf_cm AS "calfCm",
+       a.plank_seconds AS "plankSeconds", a.sit_and_reach_cm AS "sitAndReachCm"
        FROM assessments a JOIN students s ON s.id=a.student_id WHERE a.trainer_id=$1 ORDER BY a.assessed_at DESC`,
       [trainerId],
     ),

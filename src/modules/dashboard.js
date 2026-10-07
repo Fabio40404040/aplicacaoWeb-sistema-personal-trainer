@@ -6,9 +6,13 @@ import {
   persistRecord,
   removeRecord,
   syncRemoteData,
+  fetchSiteSettings,
   updateStudentAccess,
 } from './api-client.js'
 import { downloadWorkoutPdf } from './workout-pdf.js'
+import { downloadAssessmentPdf } from './assessment-pdf.js'
+import { renderEvolutionChart } from './evolution-chart.js'
+import { ACCENTS } from './site-brand.js'
 import { paintAvatar } from './profile-kit.js'
 import { legGroupNames } from '../data/library.js'
 import {
@@ -217,7 +221,11 @@ const numberFrom = (value) => {
 }
 const assessmentDate = (item) => {
   if (!item) return null
-  const date = new Date(item.assessedAt || '')
+  // Data sem hora é lida no fuso local (como UTC cairia um dia antes no Brasil).
+  const only = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T ]00:00:00)/u.exec(String(item.assessedAt || ''))
+  const date = only
+    ? new Date(Number(only[1]), Number(only[2]) - 1, Number(only[3]))
+    : new Date(item.assessedAt || '')
   return Number.isNaN(date.getTime()) ? null : date
 }
 const shortDate = (date) =>
@@ -811,6 +819,34 @@ function renderAssessments() {
       summary.append(avatar, info, highlights)
       const body = document.createElement('div')
       body.className = 'assessment-grid assessment-group-body'
+      // Relatório em PDF com a última avaliação e a evolução deste aluno.
+      const pdfBar = document.createElement('div')
+      pdfBar.className = 'assessment-pdf-bar'
+      const pdfButton = document.createElement('button')
+      pdfButton.type = 'button'
+      pdfButton.className = 'button button--secondary'
+      pdfButton.textContent = '⬇ Baixar relatório em PDF'
+      pdfButton.addEventListener('click', async () => {
+        pdfButton.disabled = true
+        let site = null
+        try {
+          site = await fetchSiteSettings()
+        } catch {
+          /* sem os dados do site: sai com a marca padrão */
+        }
+        const mark = site?.brandMark || (site?.trainerName || '').split(/\s+/u)[0]
+        downloadAssessmentPdf(
+          items,
+          { name: latest.student },
+          {
+            brand: mark ? `${mark} ${site?.brandName || 'Personal'}` : '',
+            accent: ACCENTS[site?.accent] || ACCENTS.blue,
+          },
+        )
+        pdfButton.disabled = false
+      })
+      pdfBar.append(pdfButton)
+      body.append(pdfBar)
       body.append(...items.map(assessmentCard))
       group.append(summary, body)
       return group
@@ -1090,26 +1126,17 @@ function renderProgress() {
       value: numberFrom(item[metric]),
     }))
     .filter((item) => item.date && item.value !== null)
-    .slice(-6)
-  const values = entries.map((item) => item.value)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = max - min || 1
-  document.querySelector('[data-progress-bars]').replaceChildren(
-    ...entries.map((item) => {
-      const bar = document.createElement('i')
-      bar.style.setProperty('--value', `${35 + ((item.value - min) / range) * 55}%`)
-      const label = document.createElement('span')
-      label.textContent = item.value.toLocaleString('pt-BR', {
-        maximumFractionDigits: 1,
-      })
-      bar.append(label)
-      return bar
-    }),
-  )
-  document
-    .querySelector('[data-progress-months]')
-    .replaceChildren(...entries.map((item) => elementSpan(monthLabel(item.date))))
+    .slice(-12)
+  const metricInfo = {
+    weightKg: ['Peso', 'kg'],
+    bodyFatPercent: ['Gordura corporal', '%'],
+    waistCm: ['Cintura', 'cm'],
+    bmi: ['IMC', ''],
+  }[metric] || ['Valor', '']
+  renderEvolutionChart(document.querySelector('[data-progress-chart]'), entries, {
+    label: metricInfo[0],
+    unit: metricInfo[1],
+  })
   const first = assessments[0]
   const last = assessments.at(-1)
   const updateDifference = (name, firstValue, lastValue, unit) => {

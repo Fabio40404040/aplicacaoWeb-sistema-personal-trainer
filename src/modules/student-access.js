@@ -1,5 +1,6 @@
 import { demoInviteOn } from "./demo-invite.js";
-import { currentSiteSlug } from "./site-brand.js";
+import { ACCENTS, currentSiteSlug } from "./site-brand.js";
+import { downloadAssessmentPdf } from "./assessment-pdf.js";
 import { downloadWorkoutPdf } from "./workout-pdf.js";
 import { openSecureCardForm } from "./mercado-pago-card.js";
 import { createQrCodeImage } from "./pix.js";
@@ -767,7 +768,21 @@ function renderPortal(container, data) {
     );
   }
   if (data.access.features.includes("assessments"))
-    container.append(assessmentCard(data.assessments));
+    container.append(
+      assessmentCard(data.assessments, () => {
+        // Marca e cor da página do personal em que o aluno está.
+        const mark = document.querySelector(".student-access-shell .brand-mark, [data-public-screen] .brand-mark")?.textContent?.trim();
+        const brandName = document.querySelector("[data-public-screen] .brand-name")?.textContent?.trim();
+        downloadAssessmentPdf(
+          data.assessments,
+          { name: data.name },
+          {
+            brand: mark ? `${mark} ${brandName || "Personal"}` : "",
+            accent: ACCENTS[document.documentElement.dataset.accent] || ACCENTS.blue,
+          },
+        );
+      }),
+    );
   if (data.access.features.includes("progress"))
     container.append(progressCard(data.assessments));
   if (data.access.features.includes("checkins")) {

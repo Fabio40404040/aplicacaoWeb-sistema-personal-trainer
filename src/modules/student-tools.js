@@ -602,7 +602,7 @@ const deltaText = (current, previous, unit) => {
   return `${diff > 0 ? "▲ +" : "▼ −"}${numberBr(Math.abs(diff))} ${unit} vs. anterior`;
 };
 
-export function assessmentCard(assessments) {
+export function assessmentCard(assessments, onDownload) {
   const card = el("article", "student-tool student-assessment student-card--wide");
   card.append(el("h2", "", "Avaliação física"));
   if (!assessments.length) {
@@ -656,6 +656,12 @@ export function assessmentCard(assessments) {
     });
     older.append(list);
     card.append(older);
+  }
+  if (onDownload) {
+    const download = el("button", "button button--secondary", "⬇ Baixar avaliação e evolução em PDF");
+    download.type = "button";
+    download.addEventListener("click", () => onDownload());
+    card.append(download);
   }
   card.append(el("small", "student-tool-hint", "O IMC é uma referência geral para adultos e não considera a massa muscular. Vale a leitura do seu personal."));
   return card;

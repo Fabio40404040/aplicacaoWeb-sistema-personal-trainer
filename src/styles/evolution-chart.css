@@ -1,0 +1,217 @@
+/* Gráfico de evolução (painel do personal). */
+.evo {
+  --evo-color: var(--painel-accent, var(--blue-600, #1764ff));
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+.evo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.evo-now {
+  display: grid;
+  gap: 2px;
+}
+.evo-now span {
+  color: var(--ink-500, #6b7890);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.evo-now strong {
+  color: var(--ink-900, #14213d);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.evo-now small {
+  color: var(--ink-500, #6b7890);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.evo-change {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  text-align: right;
+}
+.evo-change strong {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #eef2f8;
+  color: var(--ink-700, #3f4c67);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+.evo-change.is-down strong,
+.evo-change.is-up strong {
+  background: color-mix(in srgb, var(--evo-color) 12%, #fff);
+  color: color-mix(in srgb, var(--evo-color) 80%, #000);
+}
+.evo-change span,
+.evo-single {
+  margin: 0;
+  color: var(--ink-500, #6b7890);
+  font-size: 0.76rem;
+}
+.evo-plot {
+  position: relative;
+  padding: 6px 4px 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfcfe, #f4f7fc);
+  touch-action: pan-y;
+}
+.evo-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.evo-grid {
+  stroke: #e3e8f1;
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+.evo-axis {
+  fill: #8b97ab;
+  stroke: none;
+  font-size: 11px;
+  font-weight: 600;
+}
+.evo-stop-top {
+  stop-color: var(--evo-color);
+  stop-opacity: 0.3;
+}
+.evo-stop-bottom {
+  stop-color: var(--evo-color);
+  stop-opacity: 0;
+}
+.evo-area {
+  stroke: none;
+  animation: evo-fade 0.7s ease 0.25s both;
+}
+.evo-line {
+  fill: none;
+  stroke: var(--evo-color);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: evo-draw 0.9s ease both;
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--evo-color) 30%, transparent));
+}
+.evo-dot {
+  fill: #fff;
+  stroke: var(--evo-color);
+  stroke-width: 3;
+  transition: r 0.15s ease;
+}
+.evo-dot.is-last,
+.evo-dot.is-active {
+  fill: var(--evo-color);
+  stroke: #fff;
+}
+.evo-halo {
+  fill: var(--evo-color);
+  opacity: 0.16;
+  stroke: none;
+}
+.evo-value {
+  fill: var(--ink-700, #3f4c67);
+  stroke: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+.evo-value.is-last {
+  fill: var(--ink-900, #14213d);
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.evo-guide {
+  stroke: var(--evo-color);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0;
+}
+.evo-guide.is-on {
+  opacity: 0.5;
+}
+.evo-tip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 1px;
+  min-width: 120px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ink-900, #14213d);
+  box-shadow: 0 10px 24px rgba(20, 33, 61, 0.25);
+  color: #fff;
+  pointer-events: none;
+  transform: translate(14px, -50%);
+}
+.evo-tip[hidden] {
+  display: none;
+}
+.evo-tip.is-left {
+  transform: translate(calc(-100% - 14px), -50%);
+}
+.evo-tip span,
+.evo-tip small {
+  color: #b9c4d8;
+  font-size: 0.7rem;
+}
+.evo-tip strong {
+  font-size: 1rem;
+}
+.evo-empty {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 44px 16px;
+  border: 1px dashed var(--line, #e6eaf1);
+  border-radius: 16px;
+  color: var(--ink-500, #6b7890);
+  text-align: center;
+}
+.evo-empty span {
+  font-size: 1.8rem;
+}
+.evo-empty strong {
+  color: var(--ink-900, #14213d);
+}
+.evo-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+@keyframes evo-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes evo-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evo-line,
+  .evo-area {
+    animation: none;
+  }
+}
+
+/* Botão do relatório em PDF dentro da pasta de avaliações do aluno. */
+.assessment-pdf-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}

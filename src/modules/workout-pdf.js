@@ -586,7 +586,7 @@ function buildPages(workout, studentInput) {
 // visualmente aquele ponto específico — o efeito fica uniforme na página
 // inteira. Evita a faixa do cabeçalho (título, nome, programa) e do
 // rodapé, pra nunca cruzar com esse texto fino.
-function drawWatermark(commands, text = DEFAULT_BRAND) {
+export function drawWatermark(commands, text = DEFAULT_BRAND) {
   const label = escapePdf(text);
   const angle = (30 * Math.PI) / 180;
   const cos = Math.cos(angle).toFixed(4);
@@ -605,7 +605,7 @@ function drawWatermark(commands, text = DEFAULT_BRAND) {
   commands.push("Q");
 }
 
-function pdfDocument(pages, images) {
+export function pdfDocument(pages, images) {
   const encoder = new TextEncoder();
   const objects = [];
   const pageIds = pages.map((_, index) => 3 + index * 2);
@@ -653,9 +653,9 @@ function pdfDocument(pages, images) {
     });
   });
   objects[regularFontId] =
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
   objects[boldFontId] =
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
   objects[watermarkGsId] = "<< /Type /ExtGState /ca 0.09 /CA 0.09 >>";
   images.forEach((image, index) => {
     objects[imageIds[index]] = {
