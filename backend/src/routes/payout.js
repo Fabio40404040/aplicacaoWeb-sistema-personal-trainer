@@ -212,7 +212,7 @@ async function paidHistory(db, trainerId) {
         `SELECT p.id, p.amount_cents AS "amountCents", p.method, p.provider, p.paid_at AS "paidAt",
            p.billing_cycle AS "billingCycle", s.name AS "studentName", pl.name AS "planName"
          FROM payments p LEFT JOIN students s ON s.id=p.student_id LEFT JOIN plans pl ON pl.code=p.plan_code
-         WHERE p.trainer_id=$1 AND p.status='paid' ORDER BY p.paid_at DESC LIMIT 200`,
+         WHERE p.trainer_id=$1 AND p.status='paid' ORDER BY p.paid_at DESC LIMIT 5000`,
         [trainerId],
       )
     ).rows

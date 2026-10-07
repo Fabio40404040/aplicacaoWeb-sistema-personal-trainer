@@ -2,6 +2,7 @@
 //  - Mercado Pago conectado: Pix e cartão, com liberação automática;
 //  - Chave Pix de qualquer banco: o aluno paga e avisa, o personal confirma.
 import { fetchPayout, payoutAction } from './api-client.js'
+import { historyBox } from './payout-history.js'
 import { showToast } from './utils.js'
 
 const el = (tag, className = '', text = '') => {
@@ -119,56 +120,6 @@ function folder(key, label, count, openByDefault) {
   summary.append(el('span', '', label), el('small', '', String(count)))
   details.append(summary)
   return details
-}
-
-const METHODS = { pix: 'Pix', credit_card: 'Cartão' }
-// Pagamentos recebidos, agrupados por mês (só o mês atual começa aberto).
-function historyBox() {
-  const history = info.history || []
-  if (!history.length) return null
-  const card = el('section', 'panel payout-card')
-  card.append(el('h2', '', 'Pagamentos recebidos'))
-  const months = new Map()
-  history.forEach((item) => {
-    const raw = String(item.paidAt || '')
-    const date = new Date(raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`)
-    const key = Number.isNaN(date.getTime()) ? 'sem-data' : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    if (!months.has(key)) months.set(key, { date, items: [] })
-    months.get(key).items.push({ ...item, date })
-  })
-  let first = true
-  months.forEach((month, key) => {
-    const total = month.items.reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
-    const title =
-      key === 'sem-data'
-        ? 'Sem data'
-        : month.date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./u, (letter) => letter.toUpperCase())
-    const details = folder(`month:${key}`, `${title} · ${money(total)}`, month.items.length, first)
-    first = false
-    month.items.forEach((item) => {
-      const row = el('div', 'payout-pending-row')
-      const text = el('div')
-      text.append(
-        el('strong', '', `${item.studentName || 'Aluno removido'} · ${money(item.amountCents)}`),
-        el(
-          'small',
-          '',
-          [
-            key === 'sem-data' ? '' : item.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-            item.planName,
-            METHODS[item.method] || item.method,
-            item.provider === 'pix_manual' ? 'confirmado por você' : '',
-          ]
-            .filter(Boolean)
-            .join(' · '),
-        ),
-      )
-      row.append(text)
-      details.append(row)
-    })
-    card.append(details)
-  })
-  return card
 }
 
 function mercadoPagoCard() {
@@ -340,7 +291,7 @@ function render() {
     grid.append(mercadoPagoCard(), pixCard())
     root.append(grid)
   }
-  const history = historyBox()
+  const history = historyBox(info.history)
   if (history) root.append(history)
 }
 
