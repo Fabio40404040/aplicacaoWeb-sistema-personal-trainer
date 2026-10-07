@@ -723,3 +723,65 @@
     align-self: center;
   }
 }
+
+/* Nutrição: indicações do personal */
+.student-referral {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #2c3d55;
+  border-radius: 12px;
+  background: var(--tool-soft);
+}
+.student-referral-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.student-referral-icon {
+  display: grid;
+  flex: 0 0 44px;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #0f3d2e;
+  font-size: 1.4rem;
+}
+.student-referral-head div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.student-referral-head small {
+  color: var(--tool-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.student-referral-head strong {
+  color: #fff;
+  font-size: 1.02rem;
+  overflow-wrap: anywhere;
+}
+.student-referral-head span:not(.student-referral-icon) {
+  color: var(--tool-muted);
+  font-size: 0.78rem;
+}
+.student-referral p {
+  margin: 0;
+  color: #dce9f8;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.student-referral-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.student-referral-actions .button {
+  flex: 1 1 140px;
+  text-align: center;
+  text-decoration: none;
+}

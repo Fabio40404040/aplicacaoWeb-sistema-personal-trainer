@@ -472,6 +472,39 @@ function contactCard(form) {
   form.append(card)
 }
 
+function referralsCard(form) {
+  if (!site.referralsReady) return
+  const card = section(
+    'Indicações para o aluno',
+    'Aparecem na área do aluno, no cartão "Nutrição". Indique um nutricionista de confiança e, se quiser, um app para montar refeições e contar calorias. O que ficar vazio não é mostrado.',
+  )
+  const nutritionist = site.referrals?.nutritionist || {}
+  const app = site.referrals?.app || {}
+  const who = el('div', 'field-grid')
+  who.append(
+    field('Nutricionista (nome)', 'refNutriName', nutritionist.name, { maxLength: 80, placeholder: 'Ex.: Dra. Ana Lima' }),
+    field('Registro (CRN)', 'refNutriRegistration', nutritionist.registration, { maxLength: 30, placeholder: 'Ex.: CRN-6 12345' }),
+  )
+  const reach = el('div', 'field-grid')
+  reach.append(
+    field('WhatsApp do nutricionista (com DDD)', 'refNutriWhatsapp', nutritionist.whatsapp ? nutritionist.whatsapp.replace(/^55/u, '') : '', { maxLength: 20, inputMode: 'tel', placeholder: '81 99999-0000' }),
+    field('Instagram ou site', 'refNutriLink', nutritionist.link, { maxLength: 200, placeholder: 'instagram.com/perfil' }),
+  )
+  const appGrid = el('div', 'field-grid')
+  appGrid.append(
+    field('App de alimentação (nome)', 'refAppName', app.name, { maxLength: 60, placeholder: 'Ex.: nome do app que você recomenda' }),
+    field('Link do app', 'refAppLink', app.link, { maxLength: 200, placeholder: 'Link da loja ou do site' }),
+  )
+  card.append(
+    who,
+    reach,
+    field('Recado sobre o nutricionista', 'refNutriNote', nutritionist.note, { maxLength: 240, placeholder: 'Ex.: meus alunos têm desconto na primeira consulta' }),
+    appGrid,
+    field('Recado sobre o app', 'refAppNote', app.note, { maxLength: 240, placeholder: 'Ex.: use para anotar as refeições e me mostre no check-in' }),
+  )
+  form.append(card)
+}
+
 function render() {
   const root = document.querySelector('[data-site-root]')
   if (!root || !site) return
@@ -485,6 +518,7 @@ function render() {
   heroCard(form)
   plansCard(form)
   contactCard(form)
+  referralsCard(form)
   const bar = el('div', 'site-save')
   const status = el('p', 'site-status')
   status.setAttribute('role', 'status')
@@ -516,6 +550,20 @@ function render() {
           instagram: values.instagram,
           facebook: values.facebook,
           tiktok: values.tiktok,
+          ...(site.referralsReady
+            ? {
+                referrals: {
+                  nutritionist: {
+                    name: values.refNutriName,
+                    registration: values.refNutriRegistration,
+                    whatsapp: values.refNutriWhatsapp,
+                    link: values.refNutriLink,
+                    note: values.refNutriNote,
+                  },
+                  app: { name: values.refAppName, link: values.refAppLink, note: values.refAppNote },
+                },
+              }
+            : {}),
           plans: [...form.querySelectorAll('.site-plan')].map((row) => ({
             code: row.dataset.code,
             active: row.querySelector('[name="active"]').checked,

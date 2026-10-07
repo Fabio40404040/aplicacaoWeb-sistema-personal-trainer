@@ -752,3 +752,61 @@ export function progressCard(assessments) {
   card.append(grid);
   return card;
 }
+
+/* ------------------------------------------------------------------ */
+/* Nutrição: indicações do personal                                    */
+/* ------------------------------------------------------------------ */
+
+const safeLink = (value) => (/^https:\/\//iu.test(String(value || "")) ? String(value) : "");
+
+export function referralsCard(referrals, studentName) {
+  const nutritionist = referrals?.nutritionist;
+  const app = referrals?.app;
+  if (!nutritionist && !app) return null;
+  const card = el("article", "student-tool student-referrals");
+  card.append(el("h2", "", "Nutrição"), el("p", "student-tool-empty", "Indicações do seu personal para cuidar da alimentação."));
+  const linkButton = (text, href, primary) => {
+    const link = el("a", `button ${primary ? "button--primary" : "button--secondary"}`, text);
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    return link;
+  };
+  if (nutritionist) {
+    const box = el("div", "student-referral");
+    const head = el("div", "student-referral-head");
+    head.append(el("span", "student-referral-icon", "🥗"));
+    const who = el("div");
+    who.append(el("small", "", "Nutricionista indicado"), el("strong", "", nutritionist.name));
+    if (nutritionist.registration) who.append(el("span", "", nutritionist.registration));
+    head.append(who);
+    box.append(head);
+    if (nutritionist.note) box.append(el("p", "", nutritionist.note));
+    const actions = el("div", "student-referral-actions");
+    if (/^55\d{10,11}$/u.test(String(nutritionist.whatsapp || ""))) {
+      const message = `Olá! Sou ${studentName || "aluno(a)"} e fui indicado(a) pelo meu personal. Gostaria de agendar uma consulta.`;
+      actions.append(linkButton("Chamar no WhatsApp", `https://wa.me/${nutritionist.whatsapp}?text=${encodeURIComponent(message)}`, true));
+    }
+    if (safeLink(nutritionist.link)) actions.append(linkButton("Ver perfil", safeLink(nutritionist.link), false));
+    if (actions.childElementCount) box.append(actions);
+    card.append(box);
+  }
+  if (app) {
+    const box = el("div", "student-referral");
+    const head = el("div", "student-referral-head");
+    head.append(el("span", "student-referral-icon", "📱"));
+    const which = el("div");
+    which.append(el("small", "", "App para refeições e calorias"), el("strong", "", app.name));
+    head.append(which);
+    box.append(head);
+    if (app.note) box.append(el("p", "", app.note));
+    if (safeLink(app.link)) {
+      const actions = el("div", "student-referral-actions");
+      actions.append(linkButton("Abrir o app", safeLink(app.link), false));
+      box.append(actions);
+    }
+    card.append(box);
+  }
+  card.append(el("small", "student-tool-hint", "O plano alimentar é feito pelo nutricionista. O personal cuida do seu treino."));
+  return card;
+}

@@ -11,6 +11,7 @@ import {
   assessmentCard,
   loadTrend,
   progressCard,
+  referralsCard,
   restTimer,
   trainingCalendarCard,
   waterCard,
@@ -767,6 +768,8 @@ function renderPortal(container, data) {
       waterCard(studentTools, studentRequest),
     );
   }
+  const referrals = referralsCard(data.referrals, data.name);
+  if (referrals) container.append(referrals);
   if (data.access.features.includes("assessments"))
     container.append(
       assessmentCard(data.assessments, () => {

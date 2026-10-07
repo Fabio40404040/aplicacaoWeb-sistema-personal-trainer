@@ -40,6 +40,53 @@ const phone = (value) => {
   return /^\d{10,11}$/u.test(local) ? `55${local}` : undefined
 }
 
+// Indicações para o aluno: nutricionista e app de alimentação.
+const webLink = (value) => {
+  const text = clean(value, 200)
+  if (!text) return null
+  const url = /^https?:\/\//iu.test(text) ? text.replace(/^http:/iu, 'https:') : `https://${text}`
+  return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?$/iu.test(url) ? url : undefined
+}
+function cleanReferrals(body) {
+  const nutritionist = body?.nutritionist || {}
+  const app = body?.app || {}
+  const whatsapp = phone(nutritionist.whatsapp)
+  if (whatsapp === undefined) return { error: 'Confira o WhatsApp do nutricionista: informe DDD + número.' }
+  const link = webLink(nutritionist.link)
+  const appLink = webLink(app.link)
+  if (link === undefined || appLink === undefined) return { error: 'Confira os links das indicações (ex.: instagram.com/perfil).' }
+  const value = {
+    nutritionist: {
+      name: clean(nutritionist.name, 80),
+      registration: clean(nutritionist.registration, 30),
+      whatsapp,
+      link,
+      note: clean(nutritionist.note, 240),
+    },
+    app: { name: clean(app.name, 60), link: appLink, note: clean(app.note, 240) },
+  }
+  if (!value.nutritionist.name) value.nutritionist = null
+  if (!value.app.name) value.app = null
+  return { value: value.nutritionist || value.app ? value : null }
+}
+export function referralsOf(row) {
+  try {
+    const value = JSON.parse(row?.referrals || 'null')
+    return value && (value.nutritionist || value.app) ? value : null
+  } catch {
+    return null
+  }
+}
+// Para a área do aluno: o que o personal dele indica.
+export async function trainerReferrals(db, trainerId) {
+  if (!trainerId) return null
+  try {
+    return referralsOf((await db.query('SELECT referrals FROM trainer_site WHERE trainer_id=$1', [trainerId])).rows[0])
+  } catch {
+    return null // sem a migração 039
+  }
+}
+
 async function ownerId(db) {
   return (await db.query('SELECT id FROM trainers ORDER BY created_at, id LIMIT 1')).rows[0]?.id || null
 }
@@ -306,6 +353,8 @@ export async function siteSettings(db, trainerId) {
       ready: true,
       ...publicShape(row, trainer, isOwner),
       heroPreset: row.hero_preset || null,
+      referrals: referralsOf(row),
+      referralsReady: 'referrals' in row,
       accents: ACCENTS,
       plans: await trainerPlans(db, trainerId, { includeInactive: true }),
     },
@@ -324,6 +373,8 @@ export async function saveSite(db, trainerId, body) {
   if (whatsapp === undefined) return { error: 'Confira o WhatsApp: informe DDD + número.', status: 400 }
   const email = clean(body?.email, 120)
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) return { error: 'Confira o e-mail de contato.', status: 400 }
+  const referrals = body?.referrals && 'referrals' in row ? cleanReferrals(body.referrals) : null
+  if (referrals?.error) return { error: referrals.error, status: 400 }
   const accent = ACCENTS.includes(body?.accent) ? body.accent : row.accent
   let heroKind = row.hero_kind
   let heroPreset = row.hero_preset
@@ -387,6 +438,11 @@ export async function saveSite(db, trainerId, body) {
     if (!/icon_/u.test(String(error?.message))) throw error
     await db.batch(queries.slice(0, -1))
   }
+  if (referrals)
+    await db.query('UPDATE trainer_site SET referrals=$2 WHERE trainer_id=$1', [
+      trainerId,
+      referrals.value ? JSON.stringify(referrals.value) : null,
+    ])
   return siteSettings(db, trainerId)
 }
 
