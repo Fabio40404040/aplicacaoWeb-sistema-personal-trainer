@@ -80,6 +80,8 @@ const ROWS = [
   ["Peso", "weightKg", "kg", 1],
   ["Altura", "heightCm", "cm", 0],
   ["Gordura corporal", "bodyFatPercent", "%", 1],
+  ["Massa magra", "leanKg", "kg", 1],
+  ["Massa gorda", "fatKg", "kg", 1],
   ["Cintura", "waistCm", "cm", 1],
   ["Quadril", "hipCm", "cm", 1],
   ["Relação cintura/quadril", "whr", "", 2],
@@ -230,7 +232,17 @@ export function buildAssessmentPdfBytes(assessments, student, options = {}) {
   const dark = hexRgb(options.accent?.dark || "#0d3aa8");
   const theme = { main: pdfColor(accent), dark: pdfColor(mix(dark, [0, 0, 0], 0.25)), soft: pdfColor(mix(accent, WHITE, 0.86)) };
   const brand = String(options.brand || "FARISA PERSONAL").trim().toUpperCase().slice(0, 34);
-  const ordered = [...assessments].sort((a, b) => asDate(b.assessedAt) - asDate(a.assessedAt));
+  const ordered = assessments
+    .map((item) =>
+      has(item.weightKg) && has(item.bodyFatPercent)
+        ? {
+            ...item,
+            leanKg: Number(item.weightKg) * (1 - Number(item.bodyFatPercent) / 100),
+            fatKg: (Number(item.weightKg) * Number(item.bodyFatPercent)) / 100,
+          }
+        : item,
+    )
+    .sort((a, b) => asDate(b.assessedAt) - asDate(a.assessedAt));
   const [latest, previous] = ordered;
   const pages = [];
   let page = [];

@@ -657,6 +657,18 @@ export function assessmentCard(assessments, onDownload) {
   };
   add("⚖️", "Peso", "weightKg", "kg");
   add("📉", "Gordura corporal", "bodyFatPercent", "%");
+  // Massa magra e massa gorda saem do peso e do percentual de gordura.
+  const masses = (item) =>
+    item && has(item.weightKg) && has(item.bodyFatPercent) && Number(item.bodyFatPercent) > 0
+      ? {
+          leanKg: Number(item.weightKg) * (1 - Number(item.bodyFatPercent) / 100),
+          fatKg: (Number(item.weightKg) * Number(item.bodyFatPercent)) / 100,
+        }
+      : {};
+  Object.assign(latest, masses(latest));
+  if (previous) Object.assign(previous, masses(previous));
+  add("💪", "Massa magra", "leanKg", "kg");
+  add("🧈", "Massa gorda", "fatKg", "kg");
   add("📏", "Altura", "heightCm", "cm", 0);
   add("➰", "Cintura", "waistCm", "cm");
   add("🍐", "Quadril", "hipCm", "cm");

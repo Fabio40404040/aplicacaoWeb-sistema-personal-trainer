@@ -2,6 +2,7 @@ import { initAuth } from './modules/auth.js'
 import { initNavigation } from './modules/router.js'
 import { initDashboard } from './modules/dashboard.js'
 import { initForms } from './modules/forms.js'
+import { initBodyFatCalc } from './modules/body-fat-calc.js'
 import { initShortcuts } from './modules/shortcuts.js'
 import { initRemoteSync } from './modules/api-client.js'
 import { initWebTools } from './modules/web-tools.js'
@@ -59,6 +60,7 @@ initialize('check-ins', initCheckins)
 initialize('agenda', initAgenda)
 initialize('configuração da agenda', initAgendaSettings)
 initialize('formulários', initForms)
+initialize('calculadora de gordura', initBodyFatCalc)
 initialize('atalhos', initShortcuts)
 initialize('sincronização remota', initRemoteSync)
 initialize('ferramentas web', initWebTools)

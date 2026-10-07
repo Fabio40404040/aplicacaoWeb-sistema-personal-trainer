@@ -1,0 +1,58 @@
+/* Calculadora de gordura no formulário de avaliação (painel do personal). */
+.fat-calc {
+  display: grid;
+  gap: 12px;
+}
+.fat-calc-toggle {
+  justify-self: start;
+}
+.fat-calc-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 13px;
+  background: #f8fafd;
+}
+.fat-calc-panel[hidden] {
+  display: none;
+}
+.fat-calc-result {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.fat-calc-result p {
+  margin: 0;
+}
+.fat-calc-error {
+  color: #b42318;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.fat-calc-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.fat-calc-tiles div {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.fat-calc-tiles span {
+  color: var(--ink-500);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.fat-calc-tiles strong {
+  color: var(--ink-900);
+  font-size: 1.35rem;
+}
+.fat-calc-tiles div:first-child strong {
+  color: var(--blue-700);
+}
