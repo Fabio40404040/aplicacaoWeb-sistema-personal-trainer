@@ -985,6 +985,12 @@ export function initStudentAccess() {
     try {
       const data = await studentRequest("me");
       if (current !== generation) return;
+      // Aluno que entrou pela página principal ou pela de outro personal:
+      // vai para a página do personal dele (marca, cor e contato certos).
+      if (data.siteSlug && data.siteSlug !== currentSiteSlug()) {
+        location.replace(`/p/${data.siteSlug}#painel-aluno`);
+        return;
+      }
       hasLoadedOnce = true;
       studentDisplayName = data.name || "";
       document.querySelector("[data-student-name]").textContent =
@@ -1064,6 +1070,8 @@ export function initStudentAccess() {
         if (!result?.token)
           throw new Error("O servidor não retornou uma sessão válida.");
         sessionStorage.setItem(TOKEN_KEY, result.token);
+        // Entrou com conta de verdade: deixa de ser sessão de demonstração.
+        sessionStorage.removeItem("farisa-demo");
         if (action === "register") {
           form.reset();
           sessionStorage.setItem(

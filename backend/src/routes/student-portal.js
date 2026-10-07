@@ -158,6 +158,12 @@ export async function studentPortal(db, accountId, version) {
     planOptions: await planOptions(db, account.trainerId || account.accountTrainerId),
     pendingChange: await pendingChange(db, accountId),
   };
+  // Endereço da página do personal deste aluno: se ele entrar por outra página
+  // (a principal ou a de demonstração), o site leva para a página certa.
+  response.siteSlug = await db
+    .query("SELECT slug FROM trainer_site WHERE trainer_id=$1", [account.trainerId || account.accountTrainerId])
+    .then((result) => result.rows[0]?.slug || null)
+    .catch(() => null);
   if (!accessActive || !account.studentId) return response;
 
   // Próximos atendimentos (usados nas notificações do aluno).
