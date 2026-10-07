@@ -158,6 +158,7 @@ export function accountCard() {
 
 // ---------- primeiros passos (aparece no Painel até concluir ou ocultar)
 const HIDE_KEY = 'farisa-primeiros-passos-oculto'
+const DONE_KEY = 'farisa-primeiros-passos-concluido'
 const STEPS = [
   ['profile', 'Complete o seu perfil', 'Foto, telefone e uma frase sobre você.', '#painel', 'profile'],
   ['site', 'Monte a sua página', 'Marca, cor, foto e os preços dos seus planos.', '#meu-site'],
@@ -187,7 +188,13 @@ export async function paintOnboarding() {
     return
   }
   const done = STEPS.filter(([key]) => data.steps?.[key]).length
-  if (done === STEPS.length) {
+  let celebrated = false
+  try {
+    celebrated = localStorage.getItem(DONE_KEY) === '1'
+  } catch {
+    celebrated = false
+  }
+  if (done === STEPS.length && celebrated) {
     card?.remove()
     return
   }
@@ -196,6 +203,38 @@ export async function paintOnboarding() {
     card.dataset.onboarding = ''
     host.querySelector('.page-heading')?.after(card)
   }
+  // Tudo concluído: parabéns uma vez, até a pessoa fechar.
+  if (done === STEPS.length) {
+    card.classList.add('onboarding--done')
+    const close = el('button', 'button button--primary', 'Fechar')
+    close.type = 'button'
+    close.addEventListener('click', () => {
+      try {
+        localStorage.setItem(DONE_KEY, '1')
+      } catch {
+        /* sem armazenamento: some só nesta visita */
+      }
+      card.remove()
+    })
+    const text = el('div')
+    text.append(
+      el('h2', '', '🎉 Tudo pronto!'),
+      el('p', '', 'Sua conta está configurada: perfil, página, recebimento, aluno e treino. Agora é só divulgar a sua página.'),
+    )
+    card.replaceChildren(text)
+    if (data.slug) {
+      const share = el('p', 'onboarding-share')
+      const link = el('a', '', `${location.origin}/p/${data.slug}`)
+      link.href = `/p/${data.slug}`
+      link.target = '_blank'
+      link.rel = 'noopener'
+      share.append('Sua página: ', link)
+      card.append(share)
+    }
+    card.append(close)
+    return
+  }
+  card.classList.remove('onboarding--done')
   const head = el('div', 'onboarding-head')
   const title = el('div')
   title.append(el('h2', '', 'Primeiros passos'), el('p', '', `${done} de ${STEPS.length} concluídos`))

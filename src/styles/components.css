@@ -4874,3 +4874,19 @@ dialog.demo-invite::backdrop {
 .account-delete-status:empty {
   display: none;
 }
+
+.onboarding--done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.onboarding--done h2,
+.onboarding--done p {
+  margin: 0;
+}
+.onboarding--done > div {
+  display: grid;
+  gap: 4px;
+}
+.onboarding--done .button {
+  justify-self: start;
+}
