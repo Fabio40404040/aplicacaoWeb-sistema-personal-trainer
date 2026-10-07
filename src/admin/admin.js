@@ -4,6 +4,7 @@
 import './admin.css'
 import { paintAvatar } from '../modules/profile-kit.js'
 import { initPasswordControls } from '../modules/password-controls.js'
+import { historyBox } from '../modules/payout-history.js'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const TOKEN_KEY = 'farisa-admin-token'
@@ -508,6 +509,63 @@ function setPlan(trainer) {
   box.showModal()
 }
 
+// Aba Faturamento: resumo das assinaturas, vencimentos e o relatório de pagamentos.
+async function renderBilling() {
+  const root = $('[data-admin-billing]')
+  if (!root.childElementCount) root.replaceChildren(el('p', 'admin-billing-note', 'Carregando…'))
+  let data
+  try {
+    data = await api('/admin/billing')
+  } catch (error) {
+    root.replaceChildren(el('p', 'admin-billing-note', error.message))
+    return
+  }
+  const summary = data.summary || {}
+  const tile = (label, value, hint) => {
+    const box = el('article', 'panel admin-billing-tile')
+    box.append(el('span', '', label), el('strong', '', value), el('small', '', hint))
+    return box
+  }
+  const tiles = el('div', 'admin-billing-tiles')
+  tiles.append(
+    tile('Assinantes pagando', String(summary.paying || 0), `de ${summary.trainers || 0} personais`),
+    tile('Receita mensal prevista', money(summary.monthlyCents), 'se todos renovarem'),
+    tile('No plano Grátis', String(summary.free || 0), 'podem virar assinantes'),
+    tile('Cortesia', String(summary.courtesy || 0), 'Ilimitado sem vencimento'),
+  )
+
+  const soon = (data.expiring || []).filter((item) => item.daysLeft <= 30)
+  const due = el('article', 'panel admin-billing-due')
+  due.append(el('h2', '', 'Vencimentos nos próximos 30 dias'))
+  if (!soon.length) due.append(el('p', 'admin-billing-note', 'Nenhuma assinatura vence nos próximos 30 dias.'))
+  soon.forEach((item) => {
+    const row = el('div', 'admin-billing-row')
+    const who = el('div')
+    who.append(el('strong', '', item.name), el('small', '', `${item.email} · ${item.planName} · ${money(item.priceCents)}`))
+    const when =
+      item.daysLeft <= 0 ? 'Venceu' : item.daysLeft === 1 ? 'Vence amanhã' : `Vence em ${item.daysLeft} dias`
+    const tag = el('span', `admin-billing-tag${item.daysLeft <= 3 ? ' is-urgent' : item.daysLeft <= 7 ? ' is-soon' : ''}`, when)
+    const date = toDate(item.expiresAt)
+    if (date) tag.title = date.toLocaleDateString('pt-BR')
+    row.append(who, tag)
+    due.append(row)
+  })
+
+  const report = historyBox(
+    (data.payments || []).map((item) => ({ ...item, studentName: item.trainerName })),
+    {
+      key: 'assinaturas',
+      title: 'Pagamentos de assinatura',
+      who: 'Personal',
+      plural: 'personais',
+      removed: 'Personal removido',
+      file: 'faturamento-farisa',
+      emptyAll: 'Ainda não há pagamentos de assinatura. Eles aparecem aqui assim que um personal assinar.',
+    },
+  )
+  root.replaceChildren(tiles, due, report)
+}
+
 async function renderPlans() {
   saasPlansList = (await api('/admin/saas-plans').catch(() => [])) || []
   $('[data-admin-plans]').replaceChildren(
@@ -822,6 +880,7 @@ function showTab(name) {
   if (name === 'suporte') void loadTickets()
   if (name === 'registro') void renderAudit()
   if (name === 'planos') void renderPlans()
+  if (name === 'faturamento') void renderBilling()
 }
 
 // Telas da entrada: login, "esqueci a senha" e "nova senha" (link do e-mail).

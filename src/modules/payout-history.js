@@ -1,6 +1,8 @@
 // Painel → Recebimentos → "Pagamentos recebidos": período (mês, ano, tudo ou
 // datas escolhidas), filtro por forma de pagamento, busca por aluno, totais e
 // agrupamento por mês, ano, aluno ou plano. Tudo calculado no navegador.
+import '../styles/payout-history.css'
+
 const el = (tag, className = '', text = '') => {
   const node = document.createElement(tag)
   if (className) node.className = className
@@ -21,15 +23,12 @@ const PERIODS = [
   ['all', 'Tudo'],
   ['custom', 'Escolher datas'],
 ]
-const GROUPS = [
-  ['month', 'Mês'],
-  ['year', 'Ano'],
-  ['student', 'Aluno'],
-  ['plan', 'Plano'],
-]
-
-// Lembra as escolhas enquanto a página está aberta.
-const state = { period: 'month', group: 'month', method: 'all', search: '', from: '', to: '', open: {} }
+// Lembra as escolhas enquanto a página está aberta (uma memória por relatório).
+const memory = {}
+// Textos do relatório em uso: no painel do personal quem paga é o "aluno"; no
+// admin, o "personal".
+let state = null
+let words = null
 
 function parse(raw) {
   const text = String(raw || '')
@@ -84,7 +83,7 @@ function filtered(rows) {
 }
 
 function groupKey(item) {
-  if (state.group === 'student') return [item.studentName || 'Aluno removido', item.studentName || 'Aluno removido']
+  if (state.group === 'student') return [item.studentName || words.removed, item.studentName || words.removed]
   if (state.group === 'plan') return [item.planName || 'Sem plano', item.planName || 'Sem plano']
   if (!item.date) return ['sem-data', 'Sem data']
   if (state.group === 'year') return [String(item.date.getFullYear()), String(item.date.getFullYear())]
@@ -118,11 +117,11 @@ function tile(label, value, hint = '') {
 function exportCsv(rows) {
   const cell = (value) => `"${String(value ?? '').replace(/"/gu, '""')}"`
   const lines = [
-    ['Data', 'Aluno', 'Plano', 'Forma', 'Valor (R$)'].map(cell).join(';'),
+    ['Data', words.who, 'Plano', 'Forma', 'Valor (R$)'].map(cell).join(';'),
     ...rows.map((item) =>
       [
         item.date ? item.date.toLocaleDateString('pt-BR') : '',
-        item.studentName || 'Aluno removido',
+        item.studentName || words.removed,
         item.planName || '',
         methodOf(item) + (item.provider === 'pix_manual' ? ' (confirmado por você)' : ''),
         (Number(item.amountCents || 0) / 100).toFixed(2).replace('.', ','),
@@ -135,20 +134,42 @@ function exportCsv(rows) {
   const blob = new Blob([`﻿${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `recebimentos-${periodLabel().toLowerCase().replace(/[^a-z0-9à-ú]+/giu, '-')}.csv`
+  link.download = `${words.file}-${periodLabel().toLowerCase().replace(/[^a-z0-9à-ú]+/giu, '-')}.csv`
   document.body.append(link)
   link.click()
   link.remove()
   window.setTimeout(() => URL.revokeObjectURL(link.href), 2000)
 }
 
-export function historyBox(history) {
+export function historyBox(history, options = {}) {
+  const config = {
+    key: 'alunos',
+    title: 'Pagamentos recebidos',
+    who: 'Aluno',
+    removed: 'Aluno removido',
+    file: 'recebimentos',
+    emptyAll: '',
+    ...options,
+  }
   const all = (history || []).map((item) => ({ ...item, date: parse(item.paidAt) }))
-  if (!all.length) return null
-  const card = el('section', 'panel payout-card payhist')
+  if (!all.length && !config.emptyAll) return null
+  memory[config.key] ||= { period: 'month', group: 'month', method: 'all', search: '', from: '', to: '', open: {} }
+  // Cada desenho usa o estado e os textos do próprio relatório.
+  const use = () => {
+    state = memory[config.key]
+    words = config
+  }
+  use()
+  const GROUPS = [
+    ['month', 'Mês'],
+    ['year', 'Ano'],
+    ['student', config.who],
+    ['plan', 'Plano'],
+  ]
+  const card = el('section', 'panel payhist')
   const head = el('div', 'payhist-head')
   const title = el('div')
-  title.append(el('h2', '', 'Pagamentos recebidos'), el('p', 'payhist-period'))
+  title.append(el('h2', '', config.title), el('p', 'payhist-period'))
   const download = el('button', 'button button--secondary payhist-export', 'Baixar planilha')
   download.type = 'button'
   head.append(title, download)
@@ -171,9 +192,9 @@ export function historyBox(history) {
   const filters = el('div', 'payhist-filters')
   const search = el('input')
   search.type = 'search'
-  search.placeholder = 'Buscar aluno ou plano'
+  search.placeholder = `Buscar ${config.who.toLowerCase()} ou plano`
   search.value = state.search
-  search.setAttribute('aria-label', 'Buscar aluno ou plano')
+  search.setAttribute('aria-label', search.placeholder)
   const methodRow = el('div', 'payhist-line')
   filters.append(search, methodRow)
 
@@ -184,10 +205,12 @@ export function historyBox(history) {
 
   let current = []
   function paint() {
+    use()
     current = filtered(all)
     card.querySelector('.payhist-period').textContent = periodLabel()
     periodRow.replaceChildren(
       chips(PERIODS, state.period, (value) => {
+        use()
         state.period = value
         paint()
       }, 'Período'),
@@ -195,6 +218,7 @@ export function historyBox(history) {
     customRow.hidden = state.period !== 'custom'
     methodRow.replaceChildren(
       chips([['all', 'Todas as formas'], ['pix', 'Pix'], ['credit_card', 'Cartão']], state.method, (value) => {
+        use()
         state.method = value
         paint()
       }, 'Forma de pagamento'),
@@ -205,7 +229,7 @@ export function historyBox(history) {
     const students = new Set(current.map((item) => item.studentName || '?')).size
     tiles.replaceChildren(
       tile('Total recebido', money(total)),
-      tile('Pagamentos', String(current.length), current.length ? `${students} aluno${students === 1 ? '' : 's'}` : ''),
+      tile('Pagamentos', String(current.length), current.length ? `${students} ${students === 1 ? config.who.toLowerCase() : config.plural || `${config.who.toLowerCase()}s`}` : ''),
       tile('Valor médio', current.length ? money(total / current.length) : '—'),
       tile('Pix · Cartão', `${money(sumOf('pix'))} · ${money(sumOf('credit_card'))}`),
     )
@@ -214,13 +238,14 @@ export function historyBox(history) {
     groupLine.replaceChildren(
       el('span', '', 'Agrupar por'),
       chips(GROUPS, state.group, (value) => {
+        use()
         state.group = value
         paint()
       }, 'Agrupar por'),
     )
 
     if (!current.length) {
-      list.replaceChildren(el('p', 'payhist-empty', 'Nenhum pagamento neste período com esses filtros.'))
+      list.replaceChildren(el('p', 'payhist-empty', all.length ? 'Nenhum pagamento neste período com esses filtros.' : config.emptyAll))
       return
     }
     const groups = new Map()
@@ -239,9 +264,10 @@ export function historyBox(history) {
     list.replaceChildren(
       ...ordered.map(([key, group], index) => {
         const id = `${state.group}:${key}`
-        const details = el('details', 'support-folder payout-folder payhist-group')
+        const details = el('details', 'support-folder payhist-group')
         details.open = state.open[id] ?? (ordered.length === 1 || (index === 0 && ['month', 'year'].includes(state.group)))
         details.addEventListener('toggle', () => {
+          use()
           state.open[id] = details.open
         })
         const summary = el('summary')
@@ -256,10 +282,10 @@ export function historyBox(history) {
         bar.append(fill)
         details.append(summary, bar)
         group.items.forEach((item) => {
-          const row = el('div', 'payout-pending-row payhist-row')
+          const row = el('div', 'payhist-row')
           const text = el('div')
           text.append(
-            el('strong', '', state.group === 'student' ? item.planName || 'Pagamento' : item.studentName || 'Aluno removido'),
+            el('strong', '', state.group === 'student' ? item.planName || 'Pagamento' : item.studentName || config.removed),
             el(
               'small',
               '',
@@ -283,18 +309,24 @@ export function historyBox(history) {
 
   // A busca e as datas não redesenham o próprio campo (o cursor não some).
   search.addEventListener('input', () => {
+    use()
     state.search = search.value
     paint()
   })
   from.addEventListener('change', () => {
+    use()
     state.from = from.value
     paint()
   })
   to.addEventListener('change', () => {
+    use()
     state.to = to.value
     paint()
   })
-  download.addEventListener('click', () => exportCsv(current))
+  download.addEventListener('click', () => {
+    use()
+    exportCsv(current)
+  })
   paint()
   return card
 }

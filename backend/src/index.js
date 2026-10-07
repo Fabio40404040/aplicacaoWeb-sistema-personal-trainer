@@ -5,6 +5,7 @@ import { isRevoked, readSession, revokeSession, sessionSignature } from "./lib/s
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
 import {
   adminAuditLog,
+  adminBilling,
   adminCreateTrainer,
   adminDeleteTrainer,
   adminImpersonate,
@@ -337,6 +338,8 @@ async function handleRoutes(request, env) {
             `${body.planCode} até ${body.expiresAt || "sem vencimento"}`);
         return result;
       }
+      if (request.method === "GET" && route === "admin/billing")
+        return { data: await adminBilling(db) };
       if (request.method === "GET" && route === "admin/audit")
         return { data: await adminAuditLog(db) };
       if (request.method === "GET" && route === "admin/support")

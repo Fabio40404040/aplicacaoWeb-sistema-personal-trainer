@@ -418,6 +418,63 @@ export async function adminImpersonate(env, db, admin, id, body) {
   }
 }
 
+// Faturamento da plataforma: pagamentos de assinatura aprovados, quem está
+// pagando e quem vence em breve. A conta de demonstração fica de fora.
+export async function adminBilling(db) {
+  const safe = async (sql) => {
+    try {
+      return (await db.query(sql)).rows
+    } catch {
+      return []
+    }
+  }
+  const payments = await safe(
+    `SELECT i.id, i.amount_cents AS "amountCents", i.method, i.updated_at AS "paidAt",
+       t.name AS "trainerName", t.email AS "trainerEmail", p.name AS "planName"
+     FROM saas_payment_intents i JOIN trainers t ON t.id=i.trainer_id
+     LEFT JOIN saas_plans p ON p.code=i.plan_code
+     WHERE i.status='approved' AND t.id<>'demo-trainer' ORDER BY i.updated_at DESC LIMIT 5000`,
+  )
+  const subscribers = await safe(
+    `SELECT t.id, t.name, t.email, t.saas_expires_at AS "expiresAt", p.name AS "planName", p.price_cents AS "priceCents"
+     FROM trainers t JOIN saas_plans p ON p.code=t.saas_plan_code
+     WHERE p.price_cents > 0 AND t.id<>'demo-trainer' ORDER BY t.saas_expires_at IS NULL, t.saas_expires_at`,
+  )
+  const counts = (
+    await safe(
+      `SELECT COUNT(*) AS total,
+         SUM(CASE WHEN p.price_cents > 0 THEN 0 ELSE 1 END) AS free
+       FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id<>'demo-trainer'`,
+    )
+  )[0] || {}
+  const now = Date.now()
+  const paying = subscribers.filter((item) => item.expiresAt && Date.parse(item.expiresAt) > now)
+  return {
+    payments: payments.map((item) => ({
+      ...item,
+      method: item.method === 'card' ? 'credit_card' : item.method,
+    })),
+    summary: {
+      trainers: Number(counts.total || 0),
+      free: Number(counts.free || 0),
+      paying: paying.length,
+      // Sem vencimento = cortesia (liberado por você, não paga).
+      courtesy: subscribers.filter((item) => !item.expiresAt).length,
+      monthlyCents: paying.reduce((sum, item) => sum + Number(item.priceCents || 0), 0),
+    },
+    expiring: subscribers
+      .filter((item) => item.expiresAt)
+      .map((item) => ({
+        name: item.name,
+        email: item.email,
+        planName: item.planName,
+        priceCents: Number(item.priceCents || 0),
+        expiresAt: item.expiresAt,
+        daysLeft: Math.ceil((Date.parse(item.expiresAt) - now) / 86_400_000),
+      })),
+  }
+}
+
 export async function adminAuditLog(db) {
   try {
     return (

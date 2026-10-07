@@ -133,6 +133,7 @@
           <button type="button" role="tab" class="is-active" data-admin-tab="personais" aria-selected="true">Personais</button>
           <button type="button" role="tab" data-admin-tab="suporte" aria-selected="false">Suporte <span class="admin-tab-count" data-admin-support-count hidden></span></button>
           <button type="button" role="tab" data-admin-tab="planos" aria-selected="false">Planos</button>
+          <button type="button" role="tab" data-admin-tab="faturamento" aria-selected="false">Faturamento</button>
           <button type="button" role="tab" data-admin-tab="registro" aria-selected="false">Registro de ações</button>
         </nav>
 
@@ -153,7 +154,7 @@
             <article class="stat-card"><div class="stat-icon stat-icon--cyan"><svg><use href="#icon-users"></use></svg></div>
               <div><span>Alunos</span><strong data-admin-stat="students">—</strong><small class="trend" data-admin-stat="active">Somando todos</small></div></article>
             <article class="stat-card"><div class="stat-icon stat-icon--green"><svg><use href="#icon-check"></use></svg></div>
-              <div><span>Faturamento dos personais</span><strong data-admin-stat="revenue">—</strong><small class="trend" data-admin-stat="payments">Últimos 30 dias</small></div></article>
+              <div><span>Recebido pelos personais</span><strong data-admin-stat="revenue">—</strong><small class="trend" data-admin-stat="payments">Últimos 30 dias</small></div></article>
             <article class="stat-card"><div class="stat-icon stat-icon--violet"><svg><use href="#icon-activity"></use></svg></div>
               <div><span>Ativos em 30 dias</span><strong data-admin-stat="recent">—</strong><small class="trend">Personais que entraram</small></div></article>
           </div>
@@ -217,6 +218,17 @@
               <button class="button button--primary" type="button" data-admin-save-plans>Salvar planos</button>
             </div>
           </article>
+        </section>
+
+        <section class="admin-section" data-admin-section="faturamento" hidden>
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow--blue">Plataforma FARISA</span>
+              <h1>Faturamento</h1>
+              <p>O que a plataforma recebe das assinaturas dos personais, quem está pagando e quem vence em breve.</p>
+            </div>
+          </div>
+          <div class="admin-billing" data-admin-billing></div>
         </section>
 
         <section class="admin-section" data-admin-section="registro" hidden>

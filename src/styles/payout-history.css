@@ -1,0 +1,179 @@
+/* Recebimentos → Pagamentos recebidos (período, filtros, totais, grupos) */
+.payhist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.payhist-head h2 {
+  margin: 0;
+}
+.payhist .payhist-period {
+  font-weight: 700;
+  color: var(--blue-700, #1d4ed8);
+}
+.payhist-line,
+.payhist-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.payhist-chip {
+  padding: 7px 13px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-700, #334155);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.payhist-chip:hover {
+  border-color: #94a3b8;
+}
+.payhist-chip.is-active {
+  border-color: #1557f0;
+  background: #1557f0;
+  color: #fff;
+}
+.payhist-dates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 10px;
+  max-width: 420px;
+}
+.payhist-dates[hidden] {
+  display: none;
+}
+.payhist-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+.payhist-filters input[type='search'],
+.payhist-dates input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 10px;
+  font: inherit;
+  background: #fff;
+}
+.payhist-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 10px;
+}
+.payhist-tile {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 12px;
+  background: #f8fafc;
+  min-width: 0;
+}
+.payhist-tile span {
+  color: var(--ink-700, #475569);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.payhist-tile strong {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+.payhist-tile:first-child {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.payhist-tile:first-child strong {
+  color: #166534;
+  font-size: 1.35rem;
+}
+.payhist-tile small {
+  color: var(--ink-700, #475569);
+}
+.payhist-groupline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line, #e5e7eb);
+}
+.payhist-groupline > span {
+  color: var(--ink-700, #475569);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.payhist-list {
+  display: grid;
+}
+.payhist-group summary .payhist-amount {
+  flex: none;
+  color: #166534;
+}
+.payhist-bar {
+  height: 4px;
+  margin: 0 6px;
+  border-radius: 99px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.payhist-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: #22c55e;
+}
+.payhist-row {
+  flex-wrap: nowrap;
+  padding: 10px 6px 0;
+}
+.payhist-value {
+  flex: none;
+  font-weight: 700;
+}
+.payhist .payhist-empty {
+  padding: 18px 6px;
+  text-align: center;
+}
+@media (max-width: 640px) {
+  .payhist-filters {
+    grid-template-columns: 1fr;
+  }
+  .payhist-export {
+    width: 100%;
+  }
+}
+
+/* O relatório não depende do CSS de cada painel (personal e admin usam o mesmo). */
+.payhist {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  min-width: 0;
+}
+.payhist p {
+  margin: 0;
+}
+.payhist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line, #e5e7eb);
+}
+.payhist-row > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.payhist-row small {
+  color: var(--ink-700, #475569);
+}
