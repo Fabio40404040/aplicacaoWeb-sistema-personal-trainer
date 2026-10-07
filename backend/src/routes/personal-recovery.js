@@ -74,7 +74,7 @@ export async function personalRecovery(request, env, db, action) {
     const missing = missingEmailConfig(env, siteUrl)
     console.error(`[recuperação de senha] configuração ausente: ${missing.join(', ')}`)
     return {
-      error: `A recuperação por e-mail ainda não está disponível. Entre em contato com o suporte. (Configuração ausente: ${missing.join(', ') || 'desconhecida'})`,
+      error: `A recuperação por e-mail ainda não está disponível. Entre em contato com o suporte.`,
       status: 503,
     }
   }

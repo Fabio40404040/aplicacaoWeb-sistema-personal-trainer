@@ -65,7 +65,7 @@ export async function studentRecovery(request, env, db, action) {
     const missing = missingEmailConfig(env, siteUrl)
     console.error(`[recuperação de senha] configuração ausente: ${missing.join(', ')}`)
     return {
-      error: `A recuperação por e-mail ainda não está disponível. Entre em contato com o treinador. (Configuração ausente: ${missing.join(', ') || 'desconhecida'})`,
+      error: `A recuperação por e-mail ainda não está disponível. Entre em contato com o treinador.`,
       status: 503,
     }
   }

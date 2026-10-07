@@ -45,11 +45,10 @@ export async function mercadoPago(path, env, options = {}) {
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     console.error('Mercado Pago:', response.status, data)
-    const detail = mercadoPagoErrorDetail(data)
+    // O motivo técnico fica só no registro do servidor; quem paga vê um texto simples.
+    console.error('Mercado Pago (detalhe):', mercadoPagoErrorDetail(data))
     throw new Error(
-      detail
-        ? `Não foi possível iniciar o pagamento: ${detail}`
-        : 'Não foi possível iniciar o pagamento. Tente novamente.',
+      'Não foi possível iniciar o pagamento. Confira os dados e tente de novo, ou use outra forma de pagamento.',
     )
   }
   return data
