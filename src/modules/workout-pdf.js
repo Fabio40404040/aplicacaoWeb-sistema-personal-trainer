@@ -456,27 +456,26 @@ function drawExerciseCard(commands, exercise, top, number) {
     8,
     { color: COLORS.muted },
   );
-  rect(commands, infoX, top + 48, 134, 27, COLORS.white);
-  text(commands, "SERIES", infoX + 10, top + 56, 10, { bold: true });
-  rect(commands, infoX + 140, top + 48, 64, 27, COLORS.cyan);
-  text(commands, String(exercise.sets || 3), infoX + 165, top + 54, 13, {
-    bold: true,
-    color: COLORS.white,
-  });
-  rect(commands, infoX, top + 80, 134, 27, COLORS.white);
-  text(commands, "REPETICOES", infoX + 10, top + 88, 10, { bold: true });
-  rect(commands, infoX + 140, top + 80, 64, 27, COLORS.blue);
-  text(
-    commands,
-    truncate(exercise.repetitions || "10-12", 9),
-    infoX + 151,
-    top + 86,
-    11,
-    {
+  // Com carga anotada, as tres linhas ficam mais baixas para caber no cartao.
+  const load = truncate(exercise.load, 14);
+  const rowHeight = load ? 19 : 27;
+  const rows = [
+    ["SERIES", String(exercise.sets || 3), COLORS.cyan],
+    ["REPETICOES", truncate(exercise.repetitions || "10-12", 9), COLORS.blue],
+  ];
+  if (load) rows.push(["CARGA", load, COLORS.blueDark]);
+  rows.forEach(([label, value, fill], row) => {
+    const rowTop = top + (load ? 45 : 48) + row * (rowHeight + (load ? 2 : 5));
+    const pad = (rowHeight - 10) / 2;
+    rect(commands, infoX, rowTop, 134, rowHeight, COLORS.white);
+    text(commands, label, infoX + 10, rowTop + pad, 10, { bold: true });
+    rect(commands, infoX + 140, rowTop, 64, rowHeight, fill);
+    const fit = fitText(value, 9, 11, 6.5);
+    text(commands, fit.text, centeredX(fit.text, fit.size, infoX + 172, 0.56), rowTop + (rowHeight - fit.size) / 2 - 1, fit.size, {
       bold: true,
       color: COLORS.white,
-    },
-  );
+    });
+  });
   circle(commands, 520, top + 76, 31, COLORS.white, COLORS.ink);
   text(commands, "INTERVALO", centeredX("INTERVALO", 7, 520), top + 55, 7, {
     bold: true,
