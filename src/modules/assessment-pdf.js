@@ -3,7 +3,6 @@
 // do personal.
 import { drawWatermark, pdfDocument } from "./workout-pdf.js";
 
-const W = 595;
 const H = 842;
 const LEFT = 25;
 const RIGHT = 570;

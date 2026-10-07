@@ -172,7 +172,6 @@ function trainerNotifications() {
   const now = new Date()
   const tomorrow = new Date(now.getTime() + 86_400_000)
   const students = data.students || []
-  const byId = new Map(students.map((student) => [String(student.id), student]))
   const items = []
 
   // Alunos que ajustaram a carga de algum exercício nos últimos 7 dias.
