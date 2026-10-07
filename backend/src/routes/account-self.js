@@ -43,7 +43,15 @@ export async function onboarding(db, trainerId) {
     }
   }
   const profile = await one('SELECT avatar, phone, bio FROM trainers WHERE id=$1')
-  const site = await one('SELECT slug, updated_at AS "updatedAt", created_at AS "createdAt" FROM trainer_site WHERE trainer_id=$1')
+  // "Montou a página" = mexeu em alguma coisa: marca, cor, banner, contato, redes ou preços.
+  const site = await one(
+    `SELECT slug,
+       (brand_name IS NOT NULL OR brand_mark IS NOT NULL OR accent<>'blue' OR hero_kind<>'default'
+        OR whatsapp IS NOT NULL OR contact_email IS NOT NULL OR address IS NOT NULL
+        OR instagram IS NOT NULL OR facebook IS NOT NULL OR tiktok IS NOT NULL
+        OR EXISTS (SELECT 1 FROM trainer_plan_prices p WHERE p.trainer_id=trainer_site.trainer_id)) AS edited
+     FROM trainer_site WHERE trainer_id=$1`,
+  )
   const payout = await one('SELECT mode FROM trainer_payout WHERE trainer_id=$1')
   const counts = await one(
     `SELECT (SELECT COUNT(*) FROM students WHERE trainer_id=$1) AS students,
@@ -54,7 +62,7 @@ export async function onboarding(db, trainerId) {
       slug: site.slug || '',
       steps: {
         profile: Boolean(profile.avatar || profile.bio || profile.phone),
-        site: Boolean(site.slug && site.updatedAt && site.updatedAt !== site.createdAt),
+        site: Boolean(site.slug && Number(site.edited)),
         payout: Boolean(payout.mode && payout.mode !== 'none'),
         student: Number(counts.students || 0) > 0,
         workout: Number(counts.workouts || 0) > 0,
