@@ -35,7 +35,7 @@ function planCard(plan, { selectable = false } = {}) {
   const monthly = plan.prices.find((price) => price.cycle === 'monthly')
   card.append(
     el('strong', '', plan.name),
-    el('span', 'saas-plan-price', plan.isFree ? 'Grátis · 30 dias com tudo liberado' : `${money(monthly?.amountCents)}/mês`),
+    el('span', 'saas-plan-price', plan.isFree ? 'Grátis para sempre' : `Grátis por 30 dias · depois ${money(monthly?.amountCents)}/mês`),
     el('small', '', limitText(plan.studentLimit)),
   )
   if (plan.description) card.append(el('small', 'saas-plan-desc', plan.description))
@@ -50,7 +50,7 @@ async function initSignup() {
     .then((plans) => {
       if (!plans?.length) return
       plansBox.replaceChildren(
-        el('small', 'saas-plans-title', 'Você começa no Grátis e pode passar para o Ilimitado quando quiser:'),
+        el('small', 'saas-plans-title', 'Você começa com 30 dias do Ilimitado grátis. Depois escolhe: seguir no Grátis ou assinar.'),
         (() => {
           const grid = el('div', 'saas-plan-grid')
           grid.append(...plans.map((plan) => planCard(plan)))
