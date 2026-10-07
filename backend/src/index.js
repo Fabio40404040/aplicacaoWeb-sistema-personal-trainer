@@ -75,6 +75,7 @@ import {
   studentSetLoad,
 } from "./routes/student-portal.js";
 import { setTrainingDay, setWater } from "./routes/student-tools.js";
+import { deletePhoto, savePhoto, studentPhoto, trainerPhoto } from "./routes/assessment-photos.js";
 import { lockedForAccount, lockedMessage, STUDENT_LOCKED, trainerLocked } from "./routes/plan-access.js";
 import {
   cardPaymentConfig,
@@ -441,6 +442,8 @@ async function handleRoutes(request, env) {
       // Aluno ajusta a carga de um exercício da ficha dele.
       if (request.method === "POST" && segments[1] === "workouts" && segments[2] && segments[3] === "load")
         return studentSetLoad(db, session.sub, segments[2], await readJson(request));
+      if (request.method === "GET" && segments[1] === "assessment-photos" && segments[2] && segments[3])
+        return studentPhoto(db, session.sub, segments[2], segments[3]);
       if (request.method === "POST" && route === "student/training-day")
         return setTrainingDay(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/water")
@@ -521,6 +524,13 @@ async function handleRoutes(request, env) {
     // Assinatura da plataforma (planos dos personais).
     if (request.method === "GET" && route === "billing")
       return billingInfo(env, db, session.sub);
+    // Fotos de evolução de uma avaliação: /assessments/<id>/photos/<pose>
+    if (segments[0] === "assessments" && segments[1] && segments[2] === "photos" && segments[3]) {
+      if (request.method === "GET") return trainerPhoto(db, session.sub, segments[1], segments[3]);
+      if (request.method === "PUT")
+        return savePhoto(db, session.sub, segments[1], segments[3], await readJson(request));
+      if (request.method === "DELETE") return deletePhoto(db, session.sub, segments[1], segments[3]);
+    }
     if (request.method === "POST" && segments[0] === "workouts" && segments[1] && segments[2] === "load")
       return trainerSetLoad(db, session.sub, segments[1], await readJson(request));
     if (request.method === "POST" && route === "auth/resend-verification")

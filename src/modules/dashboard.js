@@ -11,6 +11,7 @@ import {
 } from './api-client.js'
 import { downloadWorkoutPdf } from './workout-pdf.js'
 import { downloadAssessmentPdf } from './assessment-pdf.js'
+import { openAssessmentPhotos } from './assessment-photos.js'
 import { renderEvolutionChart } from './evolution-chart.js'
 import { ACCENTS } from './site-brand.js'
 import { paintAvatar } from './profile-kit.js'
@@ -706,6 +707,16 @@ function assessmentCard(a) {
   card.querySelector('[data-value="restingHR"]').textContent = a.restingHR || '—'
   card.querySelector('[data-value="date"]').textContent = a.date
   card.querySelector('[data-value="protocol"]').textContent = a.protocol || 'Avaliação física'
+  // Fotos de evolução (frente, lado, costas) desta avaliação.
+  if (a.photosReady) {
+    const count = (a.photos || []).length
+    const photos = document.createElement('button')
+    photos.type = 'button'
+    photos.className = 'button button--secondary assessment-photos-button'
+    photos.textContent = count ? `📷 Fotos de evolução (${count})` : '📷 Adicionar fotos de evolução'
+    photos.addEventListener('click', () => openAssessmentPhotos(a))
+    ;(card.querySelector('article') || card.firstElementChild || card).append(photos)
+  }
   return card
 }
 function variationText(latest, first, unit) {

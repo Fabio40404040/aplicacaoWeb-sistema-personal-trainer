@@ -1,6 +1,7 @@
 import { loadReady, loadText } from "./resources.js";
 import { recordLoad, studentTools } from "./student-tools.js";
 import { trainerLocked } from "./plan-access.js";
+import { studentPhotoIndex } from "./assessment-photos.js";
 import { trainerPlans, trainerReferrals } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
@@ -272,6 +273,13 @@ export async function studentPortal(db, accountId, version) {
         [account.studentId],
       )
     ).rows;
+  }
+  // Fotos de evolução das avaliações publicadas.
+  if (response.assessments.length) {
+    const photos = await studentPhotoIndex(db, account.studentId);
+    response.assessments.forEach((item) => {
+      item.photos = photos[item.id] || [];
+    });
   }
   // Personal no Grátis básico: sem check-in, agendamento e relatório em PDF.
   response.trainerLocked = await trainerLocked(db, account.trainerId || account.accountTrainerId);

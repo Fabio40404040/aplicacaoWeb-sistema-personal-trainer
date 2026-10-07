@@ -1,0 +1,74 @@
+/* Fotos de evolução no painel do personal. */
+.assessment-photos-modal {
+  width: min(760px, 94vw);
+}
+.assessment-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.assessment-photo-slot {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.assessment-photo-slot > strong {
+  color: var(--ink-900);
+  font-size: 0.9rem;
+}
+.assessment-photo-frame {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: #f4f7fc;
+  color: var(--ink-500);
+}
+.assessment-photo-frame span {
+  font-size: 1.8rem;
+}
+.assessment-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.assessment-photo-frame:has(img) {
+  display: block;
+  border-style: solid;
+}
+.assessment-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.assessment-photo-remove {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #b42318;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.assessment-photos-status {
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 0.86rem;
+}
+.assessment-photos-button {
+  margin-top: 10px;
+  width: 100%;
+}
+@media (max-width: 560px) {
+  .assessment-photos-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

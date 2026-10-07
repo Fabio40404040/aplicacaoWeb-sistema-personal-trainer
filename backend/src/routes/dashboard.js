@@ -1,3 +1,4 @@
+import { trainerPhotoIndex } from "./assessment-photos.js";
 import { trainerToolsData } from "./student-tools.js";
 import { trainerPrices } from './site.js'
 async function withTrainerPrices(db, trainerId, plans) {
@@ -200,6 +201,12 @@ export async function dashboard(db, trainerId) {
         )
       : { rows: [] },
   ]);
+  // Fotos de evolução de cada avaliação (quais posições existem).
+  const photos = await trainerPhotoIndex(db, trainerId);
+  assessments.rows.forEach((item) => {
+    item.photos = photos.index[item.id] || [];
+    item.photosReady = photos.ready;
+  });
   return {
     students: students.rows,
     exercises: exercises.rows,

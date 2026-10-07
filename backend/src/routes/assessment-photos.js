@@ -1,0 +1,135 @@
+// Fotos de evolução das avaliações (migração 042). São dados sensíveis: só o
+// personal dono da avaliação e o próprio aluno (com a avaliação publicada)
+// conseguem ver. Apagar a avaliação, o aluno ou a conta apaga as fotos.
+const POSES = ["front", "side", "back"];
+const IMAGE = /^data:(image\/(?:jpeg|webp));base64,([A-Za-z0-9+/=]+)$/u;
+const MAX_CHARS = 700_000;
+
+const stamp = (value) => String(value || "").replace(/\D/gu, "").slice(0, 17);
+
+function group(rows) {
+  const index = {};
+  rows.forEach((row) => {
+    (index[row.assessmentId] ||= []).push({ pose: row.pose, v: stamp(row.createdAt) });
+  });
+  return index;
+}
+
+// { idDaAvaliação: [{ pose, v }] } para o painel do personal.
+export async function trainerPhotoIndex(db, trainerId) {
+  try {
+    return {
+      ready: true,
+      index: group(
+        (
+          await db.query(
+            `SELECT assessment_id AS "assessmentId", pose, created_at AS "createdAt" FROM assessment_photos WHERE trainer_id=$1`,
+            [trainerId],
+          )
+        ).rows,
+      ),
+    };
+  } catch {
+    return { ready: false, index: {} };
+  }
+}
+
+// O mesmo para o aluno: só das avaliações publicadas dele.
+export async function studentPhotoIndex(db, studentId) {
+  try {
+    return group(
+      (
+        await db.query(
+          `SELECT p.assessment_id AS "assessmentId", p.pose, p.created_at AS "createdAt"
+           FROM assessment_photos p JOIN assessments a ON a.id=p.assessment_id
+           WHERE a.student_id=$1 AND a.published_at IS NOT NULL`,
+          [studentId],
+        )
+      ).rows,
+    );
+  } catch {
+    return {};
+  }
+}
+
+export async function savePhoto(db, trainerId, assessmentId, pose, body) {
+  if (!POSES.includes(pose)) return { error: "Posição inválida.", status: 400 };
+  const image = String(body?.image || "");
+  if (!IMAGE.test(image) || image.length > MAX_CHARS)
+    return { error: "Não foi possível usar esta foto. Tente outra imagem.", status: 400 };
+  const owned = (
+    await db.query("SELECT id FROM assessments WHERE id=$1 AND trainer_id=$2", [assessmentId, trainerId])
+  ).rows[0];
+  if (!owned) return { error: "Avaliação não encontrada.", status: 404 };
+  const now = new Date().toISOString();
+  try {
+    await db.query(
+      `INSERT INTO assessment_photos (assessment_id, trainer_id, pose, image, created_at) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (assessment_id, pose) DO UPDATE SET image=excluded.image, created_at=excluded.created_at`,
+      [assessmentId, trainerId, pose, image, now],
+    );
+  } catch {
+    return { error: "As fotos de evolução ainda não estão disponíveis.", status: 503 };
+  }
+  return { data: { pose, v: stamp(now) } };
+}
+
+export async function deletePhoto(db, trainerId, assessmentId, pose) {
+  try {
+    await db.query("DELETE FROM assessment_photos WHERE assessment_id=$1 AND trainer_id=$2 AND pose=$3", [
+      assessmentId,
+      trainerId,
+      pose,
+    ]);
+  } catch {
+    /* sem a migração: nada a apagar */
+  }
+  return { data: { pose, removed: true } };
+}
+
+function imageResponse(row) {
+  const match = IMAGE.exec(String(row?.image || ""));
+  if (!match) return { error: "Foto não encontrada.", status: 404 };
+  return new Response(Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0)), {
+    headers: {
+      "Content-Type": match[1],
+      // Só no navegador de quem pediu; nunca em cache compartilhado.
+      "Cache-Control": "private, max-age=3600",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+export async function trainerPhoto(db, trainerId, assessmentId, pose) {
+  try {
+    return imageResponse(
+      (
+        await db.query("SELECT image FROM assessment_photos WHERE assessment_id=$1 AND trainer_id=$2 AND pose=$3", [
+          assessmentId,
+          trainerId,
+          pose,
+        ])
+      ).rows[0],
+    );
+  } catch {
+    return { error: "Foto não encontrada.", status: 404 };
+  }
+}
+
+export async function studentPhoto(db, accountId, assessmentId, pose) {
+  try {
+    return imageResponse(
+      (
+        await db.query(
+          `SELECT p.image FROM assessment_photos p
+           JOIN assessments a ON a.id=p.assessment_id
+           JOIN student_accounts s ON s.student_id=a.student_id
+           WHERE p.assessment_id=$1 AND p.pose=$2 AND s.id=$3 AND a.published_at IS NOT NULL`,
+          [assessmentId, pose, accountId],
+        )
+      ).rows[0],
+    );
+  } catch {
+    return { error: "Foto não encontrada.", status: 404 };
+  }
+}

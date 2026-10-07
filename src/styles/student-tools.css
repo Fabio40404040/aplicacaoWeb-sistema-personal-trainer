@@ -820,3 +820,76 @@
   color: #9cc3ff;
   font-weight: 700;
 }
+
+/* Fotos de evolução (antes e depois) */
+.student-photos {
+  display: grid;
+  gap: 10px;
+}
+.student-photos-tabs {
+  display: flex;
+  gap: 6px;
+}
+.student-photos-tabs button {
+  padding: 6px 14px;
+  border: 1px solid var(--tool-line);
+  border-radius: 999px;
+  background: var(--tool-soft);
+  color: #dce9f8;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-photos-tabs button.is-active {
+  border-color: var(--tool-accent);
+  background: var(--tool-accent);
+  color: #fff;
+}
+.student-photos-stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 560px;
+}
+.student-photos-stage.is-single {
+  grid-template-columns: minmax(0, 280px);
+}
+.student-photo {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.student-photo-frame {
+  display: grid;
+  place-content: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid #2c3d55;
+  border-radius: 14px;
+  background: var(--tool-soft);
+  color: var(--tool-muted);
+  text-align: center;
+}
+.student-photo-frame:has(img) {
+  display: block;
+}
+.student-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.student-photo figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.student-photo figcaption strong {
+  color: #fff;
+  font-size: 0.88rem;
+}
+.student-photo figcaption span {
+  color: var(--tool-muted);
+  font-size: 0.76rem;
+}

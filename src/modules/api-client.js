@@ -209,6 +209,27 @@ export function loadExerciseGif(id, kind = "file") {
   exerciseGifUrls.set(cacheKey, pending);
   return pending;
 }
+// Fotos de evolução de uma avaliação (frente, lado, costas).
+export async function loadAssessmentPhoto(assessmentId, pose, version = "") {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  if (!token) return null;
+  const response = await fetch(`${API_URL}/api/assessments/${assessmentId}/photos/${pose}?v=${version}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  handleUnauthorized(response.status);
+  if (!response.ok) return null;
+  return URL.createObjectURL(await response.blob());
+}
+export function saveAssessmentPhoto(assessmentId, pose, image) {
+  return request(`/assessments/${assessmentId}/photos/${pose}`, {
+    method: "PUT",
+    body: JSON.stringify({ image }),
+    timeoutMs: 60000,
+  });
+}
+export function deleteAssessmentPhoto(assessmentId, pose) {
+  return request(`/assessments/${assessmentId}/photos/${pose}`, { method: "DELETE" });
+}
 // Quadro parado do GIF, em bytes, para embutir no PDF da ficha.
 export async function loadExerciseGifFrame(id) {
   const token = sessionStorage.getItem(TOKEN_KEY);

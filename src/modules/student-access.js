@@ -69,6 +69,20 @@ async function loadStudentExerciseVideo(id) {
   }
   return URL.createObjectURL(await response.blob());
 }
+// Fotos de evolução das avaliações do aluno (guardadas enquanto a página
+// está aberta, para a atualização automática não baixar de novo).
+const studentPhotoUrls = new Map();
+function loadStudentPhoto(assessmentId, pose, version) {
+  const key = `${assessmentId}:${pose}:${version}`;
+  if (!studentPhotoUrls.has(key)) {
+    const pending = fetch(`${API_URL}/api/student/assessment-photos/${assessmentId}/${pose}?v=${version}`, {
+      headers: { Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY)}` },
+    }).then(async (response) => (response.ok ? URL.createObjectURL(await response.blob()) : null));
+    studentPhotoUrls.set(key, pending);
+    pending.then((url) => !url && studentPhotoUrls.delete(key)).catch(() => studentPhotoUrls.delete(key));
+  }
+  return studentPhotoUrls.get(key);
+}
 // GIF do exercício na conta do aluno: o animado para a tela e o quadro
 // parado para o PDF da ficha.
 // Os GIFs animados ficam guardados enquanto a página está aberta: assim a
@@ -774,22 +788,23 @@ function renderPortal(container, data) {
   if (referrals) container.append(referrals);
   if (data.access.features.includes("assessments"))
     container.append(
-      assessmentCard(data.assessments, data.trainerLocked ? null : () => {
-        // Marca e cor da página do personal em que o aluno está.
-        const mark = document.querySelector(".student-access-shell .brand-mark, [data-public-screen] .brand-mark")?.textContent?.trim();
-        const brandName = document.querySelector("[data-public-screen] .brand-name")?.textContent?.trim();
-        downloadAssessmentPdf(
-          data.assessments,
-          { name: data.name },
-          {
-            brand: mark ? `${mark} ${brandName || "Personal"}` : "",
-            accent: ACCENTS[document.documentElement.dataset.accent] || ACCENTS.blue,
-          },
-        );
-      }),
+      assessmentCard(data.assessments, data.trainerLocked ? null : downloadReport, loadStudentPhoto),
     );
   if (data.access.features.includes("progress"))
     container.append(progressCard(data.assessments));
+  function downloadReport() {
+    // Marca e cor da página do personal em que o aluno está.
+    const mark = document.querySelector(".student-access-shell .brand-mark, [data-public-screen] .brand-mark")?.textContent?.trim();
+    const brandName = document.querySelector("[data-public-screen] .brand-name")?.textContent?.trim();
+    downloadAssessmentPdf(
+      data.assessments,
+      { name: data.name },
+      {
+        brand: mark ? `${mark} ${brandName || "Personal"}` : "",
+        accent: ACCENTS[document.documentElement.dataset.accent] || ACCENTS.blue,
+      },
+    );
+  }
   if (data.access.features.includes("checkins") && !data.trainerLocked) {
     const checkin = article("Check-in semanal");
     checkin.id = "student-checkin";

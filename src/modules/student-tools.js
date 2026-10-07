@@ -638,7 +638,68 @@ const deltaText = (current, previous, unit) => {
   return `${diff > 0 ? "▲ +" : "▼ −"}${numberBr(Math.abs(diff))} ${unit} vs. anterior`;
 };
 
-export function assessmentCard(assessments, onDownload) {
+const POSE_LABELS = [
+  ["front", "Frente"],
+  ["side", "Lado"],
+  ["back", "Costas"],
+];
+
+// Antes e depois: a primeira avaliação com foto ao lado da mais recente.
+function photoCompare(assessments, loadPhoto) {
+  const withPhotos = assessments.filter((item) => item.photos?.length);
+  if (!withPhotos.length || !loadPhoto) return null;
+  const latest = withPhotos[0];
+  const first = withPhotos.at(-1);
+  const poses = POSE_LABELS.filter(([pose]) => [latest, first].some((item) => item.photos.some((photo) => photo.pose === pose)));
+  const box = el("div", "student-photos");
+  box.append(el("span", "student-tool-subtitle", "Fotos de evolução"));
+  const tabs = el("div", "student-photos-tabs");
+  const stage = el("div", "student-photos-stage");
+  const dateOf = (item) => new Intl.DateTimeFormat("pt-BR").format(asDate(item.assessedAt));
+  const figure = (item, pose, caption) => {
+    const wrap = el("figure", "student-photo");
+    const frame = el("div", "student-photo-frame");
+    const photo = item.photos.find((entry) => entry.pose === pose);
+    if (!photo) frame.append(el("small", "", "Sem foto nesta posição"));
+    else {
+      frame.append(el("small", "", "Carregando…"));
+      loadPhoto(item.id, pose, photo.v)
+        .then((url) => {
+          frame.replaceChildren();
+          if (!url) return frame.append(el("small", "", "Não foi possível carregar."));
+          const image = el("img");
+          image.src = url;
+          image.alt = `${caption} · ${dateOf(item)}`;
+          image.loading = "lazy";
+          frame.append(image);
+        })
+        .catch(() => frame.replaceChildren(el("small", "", "Não foi possível carregar.")));
+    }
+    const label = el("figcaption");
+    label.append(el("strong", "", caption), el("span", "", dateOf(item)));
+    wrap.append(frame, label);
+    return wrap;
+  };
+  const show = (pose) => {
+    [...tabs.children].forEach((tab) => tab.classList.toggle("is-active", tab.dataset.pose === pose));
+    stage.replaceChildren();
+    stage.classList.toggle("is-single", first === latest);
+    if (first === latest) stage.append(figure(latest, pose, "Avaliação"));
+    else stage.append(figure(first, pose, "Antes"), figure(latest, pose, "Depois"));
+  };
+  poses.forEach(([pose, label]) => {
+    const tab = el("button", "", label);
+    tab.type = "button";
+    tab.dataset.pose = pose;
+    tab.addEventListener("click", () => show(pose));
+    tabs.append(tab);
+  });
+  box.append(tabs, stage, el("small", "student-tool-hint", "🔒 Só você e o seu personal veem estas fotos."));
+  show(poses[0][0]);
+  return box;
+}
+
+export function assessmentCard(assessments, onDownload, loadPhoto) {
   const card = el("article", "student-tool student-assessment student-card--wide");
   card.append(el("h2", "", "Avaliação física"));
   if (!assessments.length) {
@@ -688,6 +749,8 @@ export function assessmentCard(assessments, onDownload) {
     notes.append(el("span", "", "💬 Observações do personal"), el("p", "", latest.notes));
     card.append(notes);
   }
+  const compare = photoCompare(assessments, loadPhoto);
+  if (compare) card.append(compare);
   if (assessments.length > 1) {
     const older = el("details", "student-assessment-older");
     older.append(el("summary", "", `Avaliações anteriores (${assessments.length - 1})`));
