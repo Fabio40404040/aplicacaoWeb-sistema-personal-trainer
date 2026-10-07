@@ -27,6 +27,13 @@ export function createWhatsappUrl({ name = '', planCode = '', planName = '', pur
   return `${destination}?text=${encodeURIComponent(message)}`
 }
 
+// Aluno logado falando com o personal dele. Sem WhatsApp cadastrado: ''.
+export function createStudentWhatsappUrl(name = '') {
+  if (!whatsappNumber) return ''
+  const message = `Olá! Sou ${name || 'seu aluno'} e estou falando pela área do aluno ${brandLabel}.`
+  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
+}
+
 export function createGeneralWhatsappUrl() {
   const message = `Olá! Vim pelo site ${brandLabel} e gostaria de tirar algumas dúvidas.`
   const destination = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/'

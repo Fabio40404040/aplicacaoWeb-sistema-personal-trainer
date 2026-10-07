@@ -7,6 +7,7 @@ import { createQrCodeImage } from "./pix.js";
 import { hideStudentExtras, renderStudentExtras } from "./student-extras.js";
 import { renderStudentAgenda } from "./student-agenda.js";
 import { cancelPlanChange, openPlanChange } from "./student-plan.js";
+import { createStudentWhatsappUrl } from "./whatsapp.js";
 import {
   assessmentCard,
   loadTrend,
@@ -955,6 +956,19 @@ export function initStudentAccess() {
       ),
     );
   };
+  // "Falar com o treinador": abre o WhatsApp do personal em vez de sair da
+  // área do aluno para o site público.
+  let studentDisplayName = "";
+  document.querySelector("[data-student-contact]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    const status = document.querySelector("[data-student-panel-status]");
+    const url = createStudentWhatsappUrl(studentDisplayName);
+    if (url) window.open(url, "_blank", "noopener");
+    else if (status) {
+      status.textContent = "Seu personal ainda não cadastrou um WhatsApp de contato.";
+      status.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  });
   reloadStudentPanel = () => loadPanel();
   async function loadPanel() {
     applyPlanFromHash();
@@ -972,6 +986,7 @@ export function initStudentAccess() {
       const data = await studentRequest("me");
       if (current !== generation) return;
       hasLoadedOnce = true;
+      studentDisplayName = data.name || "";
       document.querySelector("[data-student-name]").textContent =
         `Olá, ${data.name}`;
       const paymentMessage = sessionStorage.getItem(
