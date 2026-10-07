@@ -8,6 +8,7 @@ import { antifraud, mercadoPago, officialPaymentForIntent } from './payments.js'
 import { sendSaasReceipt } from './billing-notices.js'
 import { emailStatus, sendTrainerWelcome } from './account-emails.js'
 import { mediaUsage } from './account-self.js'
+import { heldSeats, LOCKED_TOOLS, planAccess } from './plan-access.js'
 
 export const SAAS_CYCLES = {
   monthly: { label: 'Mensal', months: 1, factor: 1 },
@@ -79,6 +80,8 @@ export async function saasState(db, trainerId) {
   const expires = row.expiresAt ? Date.parse(row.expiresAt) : null
   const isFree = !Number(row.priceCents)
   const custom = row.customLimit === null || row.customLimit === undefined ? null : Number(row.customLimit)
+  const access = await planAccess(db, trainerId)
+  const held = isFree ? await heldSeats(db, trainerId) : 0
   return {
     planCode: row.planCode,
     planName: row.planName || row.planCode,
@@ -90,7 +93,15 @@ export async function saasState(db, trainerId) {
     // 0 = sem limite de alunos.
     studentLimit: custom ?? Number(row.planLimit || 0),
     customLimit: custom,
-    students: Number(row.students || 0),
+    students: Number(row.students || 0) + held,
+    // Vagas em espera (aluno apagado no Grátis há menos de 30 dias).
+    heldSeats: held,
+    // Teste completo de 30 dias e ferramentas travadas depois dele.
+    full: access.full,
+    inTrial: access.inTrial,
+    trialEndsAt: access.trialEndsAt,
+    trialDaysLeft: access.trialDaysLeft,
+    lockedTools: access.full ? [] : LOCKED_TOOLS,
     downgraded: Boolean(row.downgraded),
   }
 }
@@ -160,6 +171,15 @@ export async function registerTrainer(env, db, body) {
     ],
   )
   // Conta nova ainda não confirmou o e-mail (as antigas contam como confirmadas).
+  // 30 dias com todas as ferramentas.
+  try {
+    await db.query('UPDATE trainers SET saas_trial_ends_at=$2 WHERE id=$1', [
+      trainer.id,
+      new Date(Date.now() + 30 * DAY).toISOString(),
+    ])
+  } catch {
+    // sem a migração 041
+  }
   try {
     await db.query('UPDATE trainers SET email_verified_at=NULL WHERE id=$1', [trainer.id])
   } catch {

@@ -35,7 +35,7 @@ export function showDemoInvite() {
   text.textContent =
     'Esta é uma demonstração, então nada é salvo aqui. Crie sua conta grátis em 1 minuto para fazer isso de verdade, com a sua marca e os seus alunos.'
   const note = document.createElement('small')
-  note.textContent = 'Grátis para sempre no plano inicial. Sem cartão.'
+  note.textContent = '30 dias com tudo liberado, depois grátis para sempre no plano inicial. Sem cartão.'
   const actions = document.createElement('div')
   actions.className = 'demo-invite-actions'
   const back = document.createElement('button')

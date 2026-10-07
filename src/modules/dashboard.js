@@ -827,6 +827,10 @@ function renderAssessments() {
       pdfButton.className = 'button button--secondary'
       pdfButton.textContent = '⬇ Baixar relatório em PDF'
       pdfButton.addEventListener('click', async () => {
+        if (window.farisaBilling?.state && window.farisaBilling.state.full === false) {
+          showToast('O relatório em PDF faz parte do plano Ilimitado. Assine em Minha assinatura.')
+          return
+        }
         pdfButton.disabled = true
         let site = null
         try {

@@ -1,3 +1,4 @@
+import { trainerLocked } from "./plan-access.js";
 // Agenda integrada (migração 023): atendimentos online e presenciais,
 // horários livres do personal, tipos de atendimento, cota mensal por plano e
 // agendamento feito pelo próprio aluno.
@@ -398,6 +399,9 @@ export async function studentBooking(db, accountId) {
     return { data: { enabled: false, reason: "schema", services: [], appointments: [], settings: {} } };
   const student = await studentContext(db, accountId);
   if (!student) return { error: "Conta não encontrada.", status: 404 };
+  // Personal no Grátis básico: o aluno não agenda pelo app.
+  if (await trainerLocked(db, student.trainerId))
+    return { data: { enabled: false, reason: "plan", services: [], appointments: [], settings: {} } };
   const active = hasAccess(student);
   const appointments = active
     ? (

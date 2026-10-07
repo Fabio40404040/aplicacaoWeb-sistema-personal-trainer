@@ -168,6 +168,14 @@ function brandCard(form) {
     field('Complemento', 'brandName', site.brandName, { maxLength: 24, placeholder: 'Ex.: Personal' }),
   )
   card.append(grid)
+  if (site.brandLocked)
+    card.append(
+      el(
+        'p',
+        'support-muted',
+        '🔒 No plano Grátis a página aparece com o seu primeiro nome e a cor azul padrão. Sua marca e sua cor ficam salvas e voltam a aparecer ao assinar o Ilimitado.',
+      ),
+    )
   {
     const slug = field('Endereço da sua página', 'slug', site.slug, { maxLength: 30, required: true, pattern: '[a-zA-Z0-9-]{3,30}' })
     slug.append(el('small', 'support-muted', `${location.origin}/p/…  ·  só letras, números e hífen. Mudar o endereço invalida o link antigo.`))

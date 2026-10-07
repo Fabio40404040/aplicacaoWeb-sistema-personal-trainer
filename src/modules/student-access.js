@@ -710,12 +710,14 @@ function renderPortal(container, data) {
   }
   container.replaceChildren(plan);
   // "Minha agenda": atendimentos online/presenciais e agendamento pelo app.
-  const agenda = element("article");
-  container.append(agenda);
-  void renderStudentAgenda(agenda, {
-    request: studentRequest,
-    reload: () => reloadStudentPanel(),
-  });
+  if (!data.trainerLocked) {
+    const agenda = element("article");
+    container.append(agenda);
+    void renderStudentAgenda(agenda, {
+      request: studentRequest,
+      reload: () => reloadStudentPanel(),
+    });
+  }
   renderReadyWorkoutLibrary(container, data);
   if (data.access.planCode !== "ready") {
     const workouts = article("Minha ficha personalizada");
@@ -772,7 +774,7 @@ function renderPortal(container, data) {
   if (referrals) container.append(referrals);
   if (data.access.features.includes("assessments"))
     container.append(
-      assessmentCard(data.assessments, () => {
+      assessmentCard(data.assessments, data.trainerLocked ? null : () => {
         // Marca e cor da página do personal em que o aluno está.
         const mark = document.querySelector(".student-access-shell .brand-mark, [data-public-screen] .brand-mark")?.textContent?.trim();
         const brandName = document.querySelector("[data-public-screen] .brand-name")?.textContent?.trim();
@@ -788,7 +790,7 @@ function renderPortal(container, data) {
     );
   if (data.access.features.includes("progress"))
     container.append(progressCard(data.assessments));
-  if (data.access.features.includes("checkins")) {
+  if (data.access.features.includes("checkins") && !data.trainerLocked) {
     const checkin = article("Check-in semanal");
     checkin.id = "student-checkin";
     const form = element("form");
@@ -880,6 +882,7 @@ function renderPortal(container, data) {
   ];
   unavailable
     .filter(([feature]) => !data.access.features.includes(feature))
+    .filter(([feature]) => !(feature === "checkins" && data.trainerLocked))
     .forEach(([, title, message]) => {
       const locked = article(`🔒 ${title}`);
       locked.classList.add("student-feature-locked");

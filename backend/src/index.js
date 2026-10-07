@@ -75,6 +75,7 @@ import {
   studentSetLoad,
 } from "./routes/student-portal.js";
 import { setTrainingDay, setWater } from "./routes/student-tools.js";
+import { lockedForAccount, lockedMessage, STUDENT_LOCKED, trainerLocked } from "./routes/plan-access.js";
 import {
   cardPaymentConfig,
   createCardPayment,
@@ -421,6 +422,13 @@ async function handleRoutes(request, env) {
         return studentBooking(db, session.sub);
       if (request.method === "GET" && route === "student/booking/slots")
         return studentBookingSlots(db, session.sub, url);
+      // Agendamento pelo aluno e check-in: só nos planos pagos do personal.
+      if (
+        request.method === "POST" &&
+        ["student/booking", "student/checkins"].includes(route) &&
+        (await lockedForAccount(db, session.sub))
+      )
+        return { error: STUDENT_LOCKED, status: 403 };
       if (request.method === "POST" && route === "student/booking")
         return createStudentBooking(db, session.sub, await readJson(request), env);
       if (
@@ -670,6 +678,8 @@ async function handleRoutes(request, env) {
     )
       return trainerReadyWorkoutFile(env, db, session.sub, segments[1]);
     if (request.method === "POST" && route === "exercise-videos") {
+      if (await trainerLocked(db, session.sub))
+        return { error: lockedMessage("O envio de vídeos próprios"), status: 403 };
       const result = await uploadExerciseVideo(request, env, db, session.sub);
       return result?.error ? result : { data: result, status: 201 };
     }

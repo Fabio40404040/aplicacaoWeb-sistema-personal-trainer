@@ -35,7 +35,7 @@ function planCard(plan, { selectable = false } = {}) {
   const monthly = plan.prices.find((price) => price.cycle === 'monthly')
   card.append(
     el('strong', '', plan.name),
-    el('span', 'saas-plan-price', plan.isFree ? 'Grátis para sempre' : `${money(monthly?.amountCents)}/mês`),
+    el('span', 'saas-plan-price', plan.isFree ? 'Grátis · 30 dias com tudo liberado' : `${money(monthly?.amountCents)}/mês`),
     el('small', '', limitText(plan.studentLimit)),
   )
   if (plan.description) card.append(el('small', 'saas-plan-desc', plan.description))
@@ -82,6 +82,11 @@ async function initSignup() {
 // ---------- página "Minha assinatura"
 function statusLine(state) {
   if (!state) return ['Plano', '']
+  if (state.status === 'free' && state.inTrial)
+    return [
+      'Teste completo',
+      `Todas as ferramentas liberadas por mais ${state.trialDaysLeft} dia(s), até ${day(state.trialEndsAt)}. Depois a conta segue no Grátis, com as ferramentas básicas${state.studentLimit ? ` e até ${state.studentLimit} alunos` : ''}.`,
+    ]
   if (state.status === 'free')
     return ['Grátis', state.studentLimit ? `Sem vencimento · até ${state.studentLimit} alunos` : 'Sem vencimento · alunos ilimitados']
   if (state.status === 'courtesy') return ['Ativa', 'Sem vencimento (cortesia da plataforma)']
@@ -219,10 +224,46 @@ function render() {
       usage.append(el('small', '', `${state.students} de ${state.studentLimit} alunos no plano`), bar)
     } else usage.append(el('small', '', `${state.students} aluno(s) · sem limite`))
     summary.append(usage)
+    if (state.heldSeats)
+      usage.append(
+        el(
+          'small',
+          '',
+          `Inclui ${state.heldSeats} vaga(s) em espera: no Grátis, a vaga de um aluno apagado volta a ficar livre depois de 30 dias. No Ilimitado libera na hora.`,
+        ),
+      )
     const storage = storageLine(billing.storage)
     if (storage) summary.append(storage)
   }
   root.append(summary)
+  // O que fica só no Ilimitado (aparece durante o teste e depois dele).
+  if (state?.status === 'free' && (state.inTrial || state.lockedTools?.length)) {
+    const tools = el('section', 'panel saas-locked')
+    tools.append(
+      el('h2', '', state.inTrial ? 'Depois do teste, ficam só no Ilimitado' : '🔒 Ferramentas do plano Ilimitado'),
+      el(
+        'p',
+        'support-muted',
+        state.inTrial
+          ? 'Você está usando tudo. Ao fim dos 30 dias, estas ferramentas pausam e nada é apagado.'
+          : 'Estas ferramentas estão pausadas no Grátis. Nada foi apagado: ao assinar, tudo volta como estava.',
+      ),
+    )
+    const list = el('ul', 'saas-locked-list')
+    ;(state.lockedTools?.length
+      ? state.lockedTools
+      : [
+          'Pagamento automático pelo site (cartão e Pix do Mercado Pago)',
+          'Sua marca e sua cor na página',
+          'Relatório de avaliação em PDF',
+          'Agendamento feito pelo aluno',
+          'Check-in semanal',
+          'Envio de vídeos próprios',
+        ]
+    ).forEach((tool) => list.append(el('li', '', tool)))
+    tools.append(list)
+    root.append(tools)
+  }
   if (billing.pending?.length)
     root.append(el('p', 'support-muted', 'Há um pagamento em análise. Assim que o Mercado Pago aprovar, a assinatura é atualizada sozinha.'))
   checkoutBox(root)

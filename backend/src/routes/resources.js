@@ -1,3 +1,4 @@
+import { holdSeatIfUsed } from "./plan-access.js";
 import { recordLoad } from "./student-tools.js";
 import { hashPassword, isStrongPassword } from "../lib/session.js";
 
@@ -395,6 +396,8 @@ export async function updateResource(db, resource, trainerId, id, body) {
 export async function deleteResource(db, resource, trainerId, id) {
   if (!configs[resource] && resource !== "workouts") return null;
   if (resource === "students") {
+    // No Grátis, a vaga de um aluno já atendido fica em espera por 30 dias.
+    await holdSeatIfUsed(db, trainerId, id);
     const [, deleted] = await db.batch([
       {
         sql: `DELETE FROM student_accounts

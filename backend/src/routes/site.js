@@ -1,3 +1,4 @@
+import { trainerLocked } from './plan-access.js'
 // Página de cada personal (migração 030). A estrutura do site é uma só; o
 // personal personaliza marca, cor, banner, contato, redes e preços dos planos.
 // Endereço: /p/<slug>. O site principal (/) mostra a página do dono.
@@ -309,6 +310,8 @@ export async function publicSite(db, slug) {
   return {
     data: {
       ...publicShape(row, trainer, isOwner),
+      // Marca e cor próprias só nos planos pagos (e nos 30 dias de teste).
+      ...((await trainerLocked(db, trainerId)) ? { brandMark: null, brandName: null, accent: 'blue' } : {}),
       // Selo "Feito com FARISA" nas páginas do plano Grátis.
       badge: !isOwner && (await isFreePlan(db, trainerId)),
       plans: (await trainerPlans(db, trainerId)).map(({ code, name, priceCents, accessType }) => ({ code, name, priceCents, accessType })),
@@ -359,6 +362,7 @@ export async function siteSettings(db, trainerId) {
       heroPreset: row.hero_preset || null,
       referrals: referralsOf(row),
       referralsReady: 'referrals' in row,
+      brandLocked: await trainerLocked(db, trainerId),
       accents: ACCENTS,
       plans: await trainerPlans(db, trainerId, { includeInactive: true }),
     },

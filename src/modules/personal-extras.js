@@ -218,6 +218,27 @@ function trainerNotifications() {
       })
     })
 
+  // Teste completo de 30 dias: avisa perto do fim e quando termina.
+  const plan = window.farisaBilling?.state
+  if (plan?.status === 'free' && plan.inTrial && plan.trialDaysLeft <= 7)
+    items.push({
+      id: `teste:${plan.trialDaysLeft <= 1 ? 1 : plan.trialDaysLeft <= 3 ? 3 : 7}`,
+      tone: 'warn',
+      icon: '⏳',
+      title: `Seu teste completo termina em ${plan.trialDaysLeft} dia(s)`,
+      detail: 'Depois a conta segue no Grátis, com as ferramentas básicas. Assine o Ilimitado para manter tudo.',
+      href: '#assinatura',
+    })
+  if (plan?.status === 'free' && plan.full === false)
+    items.push({
+      id: `teste-fim:${String(plan.trialEndsAt || '').slice(0, 10)}`,
+      tone: 'info',
+      icon: '🔒',
+      title: 'Seu teste completo terminou',
+      detail: 'Você continua no Grátis com as ferramentas básicas. Nada foi apagado: assine o Ilimitado para liberar tudo de novo.',
+      href: '#assinatura',
+    })
+
   // Um aluno tentou entrar pela página e o plano estava cheio (últimos 7 dias).
   const blockedDay = window.farisaBilling?.seatBlockedAt
   if (blockedDay)

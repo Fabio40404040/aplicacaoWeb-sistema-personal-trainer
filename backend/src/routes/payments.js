@@ -1,3 +1,5 @@
+import { trainerLocked } from './plan-access.js'
+const PAY_LOCKED = 'O pagamento pelo site não está disponível no momento. Combine o pagamento com o seu personal.'
 import { notifyPixToCheck, notifyStudentPayment } from './account-emails.js'
 import { NOT_CONFIGURED, pixBrCode, resolvePay } from './payout.js'
 import { withTrainerPrice } from './site.js'
@@ -122,7 +124,8 @@ export async function paymentOptions(db, accountId, platformEnv) {
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
   const pay = await resolvePay(db, platformEnv, row.trainerId)
-  const online = Boolean(pay.env?.MERCADO_PAGO_ACCESS_TOKEN)
+  // Mercado Pago automático só nos planos pagos (o Pix na chave do personal continua).
+  const online = Boolean(pay.env?.MERCADO_PAGO_ACCESS_TOKEN) && !(await trainerLocked(db, row.trainerId))
   return {
     data: {
       pix: online || pay.mode === 'pix',
@@ -163,6 +166,7 @@ export async function createPixPayment(db, accountId, platformEnv) {
   const intentId = crypto.randomUUID().replaceAll('-', '')
   const pay = await resolvePay(db, platformEnv, row.trainerId)
   if (pay.mode === 'pix') return manualPix(db, row, pay.pix, amountCents, intentId)
+  if (await trainerLocked(db, row.trainerId)) return { error: PAY_LOCKED, status: 403 }
   const env = pay.env
   if (!env?.MERCADO_PAGO_ACCESS_TOKEN) return { error: NOT_CONFIGURED, status: 503 }
   await db.query(
@@ -313,6 +317,7 @@ export async function createCardPayment(db, accountId, platformEnv, body) {
 
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
+  if (await trainerLocked(db, row.trainerId)) return { error: PAY_LOCKED, status: 403 }
   const pay = await resolvePay(db, platformEnv, row.trainerId)
   const env = pay.env
   if (!env?.MERCADO_PAGO_ACCESS_TOKEN)
