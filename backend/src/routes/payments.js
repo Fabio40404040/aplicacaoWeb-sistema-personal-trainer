@@ -637,7 +637,7 @@ export async function mercadoPagoWebhook(request, env, db) {
   if (!intent) {
     // Cobrança da assinatura de um personal (planos da plataforma).
     const { saasWebhook } = await import('./saas.js')
-    if (await saasWebhook(db, payment)) return { data: { accepted: true } }
+    if (await saasWebhook(db, payment, env)) return { data: { accepted: true } }
     return { error: 'Cobrança não encontrada.', status: 404 }
   }
   if (payment.status !== 'approved') {

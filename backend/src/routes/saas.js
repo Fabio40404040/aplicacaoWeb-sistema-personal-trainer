@@ -5,6 +5,7 @@
 // volta sozinho para o Grátis.
 import { createSession, hashPassword, isStrongPassword } from '../lib/session.js'
 import { antifraud, mercadoPago, officialPaymentForIntent } from './payments.js'
+import { sendSaasReceipt } from './billing-notices.js'
 
 export const SAAS_CYCLES = {
   monthly: { label: 'Mensal', months: 1, factor: 1 },
@@ -339,6 +340,7 @@ export async function saasCardPayment(env, db, trainerId, body) {
         db,
         { id: intentId, trainer_id: trainerId, plan_code: plan.code, cycle, amount_cents: amountCents, status: 'pending' },
         payment,
+        env,
       )
     return { data: { status, statusDetail: String(payment.status_detail || ''), paymentId: String(payment.id || '') } }
   } catch (error) {
@@ -349,7 +351,7 @@ export async function saasCardPayment(env, db, trainerId, body) {
 
 // Pagamento aprovado: ativa/renova o plano. Renovar antes de vencer soma o
 // período ao vencimento atual.
-export async function approveSaasPayment(db, intent, payment) {
+export async function approveSaasPayment(db, intent, payment, env = null) {
   if (intent.status === 'approved') return
   if (Math.round(Number(payment.transaction_amount) * 100) !== Number(intent.amount_cents))
     throw new Error('Valor da cobrança não confere.')
@@ -370,6 +372,8 @@ export async function approveSaasPayment(db, intent, payment) {
       values: [intent.trainer_id, intent.plan_code, intent.cycle, base.toISOString()],
     },
   ])
+  // Recibo por e-mail (uma vez por pagamento).
+  if (env) await sendSaasReceipt(env, db, intent.id)
 }
 
 export async function reconcileSaas(env, db, trainerId) {
@@ -390,7 +394,7 @@ export async function reconcileSaas(env, db, trainerId) {
     try {
       const payment = await officialPaymentForIntent(intent, env)
       if (!payment) continue
-      if (payment.status === 'approved') await approveSaasPayment(db, intent, payment)
+      if (payment.status === 'approved') await approveSaasPayment(db, intent, payment, env)
       else if (['rejected', 'cancelled', 'in_process', 'authorized'].includes(payment.status))
         await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, payment.status])
     } catch (error) {
@@ -400,12 +404,12 @@ export async function reconcileSaas(env, db, trainerId) {
 }
 
 // Webhook do Mercado Pago para cobranças de assinatura (referência "saas_...").
-export async function saasWebhook(db, payment) {
+export async function saasWebhook(db, payment, env = null) {
   const intent = (
     await db.query('SELECT * FROM saas_payment_intents WHERE id=$1', [String(payment.external_reference || '')])
   ).rows[0]
   if (!intent) return false
-  if (payment.status === 'approved') await approveSaasPayment(db, intent, payment)
+  if (payment.status === 'approved') await approveSaasPayment(db, intent, payment, env)
   else {
     // Estorno ou contestação de uma assinatura já aprovada: volta para o Grátis.
     const reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'

@@ -1,5 +1,6 @@
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
+import { runBillingNotices } from "./routes/billing-notices.js";
 import { isRevoked, readSession, revokeSession, sessionSignature } from "./lib/session.js";
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
 import {
@@ -253,6 +254,14 @@ async function handleRoutes(request, env) {
     return withDb(env, (db) => publicSiteHero(db, segments[2], new URL(request.url).searchParams.get("kind")));
   if (request.method === "GET" && route === "public/saas-plans")
     return withDb(env, async (db) => ({ data: await saasPlans(db) }));
+  // Avisos de vencimento da assinatura. Pode ser chamado por um agendador
+  // externo, se um dia houver. É seguro deixar aberto: roda no máximo a cada
+  // 6 horas e cada aviso sai uma vez só.
+  if (request.method === "POST" && route === "public/cron")
+    return withDb(env, async (db) => {
+      await runBillingNotices(env, db);
+      return { data: { ok: true } };
+    });
   if (request.method === "POST" && route === "auth/login")
     return withDb(env, (db) => login(request, env, db));
   if (
@@ -725,8 +734,18 @@ async function handleRoutes(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const cors = corsHeaders(request, env);
+    // O Pages não tem tarefa agendada: os avisos de assinatura saem quando
+    // alguém abre a vitrine, a página de um personal ou "Minha assinatura"
+    // (no máximo uma rodada a cada 6 horas).
+    if (
+      env.DB &&
+      request.method === "GET" &&
+      ctx?.waitUntil &&
+      /\/api\/(public\/saas-plans|public\/site|billing)\/?$/u.test(new URL(request.url).pathname)
+    )
+      ctx.waitUntil(withDb(env, (db) => runBillingNotices(env, db)).catch(() => {}));
     if (request.method === "OPTIONS")
       return new Response(null, { status: 204, headers: cors });
     try {
