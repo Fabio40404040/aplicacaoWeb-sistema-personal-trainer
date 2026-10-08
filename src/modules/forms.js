@@ -13,6 +13,21 @@ const openModal = (name) => {
   const modal = document.querySelector(`[data-modal="${name}"]`)
   if (!modal.open) modal.showModal()
 }
+// Texto do botão e mensagem de espera, conforme o formulário.
+function progressMessage(form) {
+  const editingNow = Boolean(editing[form.dataset.form])
+  const messages = {
+    student: editingNow
+      ? ['Salvando…', 'Aguarde, estamos salvando as alterações do aluno.']
+      : ['Cadastrando aluno…', 'Aguarde, estamos cadastrando o aluno e preparando o acesso dele. Isso leva só alguns segundos.'],
+    workout: ['Salvando ficha…', 'Aguarde, estamos salvando a ficha de treino.'],
+    exercise: ['Salvando exercício…', 'Aguarde, estamos salvando o exercício.'],
+    assessment: ['Salvando avaliação…', 'Aguarde, estamos salvando a avaliação física.'],
+    appointment: ['Salvando…', 'Aguarde, estamos salvando o agendamento.'],
+  }
+  return messages[form.dataset.form] || ['Salvando…', 'Aguarde, estamos salvando.']
+}
+
 // Caixa de erro dentro do formulário (antes do rodapé com os botões).
 function formError(form) {
   let box = form.querySelector('[data-form-error]')
@@ -506,10 +521,19 @@ export function initForms() {
       submit.disabled = true
       const errorBox = formError(form)
       errorBox.hidden = true
+      // Enquanto salva: botão com aviso e mensagem dentro da janela.
+      const [buttonText, progressText] = progressMessage(form)
+      submit.classList.add('is-loading')
+      submit.textContent = buttonText
+      errorBox.textContent = progressText
+      errorBox.classList.add('is-progress')
+      errorBox.hidden = false
       try {
         await handlers[form.dataset.form](form)
+        errorBox.hidden = true
         closeModal(form)
       } catch (error) {
+        errorBox.classList.remove('is-progress')
         // O aviso flutuante fica por trás da janela aberta: o erro aparece
         // também dentro do formulário, logo acima dos botões.
         errorBox.textContent = error.message
@@ -518,7 +542,12 @@ export function initForms() {
         showToast(error.message)
       } finally {
         submit.disabled = false
+        submit.classList.remove('is-loading')
         submit.textContent = label
+        if (errorBox.classList.contains('is-progress')) {
+          errorBox.classList.remove('is-progress')
+          errorBox.hidden = true
+        }
       }
     }),
   )

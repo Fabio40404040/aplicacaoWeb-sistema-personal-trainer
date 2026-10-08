@@ -4954,3 +4954,37 @@ dialog.demo-invite::backdrop {
 .billing-banner-close:hover {
   opacity: 1;
 }
+
+/* Formulário salvando: mensagem de espera e botão com indicador. */
+.form-error.is-progress {
+  border-color: #c7d7f8;
+  background: #f1f6ff;
+  color: var(--blue-700);
+}
+.form-error.is-progress::before,
+button.is-loading::before {
+  content: '';
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.12em;
+  animation: form-spin 0.7s linear infinite;
+}
+button.is-loading {
+  cursor: progress;
+}
+@keyframes form-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-error.is-progress::before,
+  button.is-loading::before {
+    animation-duration: 2s;
+  }
+}
