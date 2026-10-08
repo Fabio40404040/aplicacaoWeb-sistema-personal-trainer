@@ -20,6 +20,8 @@ export async function deleteStudentAccount(env, db, accountId, body) {
     return { error: 'Digite EXCLUIR para confirmar.', status: 400 }
   const queries = [{ sql: 'DELETE FROM student_accounts WHERE id=$1', values: [account.id] }]
   // ON DELETE CASCADE em students apaga fichas, avaliações, check-ins, agenda e pagamentos.
+  // Todos os cadastros ligados à conta (com todos os personais).
+  queries.unshift({ sql: 'DELETE FROM students WHERE account_id=$1', values: [account.id] })
   if (account.studentId)
     queries.unshift({ sql: 'DELETE FROM students WHERE id=$1', values: [account.studentId] })
   await db.batch(queries)

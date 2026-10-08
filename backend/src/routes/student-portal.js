@@ -3,6 +3,7 @@ import { loadReady, loadText } from "./resources.js";
 import { recordLoad, studentTools } from "./student-tools.js";
 import { trainerLocked } from "./plan-access.js";
 import { studentPhotoIndex } from "./assessment-photos.js";
+import { linkedTrainers } from "./student-links.js";
 import { trainerPlans, trainerReferrals } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
@@ -164,6 +165,8 @@ export async function studentPortal(db, accountId, version) {
     .query("SELECT slug FROM trainer_site WHERE trainer_id=$1", [account.trainerId || account.accountTrainerId])
     .then((result) => result.rows[0]?.slug || null)
     .catch(() => null);
+  // Todos os personais deste aluno (seletor "Meus personais").
+  response.trainers = await linkedTrainers(db, accountId);
   if (!accessActive || !account.studentId) return response;
 
   // Próximos atendimentos (usados nas notificações do aluno).

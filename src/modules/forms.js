@@ -205,7 +205,9 @@ async function handleStudent(form) {
     return
   }
   showToast(
-    editingId
+    saved?.linkedExisting
+      ? `${record.email} já tinha conta de aluno na FARISA (com outro personal). Ele entra com a senha que já usa e escolhe você em “Meus personais”.`
+      : editingId
       ? record.password
         ? 'Aluno atualizado e nova senha salva.'
         : 'Aluno atualizado com sucesso.'

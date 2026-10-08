@@ -1,3 +1,4 @@
+import { activateTrainer } from './student-links.js'
 import { notifyNewStudent, sendStudentWelcome } from './account-emails.js'
 import { seatProblem } from './saas.js'
 import { trainerIdForSlug, trainerSellsPlan } from './site.js'
@@ -109,37 +110,55 @@ export async function studentAuth(request, env, db, action) {
       /* sem a migração 026 */
     }
     let resumedPendingRegistration = false
+    // Aluno que já tem conta (com outro personal) se cadastra com mais um.
+    let linkingExisting = false
     if (!account) {
-      const existing = (
+      const found = (
         await db.query(
-          `SELECT a.id,a.name,a.email,a.password_hash,a.auth_version AS "authVersion",
-             s.plan_code AS "planCode",s.billing_cycle AS "billingCycle",s.payment_status AS "paymentStatus"
-           FROM student_accounts a LEFT JOIN students s ON s.id=a.student_id
-           WHERE lower(a.email)=lower($1) LIMIT 1`,
+          `SELECT a.id,a.name,a.email,a.password_hash,a.auth_version AS "authVersion"
+           FROM student_accounts a WHERE lower(a.email)=lower($1) LIMIT 1`,
           [email.trim()],
         )
       ).rows[0]
-      if (!existing || !(await verifyPassword(password, existing.password_hash)))
-        return { error: 'Este e-mail já está em uso. Confira a senha informada.', status: 409 }
-      if (['paid', 'waived'].includes(existing.paymentStatus))
+      if (!found || !(await verifyPassword(password, found.password_hash)))
+        return {
+          error: 'Este e-mail já tem conta de aluno na FARISA. Use a mesma senha que você já usa (ou “Esqueci minha senha”).',
+          status: 409,
+        }
+      // Cadastro com ESTE personal (se já existir).
+      const here = (
+        await db.query(
+          `SELECT plan_code AS "planCode", billing_cycle AS "billingCycle", payment_status AS "paymentStatus"
+           FROM students WHERE account_id=$1 AND trainer_id=$2 LIMIT 1`,
+          [found.id, trainer.id],
+        )
+      ).rows[0]
+      const existing = { ...found, ...(here || {}) }
+      if (!here) {
+        account = found
+        linkingExisting = true
+      } else if (['paid', 'waived'].includes(existing.paymentStatus))
         return { error: 'Este e-mail já possui cadastro. Entre na sua conta.', status: 409 }
-      if (existing.planCode !== planCode || existing.billingCycle !== billingCycle)
+      if (here && (existing.planCode !== planCode || existing.billingCycle !== billingCycle))
         return {
           error: 'Existe um pagamento pendente para outro plano. Conclua essa contratação ou fale com o personal.',
           status: 409,
         }
-      await db.batch([
-        {
-          sql: `UPDATE student_accounts SET requested_payment_channel=$2 WHERE id=$1`,
-          values: [existing.id, paymentChannel],
-        },
-        {
-          sql: `UPDATE students SET payment_method=$2,updated_at=CURRENT_TIMESTAMP WHERE account_id=$1 AND payment_status='pending'`,
-          values: [existing.id, paymentChannel],
-        },
-      ])
-      account = existing
-      resumedPendingRegistration = true
+      if (here) {
+        await db.batch([
+          {
+            sql: `UPDATE student_accounts SET requested_payment_channel=$2 WHERE id=$1`,
+            values: [existing.id, paymentChannel],
+          },
+          {
+            sql: `UPDATE students SET payment_method=$2,updated_at=CURRENT_TIMESTAMP WHERE account_id=$1 AND trainer_id=$3 AND payment_status='pending'`,
+            values: [existing.id, paymentChannel, trainer.id],
+          },
+        ])
+        await activateTrainer(db, existing.id, trainer.id)
+        account = existing
+        resumedPendingRegistration = true
+      }
     }
     if (!resumedPendingRegistration) {
       try {
@@ -161,21 +180,26 @@ export async function studentAuth(request, env, db, action) {
             ],
           )
         ).rows[0]
-        await db.query('UPDATE student_accounts SET student_id=$2 WHERE id=$1', [
+        // Este personal passa a ser o ativo na área do aluno.
+        await db.query('UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1', [
           account.id,
           student.id,
+          trainer.id,
         ])
-        // Conta nova: e-mail ainda não confirmado; boas-vindas ao aluno e aviso ao personal.
-        try {
-          await db.query('UPDATE student_accounts SET email_verified_at=NULL WHERE id=$1', [account.id])
-        } catch {
-          // sem a migração 036
+        if (!linkingExisting) {
+          // Conta nova: e-mail ainda não confirmado; boas-vindas ao aluno.
+          try {
+            await db.query('UPDATE student_accounts SET email_verified_at=NULL WHERE id=$1', [account.id])
+          } catch {
+            // sem a migração 036
+          }
+          await sendStudentWelcome(db, account, trainer.id)
         }
-        await sendStudentWelcome(db, account, trainer.id)
         const planName = (await db.query('SELECT name FROM plans WHERE code=$1', [planCode])).rows[0]?.name
         await notifyNewStudent(db, trainer.id, account, planName).catch(() => {})
       } catch (error) {
-        await db.query('DELETE FROM student_accounts WHERE id=$1', [account.id])
+        // Só apaga a conta se ela acabou de ser criada (nunca a que já existia).
+        if (!linkingExisting) await db.query('DELETE FROM student_accounts WHERE id=$1', [account.id])
         throw error
       }
     }
@@ -190,6 +214,12 @@ export async function studentAuth(request, env, db, action) {
     account = result.rows[0]
     if (!account || !(await verifyPassword(password, account.password_hash)))
       return { error: 'E-mail ou senha incorretos.', status: 401 }
+    // Entrou pela página de um dos personais dele: esse fica ativo.
+    const site = typeof body.site === 'string' ? body.site.trim().toLowerCase() : ''
+    if (/^[a-z0-9-]{3,30}$/u.test(site)) {
+      const siteTrainer = await trainerIdForSlug(db, site).catch(() => null)
+      if (siteTrainer) await activateTrainer(db, account.id, siteTrainer).catch(() => false)
+    }
   }
   return {
     data: {

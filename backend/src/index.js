@@ -1,3 +1,4 @@
+import { activateTrainer, switchTrainer } from "./routes/student-links.js";
 import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
@@ -93,7 +94,7 @@ import {
 } from "./routes/payments.js";
 import { demoSession } from "./routes/demo.js";
 import { demoReadOnly, isDemoEmail } from "./lib/demo.js";
-import { publicSite, publicSiteHero, saveSite, saveSiteHero, siteIcon, siteManifest, siteSettings } from "./routes/site.js";
+import { trainerIdForSlug, publicSite, publicSiteHero, saveSite, saveSiteHero, siteIcon, siteManifest, siteSettings } from "./routes/site.js";
 import {
   payoutConnectUrl,
   payoutDisconnect,
@@ -429,7 +430,16 @@ async function handleRoutes(request, env) {
         )
       ).rows[0];
       if (!account) return { error: "Sessão inválida ou expirada.", status: 401 };
+      // Aluno com mais de um personal escolhe qual ver.
+      if (request.method === "POST" && route === "student/switch-trainer")
+        return switchTrainer(db, session.sub, await readJson(request));
       if (request.method === "GET" && route === "student/me") {
+        // Aberto na página de um dos personais dele: esse fica ativo.
+        const site = String(url.searchParams.get("site") || "").toLowerCase();
+        if (/^[a-z0-9-]{3,30}$/u.test(site)) {
+          const siteTrainer = await trainerIdForSlug(db, site).catch(() => null);
+          if (siteTrainer) await activateTrainer(db, session.sub, siteTrainer).catch(() => false);
+        }
         await reconcileStudentPayments(
           db,
           session.sub,

@@ -705,6 +705,30 @@ function renderPortal(container, data) {
   change.type = "button";
   change.addEventListener("click", () => openPlanChange(data, planOptions));
   plan.append(change);
+  // Aluno com mais de um personal: escolhe qual ver.
+  if ((data.trainers || []).length > 1) {
+    const box = element("label", "student-trainer-switch");
+    box.append(element("span", "", "Meus personais"));
+    const select = element("select");
+    data.trainers.forEach((trainer) => {
+      const label = [trainer.brandMark, trainer.brandName].filter(Boolean).join(" ") || trainer.trainerName;
+      const option = new Option(label, trainer.trainerId, trainer.active, trainer.active);
+      select.append(option);
+    });
+    select.addEventListener("change", async () => {
+      select.disabled = true;
+      try {
+        const result = await studentRequest("switch-trainer", { trainerId: select.value });
+        if (result.slug) location.href = `/p/${result.slug}#painel-aluno`;
+        else await reloadStudentPanel();
+      } catch (error) {
+        select.disabled = false;
+        plan.append(element("small", "", error.message));
+      }
+    });
+    box.append(select);
+    plan.append(box);
+  }
   if (data.pendingChange) {
     const pending = element("div", "student-plan-pending");
     pending.append(
@@ -983,7 +1007,8 @@ export function initStudentAccess() {
       return;
     }
     try {
-      const data = await studentRequest("me");
+      const site = currentSiteSlug();
+      const data = await studentRequest(site ? `me?site=${encodeURIComponent(site)}` : "me");
       if (current !== generation) return;
       // Aluno que entrou pela página principal ou pela de outro personal:
       // vai para a página do personal dele (marca, cor e contato certos).
@@ -1052,7 +1077,8 @@ export function initStudentAccess() {
         const data = Object.fromEntries(new FormData(form)),
           action = form.dataset.studentForm;
         // Cadastro feito na página de um personal (/p/<slug>) cai para ele.
-        if (action === "register") data.site = currentSiteSlug();
+        // Na página de um personal: cadastro cai para ele e o login abre com ele.
+        if (action === "register" || action === "login") data.site = currentSiteSlug();
         if (action === "reset")
           data.token = new URLSearchParams(
             location.hash.split("?")[1] || "",

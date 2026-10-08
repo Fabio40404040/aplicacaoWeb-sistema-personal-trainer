@@ -81,6 +81,28 @@ export async function sendStudentWelcome(db, account, trainerId, { byTrainer = f
   }
 }
 
+// Aluno que já tinha conta foi adicionado por mais um personal.
+export async function sendStudentLinked(db, account, trainerId) {
+  try {
+    const trainer = await trainerOf(db, trainerId)
+    const who = escape(trainer?.brand || trainer?.name || 'um novo personal')
+    await notify({
+      to: account.email,
+      name: account.name,
+      subject: `${trainer?.brand || trainer?.name || 'Um personal'} adicionou você como aluno`,
+      lines: [
+        `<strong>${who}</strong> adicionou você como aluno na FARISA.`,
+        'Você entra com o mesmo e-mail e a mesma senha que já usa. Na sua área, em “Meus personais”, escolha com qual personal quer ver os treinos.',
+        `Página deste personal: <a href="${studentPage(trainer)}">${escape(studentPage(trainer))}</a>`,
+        'Se você não conhece este personal, responda este e-mail.',
+      ],
+      button: { label: 'Abrir a área do aluno', url: `${studentPage(trainer)}` },
+    })
+  } catch (error) {
+    console.error('[aluno ligado a outro personal]', error?.message)
+  }
+}
+
 // Link do e-mail: confirma e mostra uma página simples (rota pública).
 export async function verifyEmailPage(db, token) {
   let ok = false

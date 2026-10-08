@@ -1,5 +1,26 @@
+import { detachStudent } from "./student-links.js";
 import { holdSeatIfUsed } from "./plan-access.js";
-import { sendStudentWelcome } from "./account-emails.js";
+import { sendStudentLinked, sendStudentWelcome } from "./account-emails.js";
+
+// E-mail que já tem conta de aluno (com outro personal): este cadastro passa
+// a usar a mesma conta. O aluno escolhe o personal na área dele.
+async function linkExistingAccount(db, student, trainerId) {
+  const existing = (
+    await db.query("SELECT id, name, email, student_id AS \"studentId\" FROM student_accounts WHERE lower(email)=lower($1) LIMIT 1", [
+      student.email,
+    ])
+  ).rows[0];
+  if (!existing) return { error: "Não foi possível criar o acesso deste aluno. Tente de novo.", status: 409 };
+  const already = (
+    await db.query("SELECT id FROM students WHERE account_id=$1 AND trainer_id=$2 AND id<>$3 LIMIT 1", [existing.id, trainerId, student.id])
+  ).rows[0];
+  if (already) return { error: "Este aluno já está na sua lista de alunos.", status: 409 };
+  await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [existing.id, student.id]);
+  if (!existing.studentId)
+    await db.query("UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1", [existing.id, student.id, trainerId]);
+  await sendStudentLinked(db, existing, trainerId).catch(() => {});
+  return { ok: true };
+}
 
 // Aluno com login criado pelo personal: recebe o e-mail de boas-vindas com o
 // link da página e a confirmação do e-mail.
@@ -334,12 +355,14 @@ export async function createResource(db, resource, trainerId, body) {
         )
       ).rows[0];
       if (!account) {
-        await db.query("DELETE FROM students WHERE id=$1", [student.id]);
-        return {
-          error:
-            "Este e-mail já está em uso por outro aluno. Use outro e-mail ou cadastre sem senha.",
-          status: 409,
-        };
+        // O aluno já tem conta na FARISA (com outro personal): liga este
+        // cadastro à conta dele. A senha continua a que ele já usa.
+        const linked = await linkExistingAccount(db, student, trainerId);
+        if (linked.error) {
+          await db.query("DELETE FROM students WHERE id=$1", [student.id]);
+          return linked;
+        }
+        return { ...student, linkedExisting: true };
       }
       await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [
         account.id,
@@ -391,8 +414,10 @@ export async function updateResource(db, resource, trainerId, id, body) {
     const [studentResult] = await db.batch([
       { sql: config.update, values },
       {
+        // Conta usada com mais de um personal: o nome é do aluno, não muda.
         sql: `UPDATE student_accounts SET name=$3
-          WHERE id=(SELECT account_id FROM students WHERE id=$2 AND trainer_id=$1)`,
+          WHERE id=(SELECT account_id FROM students WHERE id=$2 AND trainer_id=$1)
+            AND (SELECT COUNT(*) FROM students o WHERE o.account_id=student_accounts.id) <= 1`,
         values: [trainerId, id, body.name],
       },
     ]);
@@ -416,8 +441,11 @@ export async function updateResource(db, resource, trainerId, id, body) {
             [student.name, student.email, hash, trainerId, student.id],
           )
         ).rows[0];
-        if (!account)
-          return { error: "Este e-mail já está em uso por outro aluno. Troque o e-mail para criar o acesso.", status: 409 };
+        if (!account) {
+          const linked = await linkExistingAccount(db, student, trainerId);
+          if (linked.error) return linked;
+          return { ...updated, linkedExisting: true };
+        }
         await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [account.id, student.id]);
         await welcomeStudent(db, account.id, student, trainerId);
       }
@@ -440,18 +468,18 @@ export async function deleteResource(db, resource, trainerId, id) {
   if (resource === "students") {
     // No Grátis, a vaga de um aluno já atendido fica em espera por 30 dias.
     await holdSeatIfUsed(db, trainerId, id);
-    const [, deleted] = await db.batch([
-      {
-        sql: `DELETE FROM student_accounts
-          WHERE id=(SELECT account_id FROM students WHERE id=$1 AND trainer_id=$2)`,
-        values: [id, trainerId],
-      },
+    const mine = (await db.query("SELECT id FROM students WHERE id=$1 AND trainer_id=$2", [id, trainerId])).rows[0];
+    if (!mine) return null;
+    // Conta usada também com outro personal: fica para ele; senão é apagada.
+    const dropAccount = await detachStudent(db, id);
+    const results = await db.batch([
+      ...(dropAccount ? [dropAccount] : []),
       {
         sql: "DELETE FROM students WHERE id=$1 AND trainer_id=$2 RETURNING id",
         values: [id, trainerId],
       },
     ]);
-    return deleted.rows[0] || null;
+    return results.at(-1).rows[0] || null;
   }
   if (resource === "exercises") {
     // O exercicio e referenciado pelas fichas e pelos treinos prontos. Se

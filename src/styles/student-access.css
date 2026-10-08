@@ -1637,3 +1637,21 @@
   color: #9fb3cc;
   font-size: 0.76rem;
 }
+
+/* Aluno com mais de um personal */
+.student-trainer-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #dce9f8;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.student-trainer-switch select {
+  padding: 6px 10px;
+  border: 1px solid #3b4f6b;
+  border-radius: 8px;
+  background: #0f1826;
+  color: #fff;
+  font: inherit;
+}

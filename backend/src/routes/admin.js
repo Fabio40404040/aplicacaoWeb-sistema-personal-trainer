@@ -408,8 +408,9 @@ export async function removeTrainer(env, db, id) {
     removedAccounts = Number(
       (
         await db.query(
-          `SELECT COUNT(*) AS total FROM student_accounts WHERE trainer_id=$1
-             OR id IN (SELECT account_id FROM students WHERE trainer_id=$1 AND account_id IS NOT NULL)`,
+          `SELECT COUNT(*) AS total FROM student_accounts WHERE (trainer_id=$1
+             OR id IN (SELECT account_id FROM students WHERE trainer_id=$1 AND account_id IS NOT NULL))
+             AND id NOT IN (SELECT account_id FROM students WHERE trainer_id<>$1 AND account_id IS NOT NULL)`,
           [id],
         )
       ).rows[0]?.total || 0,
@@ -417,10 +418,33 @@ export async function removeTrainer(env, db, id) {
   } catch {
     // só para o registro
   }
+  // Aluno que também tem outro personal: a conta fica e passa a apontar para ele.
+  try {
+    const shared = (
+      await db.query(
+        `SELECT DISTINCT s.account_id AS "accountId" FROM students s WHERE s.trainer_id=$1 AND s.account_id IS NOT NULL
+           AND EXISTS (SELECT 1 FROM students o WHERE o.account_id=s.account_id AND o.trainer_id<>$1)`,
+        [id],
+      )
+    ).rows
+    for (const { accountId } of shared) {
+      const other = (
+        await db.query('SELECT id, trainer_id AS "trainerId" FROM students WHERE account_id=$1 AND trainer_id<>$2 ORDER BY created_at LIMIT 1', [
+          accountId,
+          id,
+        ])
+      ).rows[0]
+      if (other)
+        await db.query('UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1', [accountId, other.id, other.trainerId])
+    }
+  } catch {
+    /* sem alunos compartilhados */
+  }
   await db.batch([
     {
-      sql: `DELETE FROM student_accounts WHERE trainer_id=$1
-              OR id IN (SELECT account_id FROM students WHERE trainer_id=$1 AND account_id IS NOT NULL)`,
+      sql: `DELETE FROM student_accounts WHERE (trainer_id=$1
+              OR id IN (SELECT account_id FROM students WHERE trainer_id=$1 AND account_id IS NOT NULL))
+              AND id NOT IN (SELECT account_id FROM students WHERE trainer_id<>$1 AND account_id IS NOT NULL)`,
       values: [id],
     },
     { sql: 'DELETE FROM trainers WHERE id=$1', values: [id] },
