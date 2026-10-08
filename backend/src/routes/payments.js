@@ -17,9 +17,11 @@ export function amountFor(plan, billingCycle) {
   return Math.round(Number(plan.priceCents) * cycle.months * cycle.discount)
 }
 
-function expiryFor(plan, billingCycle) {
+function expiryFor(plan, billingCycle, from = null) {
   if (plan.accessType === 'permanent') return null
-  const result = new Date()
+  // Renovação antes de vencer: soma ao prazo atual (não perde os dias que faltam).
+  const base = from && Date.parse(from) > Date.now() ? new Date(from) : new Date()
+  const result = base
   result.setUTCDate(result.getUTCDate() + (BILLING_CYCLES[billingCycle]?.days || 30))
   return result.toISOString()
 }
@@ -88,6 +90,31 @@ export function antifraud(body, item) {
 }
 
 // Plano e valor a cobrar do aluno, já com o preço do personal dele.
+// Já pago e com bastante prazo: não deixa pagar de novo por engano. A renovação
+// abre 7 dias antes de vencer; mudança de plano pedida pelo aluno sempre pode.
+const RENEW_DAYS = 7
+async function alreadyPaid(db, accountId) {
+  try {
+    const row = (
+      await db.query(
+        `SELECT s.access_status AS "accessStatus", s.payment_status AS "paymentStatus", s.access_type AS "accessType",
+           s.access_expires_at AS "expiresAt", a.change_plan_code AS "changePlan"
+         FROM student_accounts a JOIN students s ON s.id=a.student_id WHERE a.id=$1 LIMIT 1`,
+        [accountId],
+      )
+    ).rows[0]
+    if (!row || row.changePlan || row.accessStatus !== 'active' || row.paymentStatus !== 'paid') return null
+    if (row.accessType === 'permanent' || !row.expiresAt)
+      return 'Seu plano já está pago e o acesso é permanente. Não é preciso pagar de novo.'
+    const left = Date.parse(row.expiresAt) - Date.now()
+    if (left <= RENEW_DAYS * 86_400_000) return null
+    const until = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(new Date(row.expiresAt))
+    return `Seu plano já está pago até ${until}. A renovação abre ${RENEW_DAYS} dias antes de vencer.`
+  } catch {
+    return null
+  }
+}
+
 async function paymentAccount(db, accountId) {
   const row = await basePaymentAccount(db, accountId)
   return withTrainerPrice(db, row?.trainerId, row)
@@ -136,6 +163,8 @@ export async function paymentOptions(db, accountId, platformEnv) {
 }
 
 export async function cardPaymentConfig(db, accountId, platformEnv) {
+  const paid = await alreadyPaid(db, accountId)
+  if (paid) return { error: paid, status: 409 }
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
   const pay = await resolvePay(db, platformEnv, row.trainerId, { charge: true })
@@ -158,6 +187,8 @@ export async function cardPaymentConfig(db, accountId, platformEnv) {
 }
 
 export async function createPixPayment(db, accountId, platformEnv) {
+  const paid = await alreadyPaid(db, accountId)
+  if (paid) return { error: paid, status: 409 }
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou pré-cadastro não encontrado.', status: 404 }
   if (row.accessType !== 'permanent' && !BILLING_CYCLES[row.billingCycle])
@@ -315,6 +346,8 @@ export async function createCardPayment(db, accountId, platformEnv, body) {
   )
     return { error: 'Confira os dados do cartão e do titular.', status: 400 }
 
+  const paid = await alreadyPaid(db, accountId)
+  if (paid) return { error: paid, status: 409 }
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
   if (await trainerLocked(db, row.trainerId)) return { error: PAY_LOCKED, status: 403 }
@@ -433,7 +466,21 @@ async function approvePayment(db, intent, payment, paymentId, provider = 'mercad
     Math.round(Number(payment.transaction_amount) * 100) !== Number(intent.amount_cents)
   )
     throw new Error('Valor da cobrança não confere.')
-  const expiresAt = expiryFor(intent, intent.billing_cycle)
+  // Mesmo plano e período ainda valendo: a renovação soma ao prazo atual.
+  const current = (
+    await db
+      .query(
+        `SELECT plan_code AS "planCode", billing_cycle AS "billingCycle", access_status AS "accessStatus",
+           access_expires_at AS "expiresAt" FROM students WHERE id=$1`,
+        [intent.student_id],
+      )
+      .catch(() => ({ rows: [] }))
+  ).rows[0]
+  const renewing =
+    current?.accessStatus === 'active' &&
+    current.planCode === intent.plan_code &&
+    current.billingCycle === intent.billing_cycle
+  const expiresAt = expiryFor(intent, intent.billing_cycle, renewing ? current.expiresAt : null)
   await db.batch([
     {
       sql: `UPDATE payment_intents SET status='approved',updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
@@ -569,7 +616,25 @@ export async function mercadoPagoWebhook(request, env, db) {
   }
   if (payment.status !== 'approved') {
     // Dinheiro devolvido ou contestado depois de aprovado: o acesso sai junto.
-    const reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'
+    let reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'
+    // Pagamento em dobro devolvido: se outro pagamento aprovado do aluno foi
+    // feito dentro do mesmo período do plano e o acesso ainda vale, o acesso
+    // continua; só esta cobrança vira devolvida.
+    if (reversed) {
+      const days = BILLING_CYCLES[intent.billing_cycle]?.days || 30
+      const other = (
+        await db
+          .query(
+            `SELECT 1 AS x FROM payment_intents i JOIN students s ON s.id=i.student_id
+             WHERE i.student_id=$1 AND i.id<>$2 AND i.status='approved'
+               AND s.access_status='active' AND (s.access_expires_at IS NULL OR s.access_expires_at > CURRENT_TIMESTAMP)
+               AND i.updated_at >= datetime('now', $3) LIMIT 1`,
+            [intent.student_id, intent.id, `-${days} days`],
+          )
+          .catch(() => ({ rows: [] }))
+      ).rows[0]
+      if (other) reversed = false
+    }
     const queries = [
       {
         sql: `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,

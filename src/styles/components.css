@@ -5065,3 +5065,10 @@ button.is-loading {
     animation: none;
   }
 }
+
+/* E-mail do cadastro no formulário do cartão (só leitura). */
+.secure-card-form input[readonly] {
+  background: #f1f5f9;
+  color: #475569;
+  cursor: default;
+}

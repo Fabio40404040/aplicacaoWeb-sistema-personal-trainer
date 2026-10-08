@@ -162,7 +162,17 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
   })
   dialog.querySelector('[data-card-description]').textContent = config.description
   dialog.querySelector('[data-card-amount]').textContent = formattedAmount
-  form.querySelector('#mp-cardholder-email').value = config.payerEmail
+  // O pagamento sai sempre com o e-mail do cadastro (é para ele que vai o
+  // recibo). O campo só mostra qual é; para trocar, corrige-se o cadastro.
+  const emailInput = form.querySelector('#mp-cardholder-email')
+  emailInput.value = config.payerEmail || ''
+  if (config.payerEmail) {
+    emailInput.readOnly = true
+    emailInput.title = 'E-mail do seu cadastro'
+    const hint = document.createElement('small')
+    hint.textContent = 'O recibo vai para o e-mail do seu cadastro.'
+    emailInput.after(hint)
+  }
   updateCardBrand(dialog)
   const say = (text, tone = '') => {
     status.textContent = text
