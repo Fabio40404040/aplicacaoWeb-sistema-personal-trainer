@@ -136,6 +136,14 @@ export async function adminTrainers(db) {
      FROM trainers t ORDER BY t.created_at`,
   ]
   const extras = new Map((await adminTrainerExtras(db)).map((row) => [row.id, row]))
+  // Fim do teste completo de 30 dias (migração 041).
+  const trials = new Map(
+    (
+      await db
+        .query('SELECT id, saas_trial_ends_at AS "trialEndsAt" FROM trainers')
+        .catch(() => ({ rows: [] }))
+    ).rows.map((row) => [row.id, row.trialEndsAt]),
+  )
   const payout = await payoutModes(db)
   for (const sql of queries) {
     try {
@@ -153,6 +161,7 @@ export async function adminTrainers(db) {
         workouts: Number(row.workouts || 0),
         isOwner: index === 0,
         payoutMode: payout.get(row.id) || 'none',
+        trialEndsAt: trials.get(row.id) || null,
       }))
     } catch {
       /* tenta a próxima versão da consulta */
@@ -276,8 +285,29 @@ export async function adminCreateTrainer(db, admin, body) {
   } catch {
     /* sem a migração 018 */
   }
+  // Conta criada pelo admin também começa com 30 dias de tudo liberado.
+  await db
+    .query('UPDATE trainers SET saas_trial_ends_at=$2 WHERE id=$1', [row.id, new Date(Date.now() + 30 * 86_400_000).toISOString()])
+    .catch(() => {})
   await audit(db, admin, 'trainer_created', { type: 'trainer', id: row.id, label: email })
   return { data: { ...row, temporaryPassword: password }, status: 201 }
+}
+
+// Teste completo de 30 dias: encerrar agora (para testar o Grátis básico) ou
+// dar mais 30 dias a partir de hoje.
+export async function adminSetTrainerTrial(db, admin, id, body) {
+  const trainer = await trainerById(db, id)
+  if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
+  const end = body?.action === 'end'
+  if (!end && body?.action !== 'restart') return { error: 'Ação inválida.', status: 400 }
+  const until = end ? new Date(Date.now() - 60_000) : new Date(Date.now() + 30 * 86_400_000)
+  try {
+    await db.query('UPDATE trainers SET saas_trial_ends_at=$2 WHERE id=$1', [id, until.toISOString()])
+  } catch {
+    return { error: 'O teste de 30 dias ainda não está disponível (migração 041).', status: 503 }
+  }
+  await audit(db, admin, end ? 'trainer_trial_ended' : 'trainer_trial_restarted', { type: 'trainer', id, label: trainer.email })
+  return { data: { id, trialEndsAt: until.toISOString() } }
 }
 
 export async function adminUpdateTrainer(db, admin, id, body) {

@@ -161,6 +161,14 @@ function render() {
           ),
         )
       }
+      // Teste completo de 30 dias (só faz diferença no Grátis).
+      if (trainer.saasPlan === 'free' && !trainer.isOwner && trainer.trialEndsAt) {
+        const trialEnd = toDate(trainer.trialEndsAt)
+        const inTrial = trialEnd && trialEnd > new Date()
+        status.append(
+          el('small', 'admin-muted', inTrial ? `Teste completo até ${formatDay(trainer.trialEndsAt)}` : 'Teste encerrado · ferramentas básicas'),
+        )
+      }
       if (trainer.payoutMode)
         status.append(
           el(
@@ -215,6 +223,7 @@ function render() {
       action('Editar dados', openTrainerForm)
       action('Acessar painel (suporte)', impersonate)
       action('Plano e limite de alunos', setPlan)
+      if (!trainer.isOwner) action('Teste de 30 dias…', setTrial)
       action('Gerar nova senha', resetPassword)
       action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
       action('Excluir personal…', deleteTrainer, 'is-danger')
@@ -397,6 +406,42 @@ function impersonate(trainer) {
     if (tab) tab.location.href = url
     else window.location.href = url
     box.close()
+  })
+  box.showModal()
+}
+
+// Teste completo de 30 dias do personal: encerrar agora (para conferir o
+// plano Grátis básico) ou dar mais 30 dias.
+function setTrial(trainer) {
+  const ends = trainer.trialEndsAt ? new Date(trainer.trialEndsAt) : null
+  const active = ends && ends.getTime() > Date.now()
+  const day = (date) => date.toLocaleDateString('pt-BR')
+  const situation = !ends
+    ? 'Esta conta não tem teste de 30 dias registrado.'
+    : active
+      ? `Em teste completo até ${day(ends)}.`
+      : `Teste encerrado em ${day(ends)}. Se estiver no Grátis, usa só as ferramentas básicas.`
+  const paid = trainer.saasPlan && trainer.saasPlan !== 'free'
+  const choice = el('div', 'admin-trial-choice')
+  ;[
+    ['end', 'Encerrar o teste agora', 'A conta passa na hora para as ferramentas básicas do Grátis (se não tiver plano pago).'],
+    ['restart', 'Dar mais 30 dias', 'Libera tudo de novo por 30 dias a partir de hoje.'],
+  ].forEach(([value, label, hint], index) => {
+    const option = el('label', 'check-field')
+    const input = el('input')
+    Object.assign(input, { type: 'radio', name: 'action', value, required: true, checked: index === (active ? 0 : 1) })
+    const text = el('span')
+    text.append(el('strong', '', label), el('br'), el('small', 'admin-muted', hint))
+    option.append(input, text)
+    choice.append(option)
+  })
+  const body = [el('p', '', situation), choice]
+  if (paid) body.push(el('p', 'admin-muted', 'Esta conta tem plano pago: o teste não muda nada enquanto o plano estiver ativo.'))
+  const { box, form, status, ok } = dialog({ title: `Teste de 30 dias · ${trainer.name}`, body, confirmLabel: 'Aplicar' })
+  run(form, ok, status, async ({ action }) => {
+    await api(`/admin/trainers/${trainer.id}/trial`, { method: 'POST', body: JSON.stringify({ action }) })
+    box.close()
+    await reload()
   })
   box.showModal()
 }

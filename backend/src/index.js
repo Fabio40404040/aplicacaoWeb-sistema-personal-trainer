@@ -11,6 +11,7 @@ import {
   adminBilling,
   adminCreateTrainer,
   adminDeleteTrainer,
+  adminSetTrainerTrial,
   adminImpersonate,
   adminLogin,
   adminOverview,
@@ -354,6 +355,8 @@ async function handleRoutes(request, env) {
           return adminImpersonate(env, db, admin, id, await readJson(request));
         if (request.method === "POST" && segments[3] === "delete")
           return adminDeleteTrainer(env, db, admin, id, await readJson(request));
+        if (request.method === "POST" && segments[3] === "trial")
+          return adminSetTrainerTrial(db, admin, id, await readJson(request));
       }
       if (request.method === "GET" && route === "admin/saas-plans")
         return { data: await saasPlans(db, { includeInactive: true }) };
