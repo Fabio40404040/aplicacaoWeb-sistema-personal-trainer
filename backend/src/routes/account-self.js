@@ -4,6 +4,8 @@ import { isDemoEmail } from '../lib/demo.js'
 import { verifyPassword } from '../lib/session.js'
 import { removeTrainer } from './admin.js'
 import { saasState } from './saas.js'
+import { sendTrainerWelcome } from './account-emails.js'
+import { notify } from '../lib/notify.js'
 
 // ---------- armazenamento (vídeos e PDFs; GIFs não contam)
 export const FREE_MEDIA_BYTES = 300 * 1024 * 1024
@@ -131,4 +133,44 @@ export async function deleteOwnAccount(env, db, session, body) {
     // registro é opcional
   }
   return { data: { deleted: true } }
+}
+
+// ---------- o próprio personal corrige o e-mail da conta
+// Pede a senha atual, troca o e-mail, envia o link de confirmação para o
+// endereço novo e avisa o endereço antigo (segurança). Sem chamar o suporte.
+export async function changeOwnEmail(db, session, body) {
+  if (session.support) return { error: 'No acesso de suporte não é possível trocar o e-mail.', status: 403 }
+  const trainer = (await db.query('SELECT id, name, email, password_hash FROM trainers WHERE id=$1', [session.sub])).rows[0]
+  if (!trainer) return { error: 'Conta não encontrada.', status: 404 }
+  if (isDemoEmail(trainer.email)) return { error: 'A conta de demonstração não pode trocar o e-mail.', status: 403 }
+  const email = String(body?.email || '').trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) || email.length > 180)
+    return { error: 'Informe um e-mail válido.', status: 400 }
+  if (typeof body?.password !== 'string' || !(await verifyPassword(body.password, trainer.password_hash)))
+    return { error: 'Senha incorreta.', status: 400 } // 401 faria o painel achar que a sessão caiu
+  if (email === String(trainer.email).toLowerCase())
+    return { error: 'Este já é o e-mail da sua conta. Use “Reenviar e-mail” para receber o link de novo.', status: 400 }
+  const taken = (await db.query('SELECT id FROM trainers WHERE lower(email)=$1 AND id<>$2', [email, trainer.id])).rows[0]
+  if (taken) return { error: 'Este e-mail já é usado por outra conta de personal.', status: 409 }
+  await db.query('UPDATE trainers SET email=$2 WHERE id=$1', [trainer.id, email])
+  await db.query('UPDATE trainers SET email_verified_at=NULL WHERE id=$1', [trainer.id]).catch(() => {})
+  const sent = await sendTrainerWelcome(db, { ...trainer, email }, { resend: true })
+  await notify({
+    to: trainer.email,
+    name: trainer.name,
+    subject: 'O e-mail da sua conta FARISA foi alterado',
+    lines: [
+      `O e-mail de acesso da sua conta de personal foi trocado para <strong>${email.replace(/[<>&"]/gu, '')}</strong>.`,
+      'Se não foi você, responda este e-mail ou fale com o suporte imediatamente.',
+    ],
+  }).catch(() => false)
+  try {
+    await db.query(
+      `INSERT INTO admin_audit (admin_email, action, target_type, target_label, details) VALUES ($1,'trainer_email_changed','trainer',$2,$3)`,
+      [email, email, `E-mail trocado pelo próprio personal (antes: ${trainer.email})`],
+    )
+  } catch {
+    // registro é opcional
+  }
+  return { data: { email, sent: Boolean(sent) } }
 }

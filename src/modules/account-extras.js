@@ -49,6 +49,10 @@ export function paintEmailBanner(email) {
       again.disabled = false
     }
   })
+  // E-mail errado? O próprio personal corrige (com a senha) e o link vai para o novo.
+  const fix = el('button', 'button button--secondary', 'Corrigir e-mail')
+  fix.type = 'button'
+  fix.addEventListener('click', () => openEmailChange(email))
   const close = el('button', 'billing-banner-close', '×')
   close.type = 'button'
   close.title = 'Fechar este aviso por 7 dias'
@@ -62,10 +66,69 @@ export function paintEmailBanner(email) {
     bar.remove()
   })
   bar.replaceChildren(
-    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para receber os avisos de alunos e de pagamentos. Enviamos um link para você. Se o e-mail estiver errado, fale com o suporte para corrigir.`),
+    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para receber os avisos de alunos e de pagamentos. Enviamos um link para você.`),
     again,
+    fix,
     close,
   )
+}
+
+function openEmailChange(email) {
+  const box = el('dialog', 'confirm-dialog')
+  const form = el('form', 'payout-confirm')
+  form.method = 'dialog'
+  form.append(
+    el('h2', '', 'Corrigir o e-mail da conta'),
+    el('p', '', `Hoje a conta está com ${email.email}. Digite o e-mail certo e a sua senha: enviamos o link de confirmação para o e-mail novo, e ele passa a ser o seu login.`),
+  )
+  const field = (label, name, type) => {
+    const wrap = el('label', 'field')
+    const input = el('input')
+    Object.assign(input, { name, type, required: true, autocomplete: type === 'password' ? 'current-password' : 'email' })
+    wrap.append(el('span', '', label), input)
+    form.append(wrap)
+    return input
+  }
+  const address = field('E-mail certo', 'email', 'email')
+  const password = field('Sua senha', 'password', 'password')
+  const status = el('p', 'form-error')
+  status.hidden = true
+  const actions = el('div', 'payout-actions')
+  const cancel = el('button', 'button button--secondary', 'Cancelar')
+  cancel.type = 'button'
+  cancel.addEventListener('click', () => box.close())
+  const save = el('button', 'button button--primary', 'Trocar e enviar o link')
+  save.type = 'submit'
+  actions.append(cancel, save)
+  form.append(status, actions)
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    if (!form.reportValidity()) return
+    save.disabled = true
+    status.hidden = true
+    try {
+      const result = await accountRequest('/account/email', {
+        method: 'POST',
+        body: JSON.stringify({ email: address.value.trim(), password: password.value }),
+      })
+      box.close()
+      paintEmailBanner({ email: result.email, verified: false })
+      showToast(
+        result.sent
+          ? `Pronto! Enviamos o link de confirmação para ${result.email}. Seu login agora é este e-mail.`
+          : `E-mail trocado para ${result.email}. Não conseguimos enviar o link agora: use “Reenviar e-mail” em alguns minutos.`,
+      )
+    } catch (error) {
+      status.textContent = error.message
+      status.hidden = false
+      save.disabled = false
+    }
+  })
+  box.addEventListener('close', () => box.remove())
+  box.append(form)
+  document.body.append(box)
+  box.showModal()
+  address.focus()
 }
 
 // ---------- uso do espaço (vídeos e PDFs)

@@ -2,7 +2,8 @@ import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { runBillingNotices } from "./routes/billing-notices.js";
 import { resendVerification, verifyEmailPage } from "./routes/account-emails.js";
-import { deleteOwnAccount, exportAccount, onboarding } from "./routes/account-self.js";
+import { deleteOwnAccount,
+  changeOwnEmail, exportAccount, onboarding } from "./routes/account-self.js";
 import { useEnv } from "./lib/notify.js";
 import { isRevoked, readSession, revokeSession, sessionSignature } from "./lib/session.js";
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
@@ -147,6 +148,8 @@ const LIMITED_ROUTES = {
   "student/auth/forgot": "forgot",
   "admin/auth/forgot": "forgot",
   "auth/register": "forgot",
+  // Troca de e-mail pede a senha: barra quem tenta adivinhar.
+  "account/email": "forgot",
   // Cadastro de aluno e cartão: barra robô criando contas e testando cartões.
   "student/auth/register": "signup",
   "student/payments/card": "card",
@@ -543,6 +546,8 @@ async function handleRoutes(request, env) {
       return resendVerification(db, session.sub);
     if (request.method === "GET" && route === "onboarding") return onboarding(db, session.sub);
     if (request.method === "GET" && route === "account/export") return exportAccount(db, session.sub);
+    if (request.method === "POST" && route === "account/email")
+      return changeOwnEmail(db, session, await readJson(request));
     if (request.method === "POST" && route === "account/delete")
       return deleteOwnAccount(env, db, session, await readJson(request));
     if (request.method === "GET" && route === "billing/card-config")
