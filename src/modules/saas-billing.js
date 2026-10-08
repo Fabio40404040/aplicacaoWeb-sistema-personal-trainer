@@ -11,7 +11,7 @@ import {
 import { accountCard, paintEmailBanner, paintOnboarding, storageLine } from './account-extras.js'
 import { openSecureCardForm } from './mercado-pago-card.js'
 import { createQrCodeImage } from './pix.js'
-import { showToast } from './utils.js'
+import { showPaidDialog } from './paid-dialog.js'
 
 const money = (cents) =>
   (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -170,9 +170,9 @@ function checkoutBox(root) {
               ? fetchBillingCardConfig(plan.code)
               : payBillingCard({ ...body, planCode: plan.code }),
           {
-            onApproved: () => {
-              showToast('Pagamento aprovado. Assinatura atualizada.')
-              void load()
+            onApproved: async () => {
+              await load()
+              subscriptionPaid()
             },
           },
         )
@@ -189,6 +189,16 @@ function checkoutBox(root) {
   root.append(section)
 }
 
+// Assinatura paga: janela com o carimbo "PAGO".
+function subscriptionPaid() {
+  const state = billing?.state || {}
+  showPaidDialog({
+    title: 'Assinatura confirmada!',
+    text: `${state.planName ? `Plano ${state.planName}` : 'Seu plano'}${state.expiresAt ? ` ativo até ${day(state.expiresAt)}` : ' ativo'}. Obrigado por usar a FARISA!`,
+    button: 'Continuar',
+  })
+}
+
 let pollTimer = 0
 function startPolling() {
   window.clearInterval(pollTimer)
@@ -199,7 +209,7 @@ function startPolling() {
     await load()
     if (`${billing?.state?.planCode}|${billing?.state?.expiresAt}` !== before) {
       window.clearInterval(pollTimer)
-      showToast('Pagamento aprovado! Sua assinatura foi atualizada.')
+      subscriptionPaid()
     }
     if (tries > 40) window.clearInterval(pollTimer)
   }, 15000)

@@ -1,3 +1,4 @@
+import { showPaidDialog } from './paid-dialog.js'
 import { getData, updateData } from './state.js'
 import { askConfirm, exerciseGroups, formatDate, showToast } from './utils.js'
 import {
@@ -156,6 +157,8 @@ export const hasAccess = (student) =>
 function accessLabel(student) {
   if (hasAccess(student) && student.paymentStatus === 'waived')
     return 'Liberado sem pagamento'
+  if (hasAccess(student) && student.paymentStatus === 'paid')
+    return student.accessType === 'permanent' ? '✓ Pago · Permanente' : '✓ Pago'
   if (hasAccess(student))
     return student.accessType === 'permanent' ? 'Permanente' : 'Liberado'
   if (student.accessStatus === 'paused') return 'Pausado'
@@ -257,6 +260,27 @@ function confirmStudentDeletion(student) {
   })
 }
 
+// Aluno que acabou de pagar (estava pendente e agora está pago): janela "PAGO".
+const lastPayment = new Map()
+let paymentsSeen = false
+function announcePayments(students) {
+  const paidNow = students.filter(
+    (s) => s.paymentStatus === 'paid' && lastPayment.has(s.id) && lastPayment.get(s.id) !== 'paid',
+  )
+  students.forEach((s) => lastPayment.set(s.id, s.paymentStatus))
+  if (!paymentsSeen) {
+    paymentsSeen = true
+    return
+  }
+  if (!paidNow.length) return
+  const names = paidNow.map((s) => s.name).join(', ')
+  showPaidDialog({
+    title: paidNow.length > 1 ? 'Pagamentos confirmados!' : 'Pagamento confirmado!',
+    text: `${names} ${paidNow.length > 1 ? 'pagaram' : 'pagou'}. O acesso já está liberado.`,
+    button: 'Ok',
+  })
+}
+
 function renderStudents() {
   const { students } = getData(),
     query = document
@@ -269,6 +293,7 @@ function renderStudents() {
       `${s.name} ${s.goal} ${s.email}`.toLocaleLowerCase('pt-BR').includes(query) &&
       (filter === 'all' || s.status === filter),
   )
+  announcePayments(students)
   const table = document.querySelector('[data-students-table]')
   table.replaceChildren(
     ...filtered.map((student) => {

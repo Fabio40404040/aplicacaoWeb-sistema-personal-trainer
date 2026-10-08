@@ -268,8 +268,28 @@ export async function syncRemoteData() {
     // Mantém o último estado disponível quando a API estiver temporariamente indisponível.
   }
 }
+// Situação de pagamento dos alunos, para perceber quando alguém pagou.
+const paymentKey = (data) =>
+  (data?.students || [])
+    .map((student) => `${student.id}:${student.paymentStatus}:${student.accessStatus}`)
+    .sort()
+    .join("|");
+// A cada 2 minutos (com a aba à vista) confere se algum aluno pagou. Só
+// redesenha o painel quando muda algo nos pagamentos, para não atrapalhar
+// quem está montando uma ficha ou preenchendo um formulário.
+async function checkPayments() {
+  if (document.hidden || !sessionStorage.getItem(TOKEN_KEY)) return;
+  try {
+    const remote = await request("/dashboard");
+    if (paymentKey(remote) !== paymentKey(getData()))
+      replaceData({ ...getData(), ...remote });
+  } catch {
+    /* sem conexão: tenta na próxima */
+  }
+}
 export function initRemoteSync() {
   window.addEventListener("farisa:remote-refresh", syncRemoteData);
+  window.setInterval(checkPayments, 120_000);
   return syncRemoteData();
 }
 // Perfil do personal (nome, foto, contato e limite de alunos do plano).

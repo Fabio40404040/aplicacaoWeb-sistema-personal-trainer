@@ -1,3 +1,4 @@
+import { showPaidDialog } from "./paid-dialog.js";
 import { demoInviteOn } from "./demo-invite.js";
 import { ACCENTS, currentSiteSlug } from "./site-brand.js";
 import { downloadAssessmentPdf } from "./assessment-pdf.js";
@@ -199,28 +200,13 @@ function addLine(parent, text, strong = false) {
   parent.append(element(strong ? "strong" : "p", "", text));
 }
 
-// Pagamento aprovado: janela com o selo "PAGO" (na própria página, sem alert).
-function showPaidDialog(access) {
-  if (document.querySelector("dialog.student-paid-dialog")) return;
-  const box = element("dialog", "confirm-dialog student-paid-dialog");
-  const body = element("div", "student-paid");
-  body.append(
-    element("span", "student-paid-stamp", "✓ PAGO"),
-    element("h2", "", "Pagamento confirmado!"),
-    element(
-      "p",
-      "",
-      `${access?.planName ? `Plano ${access.planName}. ` : ""}Seu acesso já está liberado. Bons treinos!`,
-    ),
-  );
-  const ok = element("button", "button button--primary", "Ver meus treinos");
-  ok.type = "button";
-  ok.addEventListener("click", () => box.close());
-  body.append(ok);
-  box.append(body);
-  box.addEventListener("close", () => box.remove());
-  document.body.append(box);
-  box.showModal();
+// Pagamento aprovado: janela com o carimbo "PAGO".
+function showStudentPaid(access) {
+  showPaidDialog({
+    title: "Pagamento confirmado!",
+    text: `${access?.planName ? `Plano ${access.planName}. ` : ""}Seu acesso já está liberado. Bons treinos!`,
+    button: "Ver meus treinos",
+  });
 }
 // Reduz o "baixar com um clique": tira o ícone de download dos controles
 // nativos do navegador e bloqueia o menu de clique-direito sobre o vídeo.
@@ -1051,7 +1037,7 @@ export function initStudentAccess() {
       const paidNow = data.access.paymentStatus === "paid" && data.access.active;
       if (paidNow && (lastPaymentStatus && lastPaymentStatus !== "paid" || sessionStorage.getItem(PAID_FLAG))) {
         sessionStorage.removeItem(PAID_FLAG);
-        showPaidDialog(data.access);
+        showStudentPaid(data.access);
       }
       lastPaymentStatus = data.access.paymentStatus || "";
       hasLoadedOnce = true;
