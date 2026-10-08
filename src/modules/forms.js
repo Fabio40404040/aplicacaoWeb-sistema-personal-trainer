@@ -13,7 +13,26 @@ const openModal = (name) => {
   const modal = document.querySelector(`[data-modal="${name}"]`)
   if (!modal.open) modal.showModal()
 }
+// Caixa de erro dentro do formulário (antes do rodapé com os botões).
+function formError(form) {
+  let box = form.querySelector('[data-form-error]')
+  if (!box) {
+    box = document.createElement('p')
+    box.dataset.formError = ''
+    box.className = 'form-error'
+    box.setAttribute('role', 'alert')
+    box.hidden = true
+    const footer = form.querySelector(':scope > footer')
+    const body = form.querySelector('.modal-body')
+    if (body) body.append(box)
+    else if (footer) footer.before(box)
+    else form.append(box)
+  }
+  return box
+}
 function closeModal(form) {
+  const errorBox = form.querySelector('[data-form-error]')
+  if (errorBox) errorBox.hidden = true
   form.closest('dialog').close()
   form.reset()
   editing[form.dataset.form] = null
@@ -448,10 +467,17 @@ export function initForms() {
       const submit = form.querySelector('[type="submit"]')
       const label = submit.textContent
       submit.disabled = true
+      const errorBox = formError(form)
+      errorBox.hidden = true
       try {
         await handlers[form.dataset.form](form)
         closeModal(form)
       } catch (error) {
+        // O aviso flutuante fica por trás da janela aberta: o erro aparece
+        // também dentro do formulário, logo acima dos botões.
+        errorBox.textContent = error.message
+        errorBox.hidden = false
+        errorBox.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
         showToast(error.message)
       } finally {
         submit.disabled = false
