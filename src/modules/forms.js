@@ -1,6 +1,6 @@
 import { createId, getData, updateData } from './state.js'
 import { showToast } from './utils.js'
-import { persistRecord, syncRemoteData } from './api-client.js'
+import { persistRecord, syncRemoteData, updateStudentAccess } from './api-client.js'
 import { setExerciseGifField } from './exercise-gifs.js'
 
 const editing = {
@@ -46,7 +46,72 @@ function generatePassword() {
   }
   return characters.join('')
 }
+// Plano, período e pagamento do aluno presencial (só no cadastro novo; depois
+// muda em "Liberar acesso" na lista de alunos).
+const PLAN_LABELS = {
+  ready: 'Treinos Prontos',
+  basic: 'Consultoria Básica',
+  premium: 'Consultoria Premium',
+  athlete: 'Performance Atleta',
+}
+const CYCLES = [
+  ['monthly', 'Mensal — 30 dias'],
+  ['quarterly', 'Trimestral — 90 dias'],
+  ['semiannual', 'Semestral — 180 dias'],
+  ['annual', 'Anual — 365 dias'],
+]
+function studentPlanFields(form, enabled) {
+  const statusLabel = form.elements.status?.closest('label')
+  let box = form.querySelector('[data-student-plan-fields]')
+  if (!box) {
+    box = document.createElement('div')
+    box.dataset.studentPlanFields = ''
+    box.className = 'field-grid field-grid--three'
+    ;(statusLabel?.closest('.field-grid') || form.querySelector('[name="assessmentDate"]')?.closest('label'))?.after(box)
+  }
+  if (statusLabel) statusLabel.hidden = true
+  box.hidden = !enabled
+  box.replaceChildren()
+  if (!enabled) return
+  const money = (cents) =>
+    (Number(cents) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const select = (label, name, options) => {
+    const wrap = document.createElement('label')
+    wrap.className = 'field'
+    const span = document.createElement('span')
+    span.textContent = label
+    const input = document.createElement('select')
+    input.name = name
+    options.forEach(([value, text]) => input.append(new Option(text, value)))
+    wrap.append(span, input)
+    box.append(wrap)
+    return { wrap, input }
+  }
+  const plans = (getData().plans || []).filter((plan) => PLAN_LABELS[plan.code] || plan.name)
+  const plan = select(
+    'Plano',
+    'planCode',
+    (plans.length ? plans : Object.keys(PLAN_LABELS).map((code) => ({ code }))).map((item) => [
+      item.code,
+      `${item.name || PLAN_LABELS[item.code]}${item.priceCents ? ` — ${money(item.priceCents)}${item.accessType === 'permanent' ? '' : '/mês'}` : ''}`,
+    ]),
+  )
+  plan.input.value = [...plan.input.options].some((option) => option.value === 'basic') ? 'basic' : plan.input.options[0]?.value
+  const cycle = select('Período', 'billingCycle', CYCLES)
+  cycle.input.value = 'monthly'
+  select('Pagamento', 'paymentChoice', [
+    ['paid', 'Já pagou — liberar acesso'],
+    ['waived', 'Cortesia — liberar sem cobrança'],
+    ['pending', 'Ainda não pagou — aguardando'],
+  ])
+  const sync = () => {
+    cycle.wrap.hidden = plan.input.value === 'ready'
+  }
+  plan.input.addEventListener('change', sync)
+  sync()
+}
 function toggleStudentPassword(form, enabled) {
+  studentPlanFields(form, enabled)
   const wrapper = form.querySelector('[data-student-password-field]')
   const field = form.elements.password
   if (!wrapper || !field) return
@@ -64,8 +129,29 @@ async function handleStudent(form) {
     assessmentDate: value(form, 'assessmentDate'),
   }
   if (!editingId) record.password = value(form, 'password')
-  await persistRecord('students', record, editingId)
+  const saved = await persistRecord('students', record, editingId)
+  // Cadastro novo: já grava o plano, o período e o pagamento escolhidos.
+  let accessError = ''
+  const choice = form.elements.paymentChoice?.value
+  if (!editingId && saved?.id && choice) {
+    try {
+      await updateStudentAccess(saved.id, {
+        planCode: form.elements.planCode.value,
+        billingCycle: form.elements.billingCycle.value,
+        accessStatus: choice === 'pending' ? 'pending' : 'active',
+        paymentStatus: choice,
+        paymentMethod: choice === 'waived' ? 'courtesy' : 'whatsapp',
+      })
+    } catch (error) {
+      accessError = error.message
+    }
+  }
   await syncRemoteData()
+  if (accessError) {
+    showToast(`Aluno cadastrado, mas o plano não foi salvo: ${accessError} Ajuste em "Liberar acesso".`)
+    editing.student = null
+    return
+  }
   showToast(
     editingId
       ? 'Aluno atualizado com sucesso.'
