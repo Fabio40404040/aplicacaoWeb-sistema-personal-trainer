@@ -3,6 +3,22 @@
 // conta). O personal "ativo" é o de student_accounts.student_id/trainer_id:
 // é ele que a área do aluno mostra. Trocar de personal = trocar o ativo.
 
+// A coluna students.account_seen chegou na migração 044.
+export async function linkSeenReady(db) {
+  try {
+    await db.query('SELECT account_seen FROM students LIMIT 1')
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Personal adicionou um aluno que já tinha conta: a foto do aluno fica oculta
+// para ele até o aluno entrar na página desse personal.
+export async function markLinkUnseen(db, studentId) {
+  await db.query('UPDATE students SET account_seen=0 WHERE id=$1', [studentId]).catch(() => {})
+}
+
 // Personais ligados à conta (para o seletor "Meus personais").
 export async function linkedTrainers(db, accountId) {
   try {
@@ -33,6 +49,7 @@ export async function activateTrainer(db, accountId, trainerId) {
   ).rows[0]
   if (!row) return false
   await db.query('UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1', [accountId, row.id, trainerId])
+  await db.query('UPDATE students SET account_seen=1 WHERE id=$1', [row.id]).catch(() => {})
   return true
 }
 

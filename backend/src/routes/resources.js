@@ -1,4 +1,4 @@
-import { detachStudent } from "./student-links.js";
+import { detachStudent, markLinkUnseen } from "./student-links.js";
 import { holdSeatIfUsed } from "./plan-access.js";
 import { sendStudentLinked, sendStudentWelcome } from "./account-emails.js";
 
@@ -18,6 +18,7 @@ async function linkExistingAccount(db, student, trainerId) {
   await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [existing.id, student.id]);
   if (!existing.studentId)
     await db.query("UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1", [existing.id, student.id, trainerId]);
+  else await markLinkUnseen(db, student.id);
   await sendStudentLinked(db, existing, trainerId).catch(() => {});
   return { ok: true };
 }

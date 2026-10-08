@@ -38,6 +38,7 @@ async function videoLinkReady(db) {
 
 import { trainerProfile } from "./profile.js";
 import { loadReady } from "./resources.js";
+import { linkSeenReady } from "./student-links.js";
 
 // A foto do aluno (student_accounts.avatar) chegou na migração 018.
 async function studentAvatarReady(db) {
@@ -54,6 +55,8 @@ export async function dashboard(db, trainerId) {
   const withCustomGroups = await customGroupsReady(db);
   const withVideoLink = await videoLinkReady(db);
   const withStudentAvatar = await studentAvatarReady(db);
+  // Aluno vindo de outro personal: foto só depois que ele entrar na sua página.
+  const avatarSeen = (await linkSeenReady(db)) ? " AND COALESCE(s.account_seen,1)=1" : "";
   let withSitePreview = true;
   try {
     await db.query("SELECT is_site_preview FROM ready_workout_programs LIMIT 1");
@@ -86,7 +89,7 @@ export async function dashboard(db, trainerId) {
        s.access_status AS "accessStatus", s.plan_code AS "planCode", s.access_type AS "accessType", s.billing_cycle AS "billingCycle",
        s.access_expires_at AS "accessExpiresAt", s.payment_status AS "paymentStatus",
        s.payment_method AS "paymentMethod", s.account_id AS "accountId",
-       ${withStudentAvatar ? '(SELECT a.avatar FROM student_accounts a WHERE a.id=s.account_id) AS avatar,' : ""}
+       ${withStudentAvatar ? `(SELECT a.avatar FROM student_accounts a WHERE a.id=s.account_id${avatarSeen}) AS avatar,` : ""}
        COALESCE((SELECT name FROM workouts WHERE student_id=s.id AND trainer_id=s.trainer_id ORDER BY created_at DESC LIMIT 1),'Aguardando ficha') AS workout,
        CASE WHEN s.account_id IS NOT NULL AND s.payment_status='pending' THEN 'Pré-cadastro aguardando pagamento'
             WHEN s.account_id IS NOT NULL THEN 'Cadastro pelo aplicativo' ELSE 'Aluno presencial — liberação manual' END AS activity
