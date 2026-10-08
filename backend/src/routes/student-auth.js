@@ -1,5 +1,5 @@
 import { activateTrainer } from './student-links.js'
-import { notifyNewStudent, sendStudentWelcome } from './account-emails.js'
+import { notifyNewStudent, sendStudentWelcome, trainerEmailVerified } from './account-emails.js'
 import { seatProblem } from './saas.js'
 import { trainerIdForSlug, trainerSellsPlan } from './site.js'
 import { readJson } from '../lib/http.js'
@@ -64,6 +64,12 @@ export async function studentAuth(request, env, db, action) {
       return {
         error:
           'Esta é uma página de demonstração: o cadastro fica desativado aqui. Para ver a área do aluno, volte à página inicial e toque em "Ver como o aluno usa".',
+        status: 403,
+      }
+    // Personal ainda não confirmou o e-mail: a página está em preparação.
+    if (!(await trainerEmailVerified(db, trainer.id)))
+      return {
+        error: 'Esta página ainda está em preparação: os cadastros abrem assim que o personal concluir a ativação. Tente de novo mais tarde.',
         status: 403,
       }
     const noSeat = await seatProblem(db, { trainerId: trainer.id })

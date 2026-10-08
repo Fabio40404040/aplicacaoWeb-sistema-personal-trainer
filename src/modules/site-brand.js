@@ -181,6 +181,20 @@ function applyContact(site, brand) {
 }
 
 // Selo "Feito com FARISA" (páginas do plano Grátis): leva à vitrine da plataforma.
+// Personal que ainda não confirmou o e-mail: a página abre (os alunos dele
+// entram normalmente), mas avisa que os cadastros ainda não estão abertos.
+function applyPending(site) {
+  if (!site.pending || document.querySelector('.site-pending')) return
+  const note = document.createElement('p')
+  note.className = 'site-pending'
+  note.setAttribute('role', 'status')
+  note.textContent = 'Página em preparação: os cadastros de novos alunos abrem em breve. Já é aluno? Use "Entrar".'
+  const copy = document.querySelector('.public-hero-copy')
+  const cta = copy?.querySelector('.public-cta')
+  if (cta) cta.before(note)
+  else document.querySelector('[data-public-screen]')?.prepend(note)
+}
+
 function applyBadge(site) {
   if (!site.badge || document.querySelector('.farisa-badge')) return
   const badge = document.createElement('a')
@@ -224,6 +238,7 @@ function applyExamplePhoto(site) {
 
 export function applySite(site) {
   applyBadge(site)
+  applyPending(site)
   applyAccent(site.accent)
   const brand = applyBrand(site)
   applyHero(site)

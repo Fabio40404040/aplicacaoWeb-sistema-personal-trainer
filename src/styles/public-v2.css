@@ -1390,6 +1390,20 @@ html[data-home='saas'] .saas-main {
   font-weight: 700;
 }
 
+/* Página de personal com e-mail ainda não confirmado. */
+.public-hero-copy .site-pending,
+.site-pending {
+  margin: 0 auto 14px;
+  max-width: 420px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #78350f !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 /* Selo das páginas do plano Grátis. */
 .farisa-badge {
   flex-basis: 100%;

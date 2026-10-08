@@ -145,6 +145,21 @@ export async function verifyEmailPage(db, token) {
   )
 }
 
+// Personal com e-mail ainda não confirmado não publica a página (cadastro de
+// alunos fechado) nem recebe pagamentos. Contas antigas já vêm confirmadas
+// (migração 036). Sem a coluna, nada é bloqueado.
+export const EMAIL_PENDING =
+  'Confirme seu e-mail para liberar esta função. Abra o link que enviamos (veja também o spam) ou use "Reenviar" na faixa amarela do painel.'
+export async function trainerEmailVerified(db, trainerId) {
+  if (trainerId === 'demo-trainer') return true
+  try {
+    const row = (await db.query('SELECT email_verified_at AS at FROM trainers WHERE id=$1', [trainerId])).rows[0]
+    return !row || Boolean(row.at)
+  } catch {
+    return true
+  }
+}
+
 export async function emailStatus(db, trainerId) {
   try {
     const row = (await db.query('SELECT email, email_verified_at AS at FROM trainers WHERE id=$1', [trainerId])).rows[0]

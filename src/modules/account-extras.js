@@ -66,7 +66,7 @@ export function paintEmailBanner(email) {
     bar.remove()
   })
   bar.replaceChildren(
-    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para receber os avisos de alunos e de pagamentos. Enviamos um link para você.`),
+    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para abrir sua página a novos alunos e receber pagamentos. Enviamos um link para você.`),
     again,
     fix,
     close,

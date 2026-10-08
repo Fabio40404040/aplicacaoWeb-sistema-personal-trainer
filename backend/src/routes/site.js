@@ -1,4 +1,5 @@
 import { trainerLocked } from './plan-access.js'
+import { trainerEmailVerified } from './account-emails.js'
 // Página de cada personal (migração 030). A estrutura do site é uma só; o
 // personal personaliza marca, cor, banner, contato, redes e preços dos planos.
 // Endereço: /p/<slug>. O site principal (/) mostra a página do dono.
@@ -314,6 +315,8 @@ export async function publicSite(db, slug) {
       ...((await trainerLocked(db, trainerId)) ? { brandMark: null, brandName: null, accent: 'blue' } : {}),
       // Selo "Feito com FARISA" nas páginas do plano Grátis.
       badge: !isOwner && (await isFreePlan(db, trainerId)),
+      // E-mail do personal ainda não confirmado: página em preparação.
+      pending: !(await trainerEmailVerified(db, trainerId)),
       plans: (await trainerPlans(db, trainerId)).map(({ code, name, priceCents, accessType }) => ({ code, name, priceCents, accessType })),
     },
   }

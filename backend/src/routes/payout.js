@@ -7,6 +7,7 @@
 //  - "platform": conta da plataforma (só o dono/admin).
 // Os tokens das contas conectadas ficam cifrados no banco (AES-GCM).
 import { safeEqual } from '../lib/session.js'
+import { EMAIL_PENDING, trainerEmailVerified } from './account-emails.js'
 
 const encoder = new TextEncoder()
 const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
@@ -89,7 +90,11 @@ async function saveTokens(env, db, trainerId, data, { activate = false } = {}) {
 
 // Com que conta este personal recebe. Devolve o "env" de pagamento a usar nas
 // chamadas ao Mercado Pago (o da plataforma ou o da conta conectada).
-export async function resolvePay(db, env, trainerId) {
+export async function resolvePay(db, env, trainerId, { charge = false } = {}) {
+  // Cobrança nova para aluno: só com o e-mail do personal confirmado.
+  // (Os avisos de pagamento do Mercado Pago não passam por aqui com charge.)
+  if (charge && !(await trainerEmailVerified(db, trainerId)))
+    return { mode: 'none', env: null }
   let row
   try {
     row = await payoutRow(db, trainerId)
@@ -245,7 +250,8 @@ export async function payoutInfo(db, env, trainerId) {
   }
 }
 
-export async function payoutConnectUrl(env, trainerId) {
+export async function payoutConnectUrl(env, trainerId, db) {
+  if (db && !(await trainerEmailVerified(db, trainerId))) return { error: EMAIL_PENDING, status: 403 }
   if (!mpConnectAvailable(env))
     return { error: 'A conexão com o Mercado Pago ainda não foi ativada pela plataforma. Use a chave Pix por enquanto.', status: 503 }
   const body = `${trainerId}.${Date.now() + 15 * 60_000}`
@@ -292,6 +298,7 @@ export async function payoutDisconnect(db, trainerId) {
 }
 
 export async function payoutSavePix(db, trainerId, body) {
+  if (!(await trainerEmailVerified(db, trainerId))) return { error: EMAIL_PENDING, status: 403 }
   const type = String(body?.type || '')
   const key = normalizePixKey(type, body?.key)
   if (!key) return { error: 'Confira a chave Pix: ela não combina com o tipo escolhido.', status: 400 }

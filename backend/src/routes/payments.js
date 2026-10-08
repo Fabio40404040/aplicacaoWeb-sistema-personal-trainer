@@ -123,7 +123,7 @@ async function basePaymentAccount(db, accountId) {
 export async function paymentOptions(db, accountId, platformEnv) {
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
-  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const pay = await resolvePay(db, platformEnv, row.trainerId, { charge: true })
   // Mercado Pago automático só nos planos pagos (o Pix na chave do personal continua).
   const online = Boolean(pay.env?.MERCADO_PAGO_ACCESS_TOKEN) && !(await trainerLocked(db, row.trainerId))
   return {
@@ -138,7 +138,7 @@ export async function paymentOptions(db, accountId, platformEnv) {
 export async function cardPaymentConfig(db, accountId, platformEnv) {
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
-  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const pay = await resolvePay(db, platformEnv, row.trainerId, { charge: true })
   const env = pay.env
   if (!env?.MERCADO_PAGO_PUBLIC_KEY || !env?.MERCADO_PAGO_ACCESS_TOKEN)
     return {
@@ -164,7 +164,7 @@ export async function createPixPayment(db, accountId, platformEnv) {
     row.billingCycle = 'quarterly'
   const amountCents = amountFor(row, row.billingCycle)
   const intentId = crypto.randomUUID().replaceAll('-', '')
-  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const pay = await resolvePay(db, platformEnv, row.trainerId, { charge: true })
   if (pay.mode === 'pix') return manualPix(db, row, pay.pix, amountCents, intentId)
   if (await trainerLocked(db, row.trainerId)) return { error: PAY_LOCKED, status: 403 }
   const env = pay.env
@@ -318,7 +318,7 @@ export async function createCardPayment(db, accountId, platformEnv, body) {
   const row = await paymentAccount(db, accountId)
   if (!row) return { error: 'Plano ou cadastro não encontrado.', status: 404 }
   if (await trainerLocked(db, row.trainerId)) return { error: PAY_LOCKED, status: 403 }
-  const pay = await resolvePay(db, platformEnv, row.trainerId)
+  const pay = await resolvePay(db, platformEnv, row.trainerId, { charge: true })
   const env = pay.env
   if (!env?.MERCADO_PAGO_ACCESS_TOKEN)
     return { error: pay.mode === 'pix' ? 'Seu personal recebe apenas por Pix.' : NOT_CONFIGURED, status: 503 }

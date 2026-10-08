@@ -590,7 +590,7 @@ async function handleRoutes(request, env) {
     // Recebimento do personal: conta Mercado Pago conectada ou chave Pix.
     if (segments[0] === "payout") {
       if (request.method === "GET" && route === "payout") return payoutInfo(db, env, session.sub);
-      if (request.method === "POST" && route === "payout/mp/connect") return payoutConnectUrl(env, session.sub);
+      if (request.method === "POST" && route === "payout/mp/connect") return payoutConnectUrl(env, session.sub, db);
       if (request.method === "POST" && route === "payout/mp/disconnect") return payoutDisconnect(db, session.sub);
       if (request.method === "PUT" && route === "payout/pix")
         return payoutSavePix(db, session.sub, await readJson(request));
