@@ -27,9 +27,26 @@ ${button ? `<p><a href="${button.url}" style="display:inline-block;padding:12px 
 <p style="font-size:13px;color:#64748b">${escape(footer || 'FARISA · você recebe este e-mail porque tem uma conta na plataforma.')}</p>
 </div>`
     const response = await sendNoticeEmail(ENV, { to, subject, html })
+    if (!response) await logEmailFailure(subject, to, 'envio de e-mail não configurado (BREVO_API_KEY / EMAIL_FROM)')
+    else if (!response.ok)
+      await logEmailFailure(subject, to, `Brevo respondeu ${response.status}: ${(await response.text().catch(() => '')).slice(0, 300)}`)
     return Boolean(response?.ok)
   } catch (error) {
     console.error('[e-mail] não enviado', error?.message)
+    await logEmailFailure(subject, to, String(error?.message || error))
     return false
+  }
+}
+
+// E-mail que não saiu fica em Admin → Registro de ações → Erros do sistema
+// (rota "E-MAIL"), com o motivo dado pela Brevo. Nunca guarda a chave.
+async function logEmailFailure(subject, to, reason) {
+  try {
+    const masked = String(to || '').replace(/^(.{2}).*(@.*)$/u, '$1***$2')
+    await ENV?.DB?.prepare('INSERT INTO error_log (route, message, detail) VALUES (?1, ?2, ?3)')
+      .bind('E-MAIL', `Não enviado: ${String(subject || '').slice(0, 120)} → ${masked}`, String(reason || '').slice(0, 500))
+      .run()
+  } catch {
+    /* sem a migração 036 */
   }
 }
