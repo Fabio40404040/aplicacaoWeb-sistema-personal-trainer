@@ -224,6 +224,7 @@ function render() {
       action('Acessar painel (suporte)', impersonate)
       action('Plano e limite de alunos', setPlan)
       if (!trainer.isOwner) action('Teste de 30 dias…', setTrial)
+      action('Marcar e-mail como confirmado', confirmEmail)
       action('Gerar nova senha', resetPassword)
       action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
       action('Excluir personal…', deleteTrainer, 'is-danger')
@@ -440,6 +441,22 @@ function setTrial(trainer) {
   const { box, form, status, ok } = dialog({ title: `Teste de 30 dias · ${trainer.name}`, body, confirmLabel: 'Aplicar' })
   run(form, ok, status, async ({ action }) => {
     await api(`/admin/trainers/${trainer.id}/trial`, { method: 'POST', body: JSON.stringify({ action }) })
+    box.close()
+    await reload()
+  })
+  box.showModal()
+}
+
+function confirmEmail(trainer) {
+  const { box, form, status, ok } = dialog({
+    title: `Confirmar o e-mail de ${trainer.name}`,
+    body: [
+      el('p', '', `Marca ${trainer.email} como confirmado e tira o aviso amarelo do painel deste personal. Use quando o e-mail de confirmação não chegar ou numa conta de teste.`),
+    ],
+    confirmLabel: 'Marcar como confirmado',
+  })
+  run(form, ok, status, async () => {
+    await api(`/admin/trainers/${trainer.id}/confirm-email`, { method: 'POST', body: '{}' })
     box.close()
     await reload()
   })

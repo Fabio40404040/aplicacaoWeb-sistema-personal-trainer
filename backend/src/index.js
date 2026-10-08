@@ -12,6 +12,7 @@ import {
   adminCreateTrainer,
   adminDeleteTrainer,
   adminSetTrainerTrial,
+  adminConfirmTrainerEmail,
   adminImpersonate,
   adminLogin,
   adminOverview,
@@ -355,6 +356,8 @@ async function handleRoutes(request, env) {
           return adminImpersonate(env, db, admin, id, await readJson(request));
         if (request.method === "POST" && segments[3] === "delete")
           return adminDeleteTrainer(env, db, admin, id, await readJson(request));
+        if (request.method === "POST" && segments[3] === "confirm-email")
+          return adminConfirmTrainerEmail(db, admin, id);
         if (request.method === "POST" && segments[3] === "trial")
           return adminSetTrainerTrial(db, admin, id, await readJson(request));
       }

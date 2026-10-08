@@ -310,6 +310,20 @@ export async function adminSetTrainerTrial(db, admin, id, body) {
   return { data: { id, trialEndsAt: until.toISOString() } }
 }
 
+// Marca o e-mail do personal como confirmado (conta de teste, ou quando o
+// e-mail de confirmação não chega).
+export async function adminConfirmTrainerEmail(db, admin, id) {
+  const trainer = await trainerById(db, id)
+  if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
+  try {
+    await db.query('UPDATE trainers SET email_verified_at=CURRENT_TIMESTAMP WHERE id=$1', [id])
+  } catch {
+    return { error: 'A confirmação de e-mail ainda não está disponível (migração 036).', status: 503 }
+  }
+  await audit(db, admin, 'trainer_email_confirmed', { type: 'trainer', id, label: trainer.email })
+  return { data: { id, confirmed: true } }
+}
+
 export async function adminUpdateTrainer(db, admin, id, body) {
   const trainer = await trainerById(db, id)
   if (!trainer) return { error: 'Personal não encontrado.', status: 404 }

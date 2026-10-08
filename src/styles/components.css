@@ -4939,3 +4939,18 @@ dialog.demo-invite::backdrop {
 .form-error[hidden] {
   display: none;
 }
+
+.billing-banner-close {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.billing-banner-close:hover {
+  opacity: 1;
+}

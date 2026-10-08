@@ -13,9 +13,20 @@ const el = (tag, className = '', text = '') => {
 const mb = (bytes) => `${Math.round(Number(bytes || 0) / (1024 * 1024))} MB`
 
 // ---------- e-mail não confirmado (faixa no topo do painel)
+const EMAIL_BANNER_KEY = 'farisa-email-banner-hidden'
+const hiddenFor = () => {
+  try {
+    return JSON.parse(localStorage.getItem(EMAIL_BANNER_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
 export function paintEmailBanner(email) {
   let bar = document.querySelector('[data-email-banner]')
-  if (!email || email.verified) {
+  // Fechada pelo personal: some por 7 dias (só para este e-mail).
+  const hidden = hiddenFor()
+  const dismissed = hidden?.email === email?.email && Date.now() < Number(hidden?.until || 0)
+  if (!email || email.verified || dismissed) {
     bar?.remove()
     return
   }
@@ -38,9 +49,22 @@ export function paintEmailBanner(email) {
       again.disabled = false
     }
   })
+  const close = el('button', 'billing-banner-close', '×')
+  close.type = 'button'
+  close.title = 'Fechar este aviso por 7 dias'
+  close.setAttribute('aria-label', 'Fechar este aviso por 7 dias')
+  close.addEventListener('click', () => {
+    try {
+      localStorage.setItem(EMAIL_BANNER_KEY, JSON.stringify({ email: email.email, until: Date.now() + 7 * 86_400_000 }))
+    } catch {
+      /* sem armazenamento: some só até recarregar */
+    }
+    bar.remove()
+  })
   bar.replaceChildren(
-    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para receber os avisos de alunos e de pagamentos. Enviamos um link para você.`),
+    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para receber os avisos de alunos e de pagamentos. Enviamos um link para você. Se o e-mail estiver errado, fale com o suporte para corrigir.`),
     again,
+    close,
   )
 }
 
