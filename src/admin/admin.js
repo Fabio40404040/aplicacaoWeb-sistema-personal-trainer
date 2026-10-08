@@ -1255,11 +1255,22 @@ function initInstall() {
         if (choice?.outcome === 'accepted') show(false)
         return
       }
-      window.alert(
-        isIos
-          ? 'No Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.'
-          : 'Abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.',
-      )
+      const { box, form } = dialog({
+        title: 'Instalar o painel',
+        body: [
+          el(
+            'p',
+            '',
+            isIos
+              ? 'No Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.'
+              : 'Abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.',
+          ),
+        ],
+        confirmLabel: 'Entendi',
+        cancelLabel: '',
+      })
+      form.addEventListener('submit', () => box.close())
+      box.showModal()
     }),
   )
 }

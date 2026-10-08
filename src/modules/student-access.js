@@ -20,6 +20,8 @@ import {
 
 // Calendário, água e evolução da carga (vêm junto com os dados do aluno).
 let studentTools = null;
+// Pagamento feito nesta tela: ao confirmar, mostra a janela "PAGO".
+const PAID_FLAG = "farisa-student-paid-pending";
 
 // Recarrega a área do aluno (definido quando a área inicia).
 let reloadStudentPanel = async () => {};
@@ -196,6 +198,30 @@ function article(title) {
 function addLine(parent, text, strong = false) {
   parent.append(element(strong ? "strong" : "p", "", text));
 }
+
+// Pagamento aprovado: janela com o selo "PAGO" (na própria página, sem alert).
+function showPaidDialog(access) {
+  if (document.querySelector("dialog.student-paid-dialog")) return;
+  const box = element("dialog", "confirm-dialog student-paid-dialog");
+  const body = element("div", "student-paid");
+  body.append(
+    element("span", "student-paid-stamp", "✓ PAGO"),
+    element("h2", "", "Pagamento confirmado!"),
+    element(
+      "p",
+      "",
+      `${access?.planName ? `Plano ${access.planName}. ` : ""}Seu acesso já está liberado. Bons treinos!`,
+    ),
+  );
+  const ok = element("button", "button button--primary", "Ver meus treinos");
+  ok.type = "button";
+  ok.addEventListener("click", () => box.close());
+  body.append(ok);
+  box.append(body);
+  box.addEventListener("close", () => box.remove());
+  document.body.append(box);
+  box.showModal();
+}
 // Reduz o "baixar com um clique": tira o ícone de download dos controles
 // nativos do navegador e bloqueia o menu de clique-direito sobre o vídeo.
 // Não é uma proteção definitiva (sempre dá para gravar a tela ou usar as
@@ -342,6 +368,7 @@ function paymentControls(onRefresh) {
         }
       });
       pixCheckout.replaceChildren(title, instructions, image, copy);
+      sessionStorage.setItem(PAID_FLAG, "1");
       paymentStatus.textContent =
         "Aguardando o pagamento. A situação será consultada automaticamente.";
     } catch (error) {
@@ -355,6 +382,7 @@ function paymentControls(onRefresh) {
     try {
       await openSecureCardForm(studentRequest, {
         onApproved() {
+          sessionStorage.setItem(PAID_FLAG, "1");
           sessionStorage.setItem(
             "farisa-student-payment-message",
             "Pagamento confirmado. Seu cadastro foi concluído e o acesso está liberado.",
@@ -684,6 +712,8 @@ function renderPortal(container, data) {
     element("span", "student-plan-label", "Meu plano"),
     element("strong", "student-plan-name", data.access.planName),
   );
+  if (data.access.paymentStatus === "paid")
+    plan.append(element("span", "student-paid-badge", "✓ Pago"));
   if (billingCycleLabel(data.access))
     plan.append(element("span", "", billingCycleLabel(data.access)));
   plan.append(
@@ -950,6 +980,7 @@ function applyPlanFromHash() {
 export function initStudentAccess() {
   let generation = 0;
   let hasLoadedOnce = false;
+  let lastPaymentStatus = "";
   let hasRendered = false;
   let lastSignature = "";
   // Pastas abertas/fechadas, pelo título ("Treino A — Peitoral").
@@ -1016,6 +1047,13 @@ export function initStudentAccess() {
         location.replace(`/p/${data.siteSlug}#painel-aluno`);
         return;
       }
+      // Estava aguardando o pagamento e agora está pago: mostra o "PAGO".
+      const paidNow = data.access.paymentStatus === "paid" && data.access.active;
+      if (paidNow && (lastPaymentStatus && lastPaymentStatus !== "paid" || sessionStorage.getItem(PAID_FLAG))) {
+        sessionStorage.removeItem(PAID_FLAG);
+        showPaidDialog(data.access);
+      }
+      lastPaymentStatus = data.access.paymentStatus || "";
       hasLoadedOnce = true;
       studentDisplayName = data.name || "";
       document.querySelector("[data-student-name]").textContent =
