@@ -8,5 +8,5 @@
   "compatibility_date": "2026-09-12",
   // 11:00 e 23:00 UTC = 08:00 e 20:00 em Fortaleza/Brasília.
   "triggers": { "crons": ["0 11 * * *", "0 23 * * *"] },
-  "vars": { "SITE_URL": "https://aplicacaoweb-sistema-personal-trainer.pages.dev" },
+  "vars": { "SITE_URL": "https://farisafit.com.br" },
 }
