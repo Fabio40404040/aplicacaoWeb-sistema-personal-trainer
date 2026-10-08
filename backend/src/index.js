@@ -779,16 +779,10 @@ async function handleRoutes(request, env) {
       );
       return created?.error ? created : { data: created, status: 201 };
     }
-    if (request.method === "PUT" && id)
-      return {
-        data: await updateResource(
-          db,
-          resource,
-          session.sub,
-          id,
-          await readJson(request),
-        ),
-      };
+    if (request.method === "PUT" && id) {
+      const updated = await updateResource(db, resource, session.sub, id, await readJson(request));
+      return updated?.error ? updated : { data: updated };
+    }
     if (request.method === "DELETE" && id) {
       const removed = await deleteResource(db, resource, session.sub, id);
       return removed?.error ? removed : { data: null, status: 204 };

@@ -79,7 +79,7 @@ const CYCLES = [
   ['semiannual', 'Semestral — 180 dias'],
   ['annual', 'Anual — 365 dias'],
 ]
-function studentPlanFields(form, enabled) {
+function studentPlanFields(form, enabled, current = null) {
   const statusLabel = form.elements.status?.closest('label')
   let box = form.querySelector('[data-student-plan-fields]')
   if (!box) {
@@ -115,28 +115,56 @@ function studentPlanFields(form, enabled) {
       `${item.name || PLAN_LABELS[item.code]}${item.priceCents ? ` — ${money(item.priceCents)}${item.accessType === 'permanent' ? '' : '/mês'}` : ''}`,
     ]),
   )
-  plan.input.value = [...plan.input.options].some((option) => option.value === 'basic') ? 'basic' : plan.input.options[0]?.value
+  const has = (input, value) => [...input.options].some((option) => option.value === value)
+  plan.input.value = current?.planCode && has(plan.input, current.planCode)
+    ? current.planCode
+    : has(plan.input, 'basic') ? 'basic' : plan.input.options[0]?.value
   const cycle = select('Período', 'billingCycle', CYCLES)
-  cycle.input.value = 'monthly'
-  select('Pagamento', 'paymentChoice', [
+  cycle.input.value = current?.billingCycle && has(cycle.input, current.billingCycle) ? current.billingCycle : 'monthly'
+  const payment = select('Pagamento', 'paymentChoice', [
     ['paid', 'Já pagou — liberar acesso'],
     ['waived', 'Cortesia — liberar sem cobrança'],
     ['pending', 'Ainda não pagou — aguardando'],
   ])
+  if (current) {
+    payment.input.value = ['paid', 'waived'].includes(current.paymentStatus) && current.accessStatus === 'active'
+      ? current.paymentStatus
+      : 'pending'
+    // Guarda como estava: só grava (e recalcula a validade) se mudar algo.
+    box.dataset.initial = [plan.input.value, cycle.input.value, payment.input.value].join('|')
+  } else delete box.dataset.initial
   const sync = () => {
     cycle.wrap.hidden = plan.input.value === 'ready'
   }
   plan.input.addEventListener('change', sync)
   sync()
 }
-function toggleStudentPassword(form, enabled) {
-  studentPlanFields(form, enabled)
+// enabled = cadastro novo. Na edição (record) os mesmos campos aparecem, já
+// preenchidos; a senha é opcional (em branco mantém a atual).
+function toggleStudentPassword(form, enabled, record = null) {
+  studentPlanFields(form, true, enabled ? null : record)
   const wrapper = form.querySelector('[data-student-password-field]')
   const field = form.elements.password
   if (!wrapper || !field) return
-  wrapper.hidden = !enabled
-  field.disabled = !enabled
+  wrapper.hidden = false
+  field.disabled = false
+  field.required = enabled
   field.value = ''
+  const label = wrapper.querySelector('label > span')
+  if (label) {
+    label.dataset.original ||= label.textContent
+    label.textContent = enabled
+      ? label.dataset.original
+      : record?.accountId
+        ? 'Nova senha do aluno (deixe em branco para manter a atual)'
+        : 'Senha de acesso (opcional: cria o login do aluno)'
+  }
+  // Aluno com login: o e-mail é dele e só ele muda.
+  const email = form.elements.email
+  if (email) {
+    email.readOnly = Boolean(!enabled && record?.accountId)
+    email.title = email.readOnly ? 'O aluno tem login: o e-mail só pode ser trocado por ele.' : ''
+  }
 }
 async function handleStudent(form) {
   const editingId = editing.student
@@ -147,14 +175,19 @@ async function handleStudent(form) {
     status: value(form, 'status'),
     assessmentDate: value(form, 'assessmentDate'),
   }
-  if (!editingId) record.password = value(form, 'password')
+  const password = value(form, 'password')
+  if (!editingId || password) record.password = password
   const saved = await persistRecord('students', record, editingId)
-  // Cadastro novo: já grava o plano, o período e o pagamento escolhidos.
+  // Plano, período e pagamento: no cadastro novo sempre; na edição só se mudou.
   let accessError = ''
   const choice = form.elements.paymentChoice?.value
-  if (!editingId && saved?.id && choice) {
+  const planBox = form.querySelector('[data-student-plan-fields]')
+  const now = [form.elements.planCode?.value, form.elements.billingCycle?.value, choice].join('|')
+  const changed = !editingId || (planBox?.dataset.initial && planBox.dataset.initial !== now)
+  const studentId = editingId || saved?.id
+  if (studentId && choice && changed) {
     try {
-      await updateStudentAccess(saved.id, {
+      await updateStudentAccess(studentId, {
         planCode: form.elements.planCode.value,
         billingCycle: form.elements.billingCycle.value,
         accessStatus: choice === 'pending' ? 'pending' : 'active',
@@ -173,7 +206,9 @@ async function handleStudent(form) {
   }
   showToast(
     editingId
-      ? 'Aluno atualizado com sucesso.'
+      ? record.password
+        ? 'Aluno atualizado e nova senha salva.'
+        : 'Aluno atualizado com sucesso.'
       : record.password
         ? `Aluno cadastrado! Ele já entra com ${record.email} e a senha definida.`
         : 'Aluno cadastrado com sucesso.',
@@ -414,7 +449,7 @@ function fillForm(type, id) {
     form.querySelector('header .eyebrow').textContent = 'Editar cadastro'
     form.querySelector('header h2').textContent = 'Editar aluno'
     form.querySelector('[type="submit"]').textContent = 'Salvar alterações'
-    toggleStudentPassword(form, false)
+    toggleStudentPassword(form, false, record)
   }
   openModal(type)
 }

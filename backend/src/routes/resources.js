@@ -371,6 +371,13 @@ export async function updateResource(db, resource, trainerId, id, body) {
   }
   const config = configs[resource];
   if (resource === "students") {
+    // Nova senha (opcional) na edição: troca a do aluno ou cria o acesso dele.
+    const password = typeof body.password === "string" ? body.password.trim() : "";
+    if (password && !isStrongPassword(password))
+      return {
+        error: "A senha deve ter no mínimo 8 caracteres, com maiúscula, minúscula, número e caractere especial.",
+        status: 400,
+      };
     const values = [trainerId, id, ...config.values(body)];
     const [studentResult] = await db.batch([
       { sql: config.update, values },
@@ -380,7 +387,32 @@ export async function updateResource(db, resource, trainerId, id, body) {
         values: [trainerId, id, body.name],
       },
     ]);
-    return studentResult.rows[0] || null;
+    const updated = studentResult.rows[0] || null;
+    if (updated && password) {
+      const student = (
+        await db.query("SELECT id, name, email, account_id AS \"accountId\" FROM students WHERE id=$1 AND trainer_id=$2", [id, trainerId])
+      ).rows[0];
+      const hash = await hashPassword(password);
+      if (student?.accountId)
+        // auth_version + 1: encerra as sessões abertas com a senha antiga.
+        await db.query(
+          "UPDATE student_accounts SET password_hash=$2, auth_version=auth_version+1 WHERE id=$1",
+          [student.accountId, hash],
+        );
+      else if (student) {
+        const account = (
+          await db.query(
+            `INSERT INTO student_accounts (name,email,password_hash,trainer_id,student_id,requested_plan_code,requested_payment_channel,requested_billing_cycle)
+             VALUES ($1,$2,$3,$4,$5,'basic','presencial','quarterly') ON CONFLICT DO NOTHING RETURNING id`,
+            [student.name, student.email, hash, trainerId, student.id],
+          )
+        ).rows[0];
+        if (!account)
+          return { error: "Este e-mail já está em uso por outro aluno. Troque o e-mail para criar o acesso.", status: 409 };
+        await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [account.id, student.id]);
+      }
+    }
+    return updated;
   }
   return config
     ? (
