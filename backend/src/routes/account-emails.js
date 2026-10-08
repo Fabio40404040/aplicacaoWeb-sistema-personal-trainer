@@ -57,7 +57,7 @@ export async function sendTrainerWelcome(db, trainer, { resend = false } = {}) {
   }
 }
 
-export async function sendStudentWelcome(db, account, trainerId) {
+export async function sendStudentWelcome(db, account, trainerId, { byTrainer = false } = {}) {
   try {
     const trainer = await trainerOf(db, trainerId)
     const url = await verificationLink(db, 'student', account.id)
@@ -70,6 +70,9 @@ export async function sendStudentWelcome(db, account, trainerId) {
         `Sua conta de aluno com <strong>${who}</strong> foi criada.`,
         'Confirme seu e-mail para receber os avisos de pagamento e de vencimento do seu plano. O link vale por 7 dias.',
         `Para entrar depois, use a página do seu personal: <a href="${studentPage(trainer)}">${escape(studentPage(trainer))}</a>`,
+        ...(byTrainer
+          ? ['Seu personal criou o seu acesso e definiu a senha: peça a ele ou use “Esqueci minha senha” na página para criar uma nova.']
+          : []),
       ],
       button: { label: 'Confirmar meu e-mail', url },
     })

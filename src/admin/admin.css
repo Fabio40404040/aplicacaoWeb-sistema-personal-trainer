@@ -667,3 +667,17 @@
   margin-top: 16px;
   padding: 12px;
 }
+
+.admin-email-test {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0;
+}
+.admin-email-test input {
+  flex: 1 1 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+}

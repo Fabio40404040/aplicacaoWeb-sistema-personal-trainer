@@ -1,4 +1,12 @@
 import { holdSeatIfUsed } from "./plan-access.js";
+import { sendStudentWelcome } from "./account-emails.js";
+
+// Aluno com login criado pelo personal: recebe o e-mail de boas-vindas com o
+// link da página e a confirmação do e-mail.
+async function welcomeStudent(db, accountId, student, trainerId) {
+  await db.query("UPDATE student_accounts SET email_verified_at=NULL WHERE id=$1", [accountId]).catch(() => {});
+  await sendStudentWelcome(db, { id: accountId, email: student.email, name: student.name }, trainerId, { byTrainer: true });
+}
 import { recordLoad } from "./student-tools.js";
 import { hashPassword, isStrongPassword } from "../lib/session.js";
 
@@ -337,6 +345,7 @@ export async function createResource(db, resource, trainerId, body) {
         account.id,
         student.id,
       ]);
+      await welcomeStudent(db, account.id, student, trainerId);
     }
     return student;
   }
@@ -410,6 +419,7 @@ export async function updateResource(db, resource, trainerId, id, body) {
         if (!account)
           return { error: "Este e-mail já está em uso por outro aluno. Troque o e-mail para criar o acesso.", status: 409 };
         await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [account.id, student.id]);
+        await welcomeStudent(db, account.id, student, trainerId);
       }
     }
     return updated;

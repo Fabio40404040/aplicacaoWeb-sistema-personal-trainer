@@ -1,3 +1,4 @@
+import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { runBillingNotices } from "./routes/billing-notices.js";
@@ -378,6 +379,21 @@ async function handleRoutes(request, env) {
           await audit(db, admin, "trainer_plan_set", { type: "trainer", id: segments[2], label: segments[2] },
             `${body.planCode} até ${body.expiresAt || "sem vencimento"}`);
         return result;
+      }
+      // Teste de e-mail: envia uma mensagem e mostra a resposta exata da Brevo.
+      if (request.method === "POST" && route === "admin/email-test") {
+        const to = String((await readJson(request))?.to || "").trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(to)) return { error: "Informe um e-mail válido.", status: 400 };
+        const response = await sendNoticeEmail(env, {
+          to,
+          subject: "Teste de envio — FARISA",
+          html: '<p style="font-family:Arial,sans-serif">Este é um e-mail de teste enviado pelo painel do administrador da FARISA. Se você recebeu, o envio está funcionando.</p>',
+        }).catch((error) => ({ ok: false, status: 0, text: async () => String(error?.message || error) }));
+        await audit(db, admin, "email_test", { type: "email", label: to });
+        if (!response)
+          return { data: { ok: false, configured: false, detail: "Envio não configurado: falta BREVO_API_KEY ou EMAIL_FROM no Cloudflare." } };
+        const body = (await response.text().catch(() => "")).slice(0, 400);
+        return { data: { ok: Boolean(response.ok), configured: true, status: response.status, from: env.EMAIL_FROM || env.BREVO_FROM_EMAIL || "", detail: body } };
       }
       if (request.method === "GET" && route === "admin/errors")
         return {

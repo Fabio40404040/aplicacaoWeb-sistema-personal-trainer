@@ -931,11 +931,47 @@ async function renderErrors() {
       el('strong', '', row.message || 'Erro'),
       el('small', '', [when ? when.toLocaleString('pt-BR') : '', row.route].filter(Boolean).join(' · ')),
     )
+    // E-mail que não saiu: o motivo da Brevo fica à vista.
+    if (row.route === 'E-MAIL' && row.detail) text.append(el('small', 'admin-alert', row.detail))
     item.append(text)
     item.title = row.detail || ''
     details.append(item)
   })
-  box.replaceChildren(details)
+  box.replaceChildren(details, emailTester())
+}
+
+// Envia um e-mail de teste e mostra a resposta exata da Brevo.
+function emailTester() {
+  const wrap = el('details', 'support-folder')
+  const summary = el('summary')
+  summary.append(el('span', '', 'Testar envio de e-mail'))
+  const form = el('form', 'admin-email-test')
+  const input = el('input')
+  Object.assign(input, { type: 'email', required: true, placeholder: 'seu-email@exemplo.com' })
+  const send = el('button', 'button button--primary', 'Enviar teste')
+  send.type = 'submit'
+  const result = el('p', 'admin-billing-note')
+  form.append(input, send)
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    if (!form.reportValidity()) return
+    send.disabled = true
+    result.textContent = 'Enviando…'
+    try {
+      const data = await api('/admin/email-test', { method: 'POST', body: JSON.stringify({ to: input.value }) })
+      result.textContent = data.ok
+        ? `✅ A Brevo aceitou (código ${data.status}), remetente ${data.from}. Se não chegar em 2 minutos, veja o spam e os Logs da Brevo. Resposta: ${data.detail}`
+        : data.configured
+          ? `❌ A Brevo recusou (código ${data.status}). Motivo: ${data.detail}`
+          : `❌ ${data.detail}`
+    } catch (error) {
+      result.textContent = error.message
+    } finally {
+      send.disabled = false
+    }
+  })
+  wrap.append(summary, form, result)
+  return wrap
 }
 function initAuditFilters() {
   const chips = $('[data-audit-type]')
