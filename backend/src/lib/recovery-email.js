@@ -4,6 +4,32 @@ export function hasRecoveryEmailProvider(env) {
   )
 }
 
+// Versão em texto simples do e-mail (Outlook e Gmail confiam mais em e-mails
+// que trazem as duas versões, HTML e texto).
+export function htmlToText(html) {
+  return String(html || '')
+    .replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/giu, '')
+    .replace(/<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/giu, (_, href, label) => {
+      const text = label.replace(/<[^>]+>/gu, '').trim()
+      return text && text !== href ? `${text}: ${href}` : href
+    })
+    .replace(/<br\s*\/?>/giu, '\n')
+    .replace(/<\/(p|div|h[1-6]|li|tr|table|main|section)>/giu, '\n\n')
+    .replace(/<li[^>]*>/giu, '• ')
+    .replace(/<[^>]+>/gu, '')
+    .replace(/&nbsp;/gu, ' ')
+    .replace(/&amp;/gu, '&')
+    .replace(/&lt;/gu, '<')
+    .replace(/&gt;/gu, '>')
+    .replace(/&quot;/gu, '"')
+    .replace(/&#39;/gu, "'")
+    .replace(/[ \t]+\n/gu, '\n')
+    .replace(/\n{3,}/gu, '\n\n')
+    .trim()
+}
+
+const replyTo = (env, fromEmail) => ({ replyTo: { email: env.BREVO_REPLY_TO || fromEmail } })
+
 export async function sendRecoveryEmail(env, message, idempotencyKey) {
   const fromEmail = env.EMAIL_FROM || env.BREVO_FROM_EMAIL
   if (env.BREVO_API_KEY && fromEmail) {
@@ -22,9 +48,10 @@ export async function sendRecoveryEmail(env, message, idempotencyKey) {
         to: [{ email: message.to }],
         subject: message.subject,
         htmlContent: message.html,
+        textContent: htmlToText(message.html),
         tags: ['password-reset'],
         headers: { 'X-FARISA-Reset-ID': idempotencyKey },
-        ...(env.BREVO_REPLY_TO ? { replyTo: { email: env.BREVO_REPLY_TO } } : {}),
+        ...replyTo(env, fromEmail),
       }),
     })
   }
@@ -62,7 +89,9 @@ export async function sendNoticeEmail(env, message) {
       to: [{ email: message.to }],
       subject: message.subject,
       htmlContent: message.html,
+      textContent: htmlToText(message.html),
       tags: ['agenda'],
+      ...replyTo(env, fromEmail),
     }),
   })
 }
