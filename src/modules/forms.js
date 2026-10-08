@@ -18,14 +18,33 @@ function progressMessage(form) {
   const editingNow = Boolean(editing[form.dataset.form])
   const messages = {
     student: editingNow
-      ? ['Salvando…', 'Aguarde, estamos salvando as alterações do aluno.']
-      : ['Cadastrando aluno…', 'Aguarde, estamos cadastrando o aluno e preparando o acesso dele. Isso leva só alguns segundos.'],
+      ? ['Salvando…', 'Aguarde, as alterações do aluno estão sendo salvas…']
+      : ['Adicionando aluno…', 'Aguarde, o aluno está sendo adicionado…'],
     workout: ['Salvando ficha…', 'Aguarde, estamos salvando a ficha de treino.'],
     exercise: ['Salvando exercício…', 'Aguarde, estamos salvando o exercício.'],
     assessment: ['Salvando avaliação…', 'Aguarde, estamos salvando a avaliação física.'],
     appointment: ['Salvando…', 'Aguarde, estamos salvando o agendamento.'],
   }
   return messages[form.dataset.form] || ['Salvando…', 'Aguarde, estamos salvando.']
+}
+
+// Camada "Aguarde…" por cima da janela enquanto salva.
+function showBusy(form, text) {
+  const dialog = form.closest('dialog') || form
+  dialog.querySelector('.form-busy')?.remove()
+  const layer = document.createElement('div')
+  layer.className = 'form-busy'
+  layer.setAttribute('role', 'status')
+  layer.setAttribute('aria-live', 'assertive')
+  const card = document.createElement('div')
+  const spinner = document.createElement('span')
+  spinner.className = 'form-busy-spinner'
+  const message = document.createElement('strong')
+  message.textContent = text
+  card.append(spinner, message)
+  layer.append(card)
+  dialog.append(layer)
+  return layer
 }
 
 // Caixa de erro dentro do formulário (antes do rodapé com os botões).
@@ -525,15 +544,17 @@ export function initForms() {
       const [buttonText, progressText] = progressMessage(form)
       submit.classList.add('is-loading')
       submit.textContent = buttonText
-      errorBox.textContent = progressText
-      errorBox.classList.add('is-progress')
-      errorBox.hidden = false
+      // Aviso por cima da janela, logo ao clicar (fica pelo menos 1 segundo).
+      const busy = showBusy(form, progressText)
+      const shownAt = Date.now()
+      const waitMinimum = () => new Promise((done) => setTimeout(done, Math.max(0, 1000 - (Date.now() - shownAt))))
       try {
         await handlers[form.dataset.form](form)
-        errorBox.hidden = true
+        await waitMinimum()
+        busy.remove()
         closeModal(form)
       } catch (error) {
-        errorBox.classList.remove('is-progress')
+        busy.remove()
         // O aviso flutuante fica por trás da janela aberta: o erro aparece
         // também dentro do formulário, logo acima dos botões.
         errorBox.textContent = error.message
@@ -544,10 +565,7 @@ export function initForms() {
         submit.disabled = false
         submit.classList.remove('is-loading')
         submit.textContent = label
-        if (errorBox.classList.contains('is-progress')) {
-          errorBox.classList.remove('is-progress')
-          errorBox.hidden = true
-        }
+        form.closest('dialog')?.querySelector('.form-busy')?.remove()
       }
     }),
   )
