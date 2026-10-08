@@ -937,7 +937,28 @@ async function renderErrors() {
     item.title = row.detail || ''
     details.append(item)
   })
+  if (rows.length) {
+    const clear = el('button', 'button button--secondary', 'Limpar lista')
+    clear.type = 'button'
+    clear.addEventListener('click', clearErrors)
+    details.append(clear)
+  }
   box.replaceChildren(details, emailTester())
+}
+
+// Apaga os erros já resolvidos (os novos voltam a aparecer se acontecerem de novo).
+function clearErrors() {
+  const { box, form, status, ok } = dialog({
+    title: 'Limpar os erros do sistema',
+    body: [el('p', '', 'Apaga todos os erros da lista. Use depois de resolver: se o problema acontecer de novo, ele volta a aparecer aqui.')],
+    confirmLabel: 'Limpar lista',
+  })
+  run(form, ok, status, async () => {
+    await api('/admin/errors', { method: 'DELETE' })
+    box.close()
+    await renderErrors()
+  })
+  box.showModal()
 }
 
 // Envia um e-mail de teste e mostra a resposta exata da Brevo.

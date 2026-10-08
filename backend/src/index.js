@@ -404,6 +404,12 @@ async function handleRoutes(request, env) {
               .catch(() => ({ rows: [] }))
           ).rows,
         };
+      // Limpar a lista de erros (depois de resolvidos).
+      if (request.method === "DELETE" && route === "admin/errors") {
+        await db.query("DELETE FROM error_log").catch(() => {});
+        await audit(db, admin, "errors_cleared", { type: "errors", label: "Erros do sistema" });
+        return { data: { ok: true } };
+      }
       if (request.method === "GET" && route === "admin/billing")
         return { data: await adminBilling(db) };
       if (request.method === "GET" && route === "admin/audit")
