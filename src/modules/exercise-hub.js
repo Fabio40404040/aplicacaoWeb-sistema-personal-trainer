@@ -8,8 +8,10 @@
 //   • Arquivos — as bibliotecas de GIFs e de MP4, para enviar em lote e
 //     fazer faxina.
 import { getData } from './state.js'
+import { legGroupNames } from '../data/library.js'
 import {
   persistRecord,
+  saveFolderOrder,
   syncRemoteData,
   uploadExerciseGif,
   uploadExerciseVideo,
@@ -318,6 +320,23 @@ async function saveItem(item) {
   return 'created'
 }
 
+// As pastas ficam na ordem em que foram arrastadas (Peitoral primeiro → em
+// cima). Uma pasta só, nova, vai para o fim; várias de uma vez definem a ordem.
+const folderNameOfGroup = (group) => (legGroupNames.includes(group) ? 'Pernas' : group)
+async function rememberFolderOrder(items) {
+  const dropped = [...new Set(items.map((item) => folderNameOfGroup(item.group)).filter(Boolean))]
+  if (!dropped.length) return
+  const current = getData().folderOrder || []
+  const next =
+    dropped.length > 1
+      ? [...dropped, ...current.filter((name) => !dropped.includes(name))]
+      : current.includes(dropped[0])
+        ? current
+        : [...current, dropped[0]]
+  if (next.join('|') === current.join('|')) return
+  await saveFolderOrder(next)
+}
+
 async function reviewAndSave(files, fallbackGroup) {
   const items = buildItems(files, fallbackGroup)
   if (!items.length) {
@@ -366,6 +385,7 @@ async function reviewAndSave(files, fallbackGroup) {
       }
       bar.value += 1
     }
+    await rememberFolderOrder(chosen).catch(() => {})
     await syncRemoteData().catch(() => {})
     delete dialog.dataset.busy
     save.disabled = false

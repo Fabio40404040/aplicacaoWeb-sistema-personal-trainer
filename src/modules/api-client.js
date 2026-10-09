@@ -247,6 +247,13 @@ export function createMuscleGroup(name) {
     body: JSON.stringify({ name }),
   });
 }
+// Ordem das pastas da biblioteca (a ordem em que o personal arrastou).
+export function saveFolderOrder(names) {
+  return request("/exercise-folders/order", {
+    method: "PUT",
+    body: JSON.stringify({ names }),
+  });
+}
 export function deleteMuscleGroup(id) {
   return request(`/muscle-groups/${id}`, { method: "DELETE" });
 }

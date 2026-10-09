@@ -128,6 +128,7 @@ import {
 } from "./routes/exercise-gifs.js";
 import {
   createMuscleGroup,
+  saveFolderOrder,
   deleteMuscleGroup,
   listMuscleGroups,
 } from "./routes/muscle-groups.js";
@@ -755,6 +756,8 @@ async function handleRoutes(request, env) {
       segments[2] === "file"
     )
       return trainerExerciseVideoFile(env, db, session.sub, segments[1]);
+    if (request.method === "PUT" && route === "exercise-folders/order")
+      return saveFolderOrder(db, session.sub, await readJson(request));
     if (request.method === "GET" && route === "muscle-groups")
       return { data: await listMuscleGroups(db, session.sub) };
     if (request.method === "POST" && route === "muscle-groups") {

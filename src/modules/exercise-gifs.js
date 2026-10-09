@@ -715,13 +715,20 @@ export async function filesFromDrop(dataTransfer) {
     }
     if (!entry.isDirectory) return
     const reader = entry.createReader()
+    // O navegador entrega o conteúdo da pasta em qualquer ordem: junta tudo e
+    // põe na ordem do nome (1, 2, 10… como no computador).
+    const children = []
     let batch
     do {
       batch = await new Promise((resolve, reject) =>
         reader.readEntries(resolve, reject),
       )
-      for (const child of batch) await walk(child, `${path}${entry.name}/`)
+      children.push(...batch)
     } while (batch.length)
+    children.sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR', { numeric: true, sensitivity: 'base' }),
+    )
+    for (const child of children) await walk(child, `${path}${entry.name}/`)
   }
   for (const entry of entries) await walk(entry, '')
   return collected

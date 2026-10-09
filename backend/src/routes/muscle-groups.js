@@ -120,3 +120,34 @@ export async function deleteMuscleGroup(db, trainerId, id) {
   );
   return null;
 }
+
+// Ordem das pastas da biblioteca (migração 046). Sem a tabela: lista vazia.
+export async function folderOrder(db, trainerId) {
+  try {
+    const row = (await db.query("SELECT names FROM trainer_folder_order WHERE trainer_id=$1", [trainerId])).rows[0];
+    const names = JSON.parse(row?.names || "[]");
+    return Array.isArray(names) ? names.filter((name) => typeof name === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveFolderOrder(db, trainerId, body) {
+  const names = [
+    ...new Set(
+      (Array.isArray(body?.names) ? body.names : [])
+        .map((name) => String(name || "").trim().slice(0, 60))
+        .filter(Boolean),
+    ),
+  ].slice(0, 100);
+  try {
+    await db.query(
+      `INSERT INTO trainer_folder_order (trainer_id, names) VALUES ($1,$2)
+       ON CONFLICT(trainer_id) DO UPDATE SET names=excluded.names, updated_at=CURRENT_TIMESTAMP`,
+      [trainerId, JSON.stringify(names)],
+    );
+  } catch {
+    return { error: "A ordem das pastas ainda não está disponível. Tente de novo mais tarde.", status: 503 };
+  }
+  return { data: { names } };
+}

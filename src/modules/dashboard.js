@@ -520,9 +520,13 @@ const exerciseFolderNames = (exercise) => {
   if (!groups.length) return ['Sem grupo']
   return [...new Set(groups.map((name) => (legGroups.includes(name) ? 'Pernas' : name)))]
 }
+// Primeiro a ordem em que você arrastou as pastas; depois a ordem padrão do
+// catálogo; o resto em ordem alfabética.
 const folderPosition = (name) => {
+  const own = (getData().folderOrder || []).indexOf(name)
+  if (own !== -1) return own
   const index = FOLDER_ORDER.indexOf(name)
-  return index === -1 ? FOLDER_ORDER.length : index
+  return 1000 + (index === -1 ? FOLDER_ORDER.length : index)
 }
 const sortFolders = (a, b) => folderPosition(a) - folderPosition(b) || a.localeCompare(b, 'pt-BR')
 // Pastinhas de grupo ("Todos 123", "Peitoral 18"…) acima da lista.

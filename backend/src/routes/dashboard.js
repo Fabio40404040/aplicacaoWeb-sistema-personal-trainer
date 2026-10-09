@@ -1,3 +1,4 @@
+import { folderOrder } from "./muscle-groups.js";
 import { trainerPhotoIndex } from "./assessment-photos.js";
 import { trainerToolsData } from "./student-tools.js";
 import { trainerPrices } from './site.js'
@@ -228,6 +229,8 @@ export async function dashboard(db, trainerId) {
     exerciseVideos: exerciseVideos.rows,
     exerciseGifs: exerciseGifs.rows,
     customGroups: customGroups.rows,
+    // Ordem das pastas da biblioteca (a ordem em que o personal arrastou).
+    folderOrder: await folderOrder(db, trainerId),
     // Perfil do personal (foto, nome, limite de alunos). null sem a migração 018.
     profile: await trainerProfile(db, trainerId),
   };
