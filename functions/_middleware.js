@@ -5,6 +5,42 @@
 const MAIN = 'farisafit.com.br'
 const OLD_HOSTS = new Set(['www.farisafit.com.br', 'aplicacaoweb-sistema-personal-trainer.pages.dev'])
 
+// Ícones com versão: o iPhone guarda o ícone da Tela de Início em cache e,
+// sem isto, repetia o ícone do outro app.
+const ICON_VERSION = '2'
+
+// Cada app instalável precisa chegar com nome, ícone e manifesto próprios já
+// no HTML (o Safari do iPhone lê o HTML original ao "Adicionar à Tela de
+// Início", antes de o JavaScript trocar).
+function appHead(pathname) {
+  const path = pathname.replace(/\/+$/u, '')
+  if (path === '/personal')
+    return {
+      title: 'FARISA Painel',
+      manifest: '/painel.webmanifest',
+      touch: `/icons/painel-apple-touch-icon.png?v=${ICON_VERSION}`,
+      icon: '/icons/painel-192.png',
+      theme: '#047857',
+    }
+  const page = path.match(/^\/p\/([a-z0-9-]{3,30})$/iu)
+  if (page) {
+    const slug = page[1].toLowerCase()
+    return {
+      manifest: `/api/public/site-manifest/${slug}`,
+      touch: `/api/public/site-icon/${slug}/192`,
+    }
+  }
+  if (path === '' || path === '/index.html')
+    return { touch: `/icons/apple-touch-icon.png?v=${ICON_VERSION}` }
+  return null
+}
+
+const setAttr = (attr, value) => ({
+  element(element) {
+    if (value) element.setAttribute(attr, value)
+  },
+})
+
 export async function onRequest(context) {
   const url = new URL(context.request.url)
   if (context.request.method === 'GET' && OLD_HOSTS.has(url.hostname) && !url.pathname.startsWith('/api/')) {
@@ -13,5 +49,24 @@ export async function onRequest(context) {
     url.port = ''
     return Response.redirect(url.toString(), 301)
   }
-  return context.next()
+  const response = await context.next()
+  const head = context.request.method === 'GET' && !url.pathname.startsWith('/api/') ? appHead(url.pathname) : null
+  if (!head || !(response.headers.get('content-type') || '').includes('text/html')) return response
+  try {
+    const rewriter = new HTMLRewriter()
+      .on('link[rel="manifest"]', setAttr('href', head.manifest))
+      .on('link[rel="apple-touch-icon"]', setAttr('href', head.touch))
+      .on('link[rel="icon"]', setAttr('href', head.icon))
+      .on('meta[name="theme-color"]', setAttr('content', head.theme))
+      .on('meta[name="apple-mobile-web-app-title"]', setAttr('content', head.title))
+    if (head.title)
+      rewriter.on('title', {
+        element(element) {
+          element.setInnerContent(head.title)
+        },
+      })
+    return rewriter.transform(response)
+  } catch {
+    return response
+  }
 }
