@@ -229,9 +229,16 @@ async function isFreePlan(db, trainerId) {
   }
 }
 
-const brandOf = (row, trainer) => {
-  const mark = row?.brand_mark || String(trainer?.name || 'Personal').split(/\s+/u)[0].slice(0, 14)
-  return { mark, full: `${mark} ${row?.brand_name || 'Personal'}`.trim() }
+// Cor (tom escuro) de cada opção de cor da página, igual a src/modules/site-brand.js.
+const APP_COLORS = {
+  blue: '#1c67db',
+  green: '#15803d',
+  teal: '#0f766e',
+  purple: '#6d28d9',
+  pink: '#be185d',
+  red: '#b91c1c',
+  orange: '#c2410c',
+  gold: '#a16207',
 }
 
 // Manifesto do app do aluno com a marca do personal (instalado a partir de /p/<slug>).
@@ -246,24 +253,25 @@ export async function siteManifest(db, slug) {
     row = null
   }
   if (!row) return new Response('Not found', { status: 404 })
-  const brand = brandOf(row, trainer)
-  const version = Number(row.icon_version || 0)
-  const icon = (size) =>
-    row.icon_192 && row.icon_512 ? `/api/public/site-icon/${clean}/${size}?v=${version}` : `/icons/icon-${size}.png`
+  // App do aluno: sempre "FARISA Aluno", na cor escolhida pelo personal
+  // (ícones prontos em public/icons/aluno-<cor>-*.png). No Grátis, azul.
+  const locked = await trainerLocked(db, row.trainer_id).catch(() => false)
+  const accent = !locked && APP_COLORS[row.accent] ? row.accent : 'blue'
   const manifest = {
     id: `/p/${clean}`,
-    name: brand.full.slice(0, 45),
-    short_name: brand.mark.slice(0, 12),
-    description: `App de treinos de ${trainer?.name || brand.full}.`,
+    name: 'FARISA Aluno',
+    short_name: 'FARISA Aluno',
+    description: `App de treinos de ${trainer?.name || 'seu personal'}.`,
     lang: 'pt-BR',
     start_url: `/p/${clean}#entrar-aluno`,
     scope: `/p/${clean}`,
     display: 'standalone',
-    background_color: '#18212d',
-    theme_color: '#18212d',
+    background_color: APP_COLORS[accent],
+    theme_color: APP_COLORS[accent],
     icons: [
-      { src: icon(192), sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: icon(512), sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: `/icons/aluno-${accent}-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: `/icons/aluno-${accent}-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: `/icons/aluno-${accent}-apple-touch-icon.png`, sizes: '180x180', type: 'image/png', purpose: 'any' },
     ],
   }
   return new Response(JSON.stringify(manifest), {

@@ -153,10 +153,12 @@ function linkCard() {
   const iconBox = el('div', 'site-share-item')
   const icon = el('img', 'site-app-icon')
   icon.alt = 'Ícone do app do aluno'
-  icon.src = drawIcon(192, markOf(), ACCENTS[site.accent] || ACCENTS.blue)
+  // App do aluno: "FARISA Aluno", na cor da sua página (no Grátis, azul).
+  const appColor = !site.brandLocked && ACCENTS[site.accent] ? site.accent : 'blue'
+  icon.src = `/icons/aluno-${appColor}-192.png`
   iconBox.append(
     icon,
-    el('small', 'support-muted', 'Assim o seu app aparece no celular do aluno. O nome e a cor vêm da sua marca.'),
+    el('small', 'support-muted', 'Assim o app aparece no celular do aluno: “FARISA Aluno”, na cor da sua página.'),
   )
   share.append(qrBox, iconBox)
   card.append(share)
