@@ -251,6 +251,13 @@ export function createMuscleGroup(name) {
     body: JSON.stringify({ name }),
   });
 }
+// Copia exercícios da Biblioteca FARISA para "Meus exercícios" (pula os já copiados).
+export function copyFromLibrary(ids) {
+  return request("/exercises/copy-from-library", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}
 // Ordem das pastas da biblioteca (a ordem em que o personal arrastou).
 export function saveFolderOrder(names) {
   return request("/exercise-folders/order", {

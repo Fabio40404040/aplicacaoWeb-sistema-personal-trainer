@@ -4,7 +4,7 @@
 // editável (mesmo GIF e vídeo, sem gastar espaço).
 import { getData } from './state.js'
 import { exerciseGroups, showToast } from './utils.js'
-import { persistRecord, syncRemoteData } from './api-client.js'
+import { copyFromLibrary, syncRemoteData } from './api-client.js'
 import { findGif, findVideo, gifImage, openGifLightbox, openVideoLightbox } from './exercise-gifs.js'
 import { folderSorter } from './folder-order.js'
 import { legGroupNames } from '../data/library.js'
@@ -21,6 +21,22 @@ const el = (tag, className = '', text) => {
   if (className) node.className = className
   if (text !== undefined) node.textContent = text
   return node
+}
+
+// Exercícios da FARISA que você já copiou (id da FARISA → id da sua cópia).
+export function copiedMap() {
+  const map = new Map()
+  ;(getData().exercises || []).forEach((item) => {
+    if (!item.library && item.sourceId) map.set(String(item.sourceId), item.id)
+  })
+  return map
+}
+
+// Para montar fichas: os seus exercícios + os da FARISA que você ainda não
+// copiou (o copiado aparece uma vez só, como a sua cópia).
+export function exercisesForWorkouts() {
+  const copied = copiedMap()
+  return (getData().exercises || []).filter((item) => !item.library || !copied.has(String(item.id)))
 }
 
 let view = 'exercicios'
@@ -53,31 +69,28 @@ function groupBy(items, groupsOf) {
   return folders
 }
 
-async function copyToMine(source, button) {
+async function copyExercises(items, button, label) {
+  const ids = items.map((item) => item.id)
+  if (!ids.length) return
   button.disabled = true
-  button.textContent = 'Copiando…'
+  button.textContent = ids.length > 1 ? `Copiando ${ids.length}…` : 'Copiando…'
   try {
-    const saved = await persistRecord('exercises', {
-      name: source.name,
-      group: source.group,
-      equipment: source.equipment,
-      instructions: source.instructions,
-      difficulty: source.difficulty,
-      mediaType: source.mediaType,
-      mediaUrl: source.mediaUrl,
-      thumbnailUrl: source.thumbnailUrl,
-      animationClip: source.animationClip,
-      gifId: source.gifId,
-      videoId: source.videoId,
-    })
+    const result = await copyFromLibrary(ids)
     await syncRemoteData()
-    showToast(`“${source.name}” foi copiado para Meus exercícios. Agora você pode editar a sua cópia.`)
-    if (saved?.id) window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: saved.id }))
+    if (ids.length === 1) {
+      showToast(`“${items[0].name}” está em Meus exercícios. Agora você pode editar a sua cópia.`)
+      const mine = copiedMap().get(String(ids[0]))
+      if (mine) window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: mine }))
+    } else {
+      showToast(
+        `${result.created} exercício(s) copiado(s) para Meus exercícios${result.skipped ? ` (${result.skipped} já estavam lá)` : ''}.`,
+      )
+    }
+    renderFarisaLibrary()
   } catch (error) {
     showToast(error.message)
-  } finally {
     button.disabled = false
-    button.textContent = 'Copiar para minha biblioteca'
+    button.textContent = label
   }
 }
 
@@ -109,13 +122,42 @@ function exerciseRow(exercise) {
     play.addEventListener('click', () => void openVideoLightbox(video.id, exercise.name))
     actions.append(play)
   }
-  const copy = el('button', 'button button--secondary', 'Copiar para minha biblioteca')
-  copy.type = 'button'
-  copy.title = 'Cria uma cópia sua deste exercício (mesmo GIF e vídeo) para você editar'
-  copy.addEventListener('click', () => void copyToMine(exercise, copy))
-  actions.append(copy)
+  const mine = copiedMap().get(String(exercise.id))
+  if (mine) {
+    // Já está em "Meus exercícios": nada de cópia repetida.
+    row.classList.add('is-copied')
+    const done = el('span', 'farisa-copied', '✓ Em Meus exercícios')
+    const edit = el('button', 'button button--secondary', 'Editar minha cópia')
+    edit.type = 'button'
+    edit.addEventListener('click', () => window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: mine })))
+    actions.append(done, edit)
+  } else {
+    const label = 'Copiar para minha biblioteca'
+    const copy = el('button', 'button button--secondary', label)
+    copy.type = 'button'
+    copy.title = 'Cria uma cópia sua deste exercício (mesmo GIF e vídeo) para você editar'
+    copy.addEventListener('click', () => void copyExercises([exercise], copy, label))
+    actions.append(copy)
+  }
   row.append(thumb, info, actions)
   return row
+}
+
+// "Copiar pasta inteira": só os que ainda não estão em Meus exercícios.
+function folderCopyButton(name, items) {
+  const copied = copiedMap()
+  const pending = items.filter((item) => !copied.has(String(item.id)))
+  if (!pending.length) return el('span', 'farisa-copied', '✓ Pasta em Meus exercícios')
+  const label = pending.length === items.length ? `Copiar pasta inteira (${pending.length})` : `Copiar os ${pending.length} que faltam`
+  const button = el('button', 'button button--secondary farisa-folder-copy', label)
+  button.type = 'button'
+  button.title = `Copia os exercícios de ${name} para Meus exercícios (os que já estão lá não repetem)`
+  button.addEventListener('click', (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    void copyExercises(pending, button, label)
+  })
+  return button
 }
 
 function gifCard(gif) {
@@ -135,12 +177,13 @@ function videoRow(video) {
   return row
 }
 
-function folder(key, name, items, renderBody, total) {
+function folder(key, name, items, renderBody, total, extra = null) {
   const details = el('details', 'exercise-folder farisa-folder')
   details.dataset.group = key
   details.open = Boolean(query) || openFolders.has(key)
   const summary = el('summary')
   summary.append(el('span', 'exercise-folder-name', name), el('span', 'exercise-folder-count', total))
+  if (extra) summary.append(extra)
   const body = el('div', 'farisa-folder-body')
   // Só monta o conteúdo ao abrir (a biblioteca tem centenas de GIFs).
   const fill = () => {
@@ -169,7 +212,7 @@ export function renderFarisaLibrary() {
   const intro = el('div', 'farisa-intro')
   intro.append(
     el('strong', '', '📚 Biblioteca FARISA'),
-    el('p', '', 'Exercícios prontos, com GIF e vídeo, para usar nas fichas dos seus alunos. Atualizada pela FARISA — aparecem também na hora de montar a ficha (marcados com 📚).'),
+    el('p', '', 'Exercícios prontos, com GIF e vídeo, para usar nas fichas dos seus alunos — já aparecem na montagem da ficha (marcados com 📚). Só copie para Meus exercícios se quiser mudar algo: a cópia substitui o original na ficha, sem repetir.'),
   )
   const switcher = el('div', 'farisa-switch')
   switcher.setAttribute('role', 'tablist')
@@ -228,7 +271,14 @@ export function renderFarisaLibrary() {
     list.replaceChildren(
       ...entries.map(([name, items]) => {
         const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-        const details = folder(`${view}:${name}`, name, sorted, renderBody, `${items.length} ${items.length === 1 ? unit[0] : unit[1]}`)
+        const details = folder(
+          `${view}:${name}`,
+          name,
+          sorted,
+          renderBody,
+          `${items.length} ${items.length === 1 ? unit[0] : unit[1]}`,
+          view === 'exercicios' ? folderCopyButton(name, sorted) : null,
+        )
         // GIFs em grade, como na aba GIFs.
         if (view === 'gifs') details.querySelector('.farisa-folder-body').classList.add('gif-grid', 'gif-grid--library')
         return details

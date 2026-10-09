@@ -5295,3 +5295,23 @@ body.has-support-banner .main-content {
     justify-content: flex-start;
   }
 }
+.farisa-copied {
+  align-self: center;
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.farisa-row.is-copied .farisa-row-info strong {
+  color: var(--ink-600, #64748b);
+}
+.farisa-folder summary .farisa-folder-copy,
+.farisa-folder summary .farisa-copied {
+  margin-left: auto;
+  margin-right: 8px;
+}
+.farisa-folder-copy {
+  padding: 5px 10px;
+  min-height: 0;
+  font-size: 0.76rem;
+}

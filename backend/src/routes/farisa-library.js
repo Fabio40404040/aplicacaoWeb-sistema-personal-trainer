@@ -114,3 +114,38 @@ export async function adminSyncLibrary(db, admin) {
   await audit(db, admin, 'library_synced', { type: 'library', id: LIBRARY_ID, label: LIBRARY_NAME }, `${after.exercises - before.exercises} exercício(s) criados`)
   return { data: { created: after.exercises - before.exercises, ...after } }
 }
+
+// Copiar exercícios da Biblioteca FARISA para a biblioteca do personal (um ou
+// uma pasta inteira). Pula os que ele já copiou. A cópia usa o mesmo GIF e
+// vídeo (não gasta espaço) e guarda de onde veio (source_id, migração 047).
+export async function copyFromLibrary(db, trainerId, body) {
+  if (trainerId === LIBRARY_ID) return { error: 'A Biblioteca FARISA não copia para ela mesma.', status: 400 }
+  const ids = [...new Set((Array.isArray(body?.ids) ? body.ids : []).map(String).filter((id) => /^[\w-]{1,64}$/u.test(id)))].slice(0, 500)
+  if (!ids.length) return { error: 'Escolha pelo menos um exercício.', status: 400 }
+  try {
+    await db.query('SELECT source_id FROM exercises LIMIT 1')
+  } catch {
+    return { error: 'A cópia ainda não está disponível. Tente de novo mais tarde.', status: 503 }
+  }
+  const created = []
+  // Em blocos (o banco limita a quantidade de valores por consulta).
+  for (let start = 0; start < ids.length; start += 50) {
+    const chunk = ids.slice(start, start + 50)
+    const marks = chunk.map((_, index) => `$${index + 3}`).join(',')
+    const rows = (
+      await db.query(
+        `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,media_url,
+           thumbnail_url,animation_clip,gif_id,video_id,source_id)
+         SELECT $1,e.name,e.muscle_group,e.equipment,e.instructions,e.difficulty,e.media_type,e.media_url,
+           e.thumbnail_url,e.animation_clip,e.gif_id,e.video_id,e.id
+         FROM exercises e
+         WHERE e.trainer_id=$2 AND e.id IN (${marks})
+           AND NOT EXISTS (SELECT 1 FROM exercises c WHERE c.trainer_id=$1 AND c.source_id=e.id)
+         RETURNING id, source_id AS "sourceId"`,
+        [trainerId, LIBRARY_ID, ...chunk],
+      )
+    ).rows
+    created.push(...rows)
+  }
+  return { data: { created: created.length, skipped: ids.length - created.length, items: created } }
+}

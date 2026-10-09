@@ -1,3 +1,4 @@
+import { exercisesForWorkouts } from './farisa-library-tab.js'
 import { folderSorter } from './folder-order.js'
 import {
   deleteExerciseVideo,
@@ -372,7 +373,7 @@ function catalogAddButton(groupName) {
 
 function renderWorkoutExerciseCatalog(form) {
   const catalog = form.querySelector('[data-workout-exercise-catalog]')
-  const exercises = getData().exercises || []
+  const exercises = exercisesForWorkouts()
   const groups = workoutCatalogGroups(exercises)
   catalog.replaceChildren(
     ...groups.map((group) => {
@@ -947,7 +948,7 @@ function renderReadySessionTabs(form) {
 
 function renderReadyExerciseCatalog(form) {
   const catalog = form.querySelector('[data-ready-exercise-catalog]')
-  const exercises = getData().exercises || []
+  const exercises = exercisesForWorkouts()
   const groups = workoutCatalogGroups(exercises)
   catalog.replaceChildren(
     ...groups.map((group) => {

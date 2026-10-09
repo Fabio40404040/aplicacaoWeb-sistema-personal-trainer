@@ -1,4 +1,4 @@
-import { adminOpenLibrary, adminSyncLibrary, libraryOverview } from "./routes/farisa-library.js";
+import { adminOpenLibrary, adminSyncLibrary, copyFromLibrary, libraryOverview } from "./routes/farisa-library.js";
 import { activateTrainer, switchTrainer } from "./routes/student-links.js";
 import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
@@ -786,6 +786,9 @@ async function handleRoutes(request, env) {
     }
     if (request.method === "GET" && route === "exercise-gifs")
       return { data: await listExerciseGifs(db, session.sub) };
+    // Copiar exercícios da Biblioteca FARISA para "Meus exercícios".
+    if (request.method === "POST" && route === "exercises/copy-from-library")
+      return copyFromLibrary(db, session.sub, await readJson(request));
     if (request.method === "POST" && route === "exercise-gifs") {
       const result = await uploadExerciseGif(request, env, db, session.sub);
       return result?.error ? result : { data: result, status: 201 };

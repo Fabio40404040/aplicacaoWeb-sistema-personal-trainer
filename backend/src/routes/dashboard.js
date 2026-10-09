@@ -27,6 +27,16 @@ async function gifSchemaReady(db) {
   }
 }
 
+// De qual exercício da Biblioteca FARISA veio a cópia (migração 047).
+async function sourceReady(db) {
+  try {
+    await db.query("SELECT source_id FROM exercises LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // O vínculo com o MP4 chegou na migração 017.
 async function videoLinkReady(db) {
   try {
@@ -70,6 +80,7 @@ export async function dashboard(db, trainerId) {
   const withGifs = await gifSchemaReady(db);
   const withCustomGroups = await customGroupsReady(db);
   const withVideoLink = await videoLinkReady(db);
+  const withSource = await sourceReady(db);
   const withStudentAvatar = await studentAvatarReady(db);
   // Aluno vindo de outro personal: foto só depois que ele entrar na sua página.
   const avatarSeen = (await linkSeenReady(db)) ? " AND COALESCE(s.account_seen,1)=1" : "";
@@ -118,7 +129,7 @@ export async function dashboard(db, trainerId) {
       `SELECT id, name, muscle_group AS "group", equipment, instructions, difficulty,
        media_type AS "mediaType", media_url AS "mediaUrl", thumbnail_url AS "thumbnailUrl",
        animation_clip AS "animationClip", is_active AS "isActive", created_at AS "createdAt",
-       (trainer_id<>$1) AS "library"${gifColumn}
+       (trainer_id<>$1) AS "library"${withSource ? ', source_id AS "sourceId"' : ""}${gifColumn}
        FROM exercises WHERE trainer_id IN ($1,'farisa-library') ORDER BY created_at DESC`,
       [trainerId],
     ),

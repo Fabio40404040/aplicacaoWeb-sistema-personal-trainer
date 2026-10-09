@@ -1,3 +1,4 @@
+import { exercisesForWorkouts } from './farisa-library-tab.js'
 import { folderSorter } from './folder-order.js'
 import { showPaidDialog } from './paid-dialog.js'
 import { getData, updateData } from './state.js'
@@ -937,7 +938,7 @@ function renderExerciseOptions() {
   if (!select) return
   const selected = new Set([...select.selectedOptions].map((o) => o.value))
   select.replaceChildren(
-    ...getData().exercises.map((e) => {
+    ...exercisesForWorkouts().map((e) => {
       const o = document.createElement('option')
       o.value = e.id
       o.textContent = `${e.name} — ${e.group}`
