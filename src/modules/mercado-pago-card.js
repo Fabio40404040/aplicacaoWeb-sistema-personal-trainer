@@ -118,7 +118,9 @@ function formErrorMessage(error) {
     ),
   ]
   if (fields.length) return `Confira: ${fields.join(', ')}.`
-  return 'Não foi possível validar o cartão. Confira os dados e tente de novo.'
+  // Código do Mercado Pago no fim (ajuda o suporte a achar a causa).
+  const code = list.map((item) => item.code || item.cause?.[0]?.code || item.message).filter(Boolean)[0]
+  return `Não foi possível validar o cartão. Confira os dados e tente de novo.${code ? ` (código: ${String(code).slice(0, 60)})` : ''}`
 }
 
 function updateCardBrand(dialog, response) {
@@ -244,15 +246,14 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
         updateCardBrand(dialog, error ? undefined : paymentMethods)
       },
       onError(error) {
-        if (!tried) {
-          console.warn('[cartão] aviso do Mercado Pago antes do envio', error)
-          return
-        }
+        console.warn('[cartão] erro do Mercado Pago', JSON.stringify(error))
+        if (!tried) return
         say(formErrorMessage(error), 'error')
         submit.disabled = false
       },
       onCardTokenReceived(error) {
         if (!error) return
+        console.warn('[cartão] token recusado', JSON.stringify(error))
         say(formErrorMessage(error), 'error')
         submit.disabled = false
       },
