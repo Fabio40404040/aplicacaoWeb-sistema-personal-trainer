@@ -710,3 +710,9 @@
 .admin-library-how p {
   margin: 0;
 }
+
+.admin-library-loose {
+  margin-bottom: 16px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+}

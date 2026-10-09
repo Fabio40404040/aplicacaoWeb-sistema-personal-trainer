@@ -851,6 +851,7 @@ const ACTIONS = {
   trainer_deleted: 'Personal excluído',
   trainer_impersonated: 'Acesso de suporte ao painel',
   library_opened: 'Biblioteca FARISA aberta para edição',
+  library_synced: 'Biblioteca FARISA: arquivos viraram exercícios',
   trainer_plan_set: 'Plano definido',
   saas_plans_updated: 'Planos editados',
   support_replied: 'Resposta de suporte',
@@ -1074,7 +1075,43 @@ async function renderLibrary() {
     }
   })
   how.append(open)
-  root.replaceChildren(stats, how)
+  const parts = [stats]
+  // GIFs/MP4 enviados soltos (abas GIFs e Vídeos) ainda não são exercícios:
+  // os personais só veem exercícios.
+  const loose = Number(info.looseGifs || 0) + Number(info.looseVideos || 0)
+  if (loose) {
+    const alert = el('article', 'panel admin-library-how admin-library-loose')
+    alert.append(
+      el('h2', '', `⚠️ ${loose} arquivo(s) ainda não aparecem para os personais`),
+      el(
+        'p',
+        '',
+        `${info.looseGifs || 0} GIF(s) e ${info.looseVideos || 0} vídeo(s) foram enviados soltos (nas abas GIFs/Vídeos) e ainda não viraram exercícios. Os personais só veem exercícios.`,
+      ),
+    )
+    const sync = el('button', 'button button--primary', 'Transformar em exercícios')
+    sync.type = 'button'
+    sync.addEventListener('click', async () => {
+      sync.disabled = true
+      sync.textContent = 'Criando exercícios…'
+      try {
+        const result = await api('/admin/library/sync', { method: 'POST', body: '{}' })
+        alert.replaceChildren(el('h2', '', `✅ ${result.created} exercício(s) criados. Já aparecem para os personais.`))
+        window.setTimeout(() => void renderLibrary(), 1500)
+      } catch (error) {
+        sync.disabled = false
+        sync.textContent = 'Transformar em exercícios'
+        alert.append(el('p', 'admin-alert', error.message))
+      }
+    })
+    alert.append(
+      el('p', 'admin-muted', 'Cada arquivo vira um exercício com o nome do arquivo e a pasta dele. Depois você pode editar nome, equipamento e instruções na Biblioteca FARISA.'),
+      sync,
+    )
+    parts.push(alert)
+  }
+  parts.push(how)
+  root.replaceChildren(...parts)
 }
 
 // Telas da entrada: login, "esqueci a senha" e "nova senha" (link do e-mail).

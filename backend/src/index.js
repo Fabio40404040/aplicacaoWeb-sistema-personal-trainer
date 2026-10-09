@@ -1,4 +1,4 @@
-import { adminOpenLibrary, libraryOverview } from "./routes/farisa-library.js";
+import { adminOpenLibrary, adminSyncLibrary, libraryOverview } from "./routes/farisa-library.js";
 import { activateTrainer, switchTrainer } from "./routes/student-links.js";
 import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
@@ -417,6 +417,8 @@ async function handleRoutes(request, env) {
         return { data: await libraryOverview(db) };
       if (request.method === "POST" && route === "admin/library/open")
         return adminOpenLibrary(env, db, admin);
+      if (request.method === "POST" && route === "admin/library/sync")
+        return adminSyncLibrary(db, admin);
       if (request.method === "GET" && route === "admin/billing")
         return { data: await adminBilling(db) };
       if (request.method === "GET" && route === "admin/audit")

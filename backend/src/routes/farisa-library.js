@@ -21,6 +21,43 @@ export async function ensureLibraryTrainer(db) {
   await db.query('UPDATE trainers SET email_verified_at=COALESCE(email_verified_at, CURRENT_TIMESTAMP) WHERE id=$1', [LIBRARY_ID]).catch(() => {})
 }
 
+// GIF ou MP4 enviado sozinho na Biblioteca FARISA (aba GIFs/Vídeos) ainda
+// não é um exercício — e os personais só veem exercícios. Este botão do admin
+// cria um exercício para cada arquivo solto, com o nome e a pasta do arquivo.
+// Não mexe no que já existe.
+export async function syncLibraryExercises(db) {
+  try {
+    await db.query(
+      `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,difficulty,media_type,gif_id)
+       SELECT g.trainer_id, g.name, g.muscle_group, 'Sem equipamento', 'Intermediário', 'gif', g.id
+       FROM exercise_gifs g
+       WHERE g.trainer_id=$1
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND e.gif_id=g.id)`,
+      [LIBRARY_ID],
+    )
+  } catch {
+    /* sem a tabela de GIFs */
+  }
+  try {
+    // Vídeo enviado pela aba Vídeos: o exercício nasce com o mesmo id do vídeo.
+    await db.query(
+      `UPDATE exercises SET video_id=id
+       WHERE trainer_id=$1 AND video_id IS NULL AND id IN (SELECT id FROM exercise_videos WHERE trainer_id=$1)`,
+      [LIBRARY_ID],
+    )
+    await db.query(
+      `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,difficulty,media_type,video_id)
+       SELECT v.trainer_id, v.name, v.muscle_group, COALESCE(v.equipment,'Sem equipamento'), COALESCE(v.difficulty,'Intermediário'), 'video', v.id
+       FROM exercise_videos v
+       WHERE v.trainer_id=$1
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
+      [LIBRARY_ID],
+    )
+  } catch {
+    /* sem a coluna video_id */
+  }
+}
+
 // Números para a aba do admin.
 export async function libraryOverview(db) {
   const count = async (sql) => {
@@ -30,15 +67,23 @@ export async function libraryOverview(db) {
       return 0
     }
   }
-  const [exercises, gifs, videos, folders] = await Promise.all([
+  const [exercises, gifs, videos, folders, looseGifs, looseVideos] = await Promise.all([
     count('SELECT COUNT(*) AS n FROM exercises WHERE trainer_id=$1'),
     count('SELECT COUNT(*) AS n FROM exercises WHERE trainer_id=$1 AND gif_id IS NOT NULL'),
     count('SELECT COUNT(*) AS n FROM exercises WHERE trainer_id=$1 AND video_id IS NOT NULL'),
     count(
       `SELECT COUNT(DISTINCT muscle_group) AS n FROM exercises WHERE trainer_id=$1 AND muscle_group IS NOT NULL AND muscle_group<>''`,
     ),
+    count(
+      `SELECT COUNT(*) AS n FROM exercise_gifs g WHERE g.trainer_id=$1
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND e.gif_id=g.id)`,
+    ),
+    count(
+      `SELECT COUNT(*) AS n FROM exercise_videos v WHERE v.trainer_id=$1
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
+    ),
   ])
-  return { exercises, gifs, videos, folders }
+  return { exercises, gifs, videos, folders, looseGifs, looseVideos }
 }
 
 // Abre a Biblioteca FARISA no painel (sessão de 4 horas, registrada).
@@ -60,4 +105,12 @@ export async function adminOpenLibrary(env, db, admin) {
       name: LIBRARY_NAME,
     },
   }
+}
+
+export async function adminSyncLibrary(db, admin) {
+  const before = await libraryOverview(db)
+  await syncLibraryExercises(db)
+  const after = await libraryOverview(db)
+  await audit(db, admin, 'library_synced', { type: 'library', id: LIBRARY_ID, label: LIBRARY_NAME }, `${after.exercises - before.exercises} exercício(s) criados`)
+  return { data: { created: after.exercises - before.exercises, ...after } }
 }
