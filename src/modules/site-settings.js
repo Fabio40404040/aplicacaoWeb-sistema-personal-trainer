@@ -3,7 +3,10 @@
 import { fetchSiteSettings, saveSiteHero, saveSiteSettings } from './api-client.js'
 import { ACCENTS } from './site-brand.js'
 import { createQrCodeImage } from './pix.js'
-import { showToast } from './utils.js'
+import { askConfirm, showToast } from './utils.js'
+
+const money = (cents) =>
+  (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 const HERO_WIDTH = 1600
 const HERO_HEIGHT = 900
@@ -458,7 +461,30 @@ function plansCard(form) {
     row.append(toggle, price)
     list.append(row)
   })
-  card.append(list, el('small', 'support-muted', 'Trimestral, semestral e anual são calculados a partir do valor mensal, com 5%, 10% e 15% de desconto.'))
+  // Volta aos preços sugeridos pela FARISA (e liga todos os planos).
+  const reset = el('button', 'button button--secondary site-reset-small', 'Voltar aos preços sugeridos')
+  reset.type = 'button'
+  reset.addEventListener('click', async () => {
+    const ok = await askConfirm({
+      eyebrow: 'Meu site',
+      title: 'Voltar aos preços sugeridos?',
+      message: `Os planos voltam para: ${site.plans.map((plan) => `${plan.name} ${money(plan.defaultPriceCents ?? plan.priceCents)}`).join(' · ')}. Todos ficam ligados.`,
+      note: 'Quem já paga continua com o valor que pagou até renovar.',
+      confirmLabel: 'Voltar aos sugeridos',
+      danger: false,
+    })
+    if (!ok) return
+    list.querySelectorAll('.site-plan').forEach((row) => {
+      const plan = site.plans.find((item) => item.code === row.dataset.code)
+      if (!plan) return
+      const check = row.querySelector('[name="active"]')
+      check.checked = true
+      check.dispatchEvent(new Event('change'))
+      row.querySelector('[name="price"]').value = ((plan.defaultPriceCents ?? plan.priceCents) / 100).toFixed(2)
+    })
+    form.requestSubmit()
+  })
+  card.append(list, el('small', 'support-muted', 'Trimestral, semestral e anual são calculados a partir do valor mensal, com 5%, 10% e 15% de desconto.'), reset)
   form.append(card)
 }
 
@@ -552,7 +578,27 @@ function render() {
   status.setAttribute('role', 'status')
   const save = el('button', 'button button--primary', 'Salvar meu site')
   save.type = 'submit'
-  bar.append(status, save)
+  // Desfaz marca, cor e banner (endereço, contatos, preços e indicações ficam).
+  const restore = el('button', 'button button--secondary', 'Restaurar aparência padrão')
+  restore.type = 'button'
+  restore.addEventListener('click', async () => {
+    const ok = await askConfirm({
+      eyebrow: 'Meu site',
+      title: 'Restaurar a aparência padrão?',
+      message: 'A marca volta para o seu nome, a cor volta para o azul e o banner volta para a imagem padrão.',
+      note: 'O endereço da página, os contatos, os preços, as indicações e a sua foto no banner continuam como estão.',
+      confirmLabel: 'Restaurar',
+      danger: false,
+    })
+    if (!ok) return
+    form.elements.brandMark.value = ''
+    form.elements.brandName.value = ''
+    draft.accent = 'blue'
+    draft.heroKind = 'default'
+    draft.heroPreset = null
+    form.requestSubmit()
+  })
+  bar.append(status, restore, save)
   form.append(bar)
   form.addEventListener('submit', async (event) => {
     event.preventDefault()

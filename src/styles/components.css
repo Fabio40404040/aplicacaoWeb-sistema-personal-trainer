@@ -5315,3 +5315,10 @@ body.has-support-banner .main-content {
   min-height: 0;
   font-size: 0.76rem;
 }
+
+.site-reset-small {
+  justify-self: start;
+  padding: 6px 12px;
+  min-height: 0;
+  font-size: 0.82rem;
+}
