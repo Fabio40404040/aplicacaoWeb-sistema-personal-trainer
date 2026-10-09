@@ -231,16 +231,17 @@ function supportBanner() {
       'span',
       '',
       library
-        ? '📚 Você está abastecendo a Biblioteca FARISA. O que salvar em “Biblioteca de exercícios” vai para todos os personais.'
+        ? '📚 Biblioteca FARISA'
         : `🛟 Modo suporte — você está no painel de ${name}. Tudo o que fizer aqui fica registrado.`,
     ),
   )
   if (library) {
     bar.classList.add('support-mode-banner--library')
+    bar.title = 'Você está abastecendo a Biblioteca FARISA: o que salvar aqui vai para todos os personais.'
     // Só a biblioteca interessa aqui: esconde o resto do menu.
     document.body.classList.add('is-library-mode')
   }
-  const exit = el('button', 'button button--secondary', 'Encerrar acesso')
+  const exit = el('button', 'button button--secondary', library ? 'Sair' : 'Encerrar acesso')
   exit.type = 'button'
   exit.addEventListener('click', () => {
     ;['farisa-support-mode', 'farisa-library-mode', 'farisa-coach-api-token', 'farisa-coach-session-v2', 'farisa-coach-data-v1'].forEach((key) =>
