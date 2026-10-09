@@ -204,6 +204,7 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
   // Erros do Mercado Pago antes de o aluno tentar pagar (ex.: campo ainda
   // vazio sendo conferido) não aparecem: só depois de clicar em Pagar.
   let tried = false
+  const usedTokens = new Set()
   // Roda antes do Mercado Pago: dado errado do titular para aqui, com aviso.
   if (!dialog.dataset.checked) {
     dialog.dataset.checked = 'true'
@@ -285,8 +286,17 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
         say('Processando o pagamento com segurança…')
         try {
           const data = cardForm.getCardFormData()
+          // O token do cartão só vale uma vez: numa nova tentativa no mesmo
+          // formulário (depois de recusa ou erro) pede um token novo.
+          let token = data.token
+          if (usedTokens.has(token)) {
+            const fresh = await cardForm.createCardToken().catch(() => null)
+            token = fresh?.token || ''
+            if (!token) throw new Error('Confira os dados do cartão e clique em Pagar de novo.')
+          }
+          usedTokens.add(token)
           const result = await request('payments/card', {
-            token: data.token,
+            token,
             issuerId: data.issuerId,
             paymentMethodId: data.paymentMethodId,
             installments: Number(data.installments),
