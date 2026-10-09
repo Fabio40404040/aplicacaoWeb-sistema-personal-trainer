@@ -26,6 +26,7 @@ function appHead(pathname) {
   if (page) {
     const slug = page[1].toLowerCase()
     return {
+      slug,
       manifest: `/api/public/site-manifest/${slug}`,
       touch: `/api/public/site-icon/${slug}/192`,
     }
@@ -52,6 +53,20 @@ export async function onRequest(context) {
   const response = await context.next()
   const head = context.request.method === 'GET' && !url.pathname.startsWith('/api/') ? appHead(url.pathname) : null
   if (!head || !(response.headers.get('content-type') || '').includes('text/html')) return response
+  // Página de um personal: o app instalado leva o nome dele (não "FARISA").
+  if (head.slug) {
+    try {
+      const manifest = await fetch(new URL(head.manifest, url.origin), { signal: AbortSignal.timeout(2500) })
+      if (manifest.ok) {
+        const data = await manifest.json()
+        head.title = String(data.short_name || data.name || '').slice(0, 30) || undefined
+        head.pageTitle = String(data.name || '').slice(0, 60) || undefined
+        if (data.icons?.[0]?.src) head.touch = String(data.icons[0].src)
+      }
+    } catch {
+      /* sem o nome: segue com o manifesto e o ícone dele */
+    }
+  }
   try {
     const rewriter = new HTMLRewriter()
       .on('link[rel="manifest"]', setAttr('href', head.manifest))
@@ -59,10 +74,11 @@ export async function onRequest(context) {
       .on('link[rel="icon"]', setAttr('href', head.icon))
       .on('meta[name="theme-color"]', setAttr('content', head.theme))
       .on('meta[name="apple-mobile-web-app-title"]', setAttr('content', head.title))
-    if (head.title)
+    const pageTitle = head.pageTitle || (head.slug ? '' : head.title)
+    if (pageTitle)
       rewriter.on('title', {
         element(element) {
-          element.setInnerContent(head.title)
+          element.setInnerContent(pageTitle)
         },
       })
     return rewriter.transform(response)

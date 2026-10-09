@@ -66,8 +66,7 @@
           // ícone dele (manifesto gerado pelo servidor).
           var slug = page[1].toLowerCase()
           if (manifestLink) manifestLink.setAttribute('href', '/api/public/site-manifest/' + slug)
-          var touch = document.querySelector('link[rel="apple-touch-icon"]')
-          if (touch) touch.setAttribute('href', '/api/public/site-icon/' + slug + '/192')
+          // O ícone (com versão) e o nome já vêm certos do servidor (functions/_middleware.js).
           // Esconde o site até a marca, a foto e os preços deste personal
           // chegarem (senão o padrão aparece por um instante e some).
           document.documentElement.setAttribute('data-site-loading', '')
