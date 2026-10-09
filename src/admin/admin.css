@@ -716,3 +716,17 @@
   border: 1px solid #fcd34d;
   background: #fffbeb;
 }
+
+/* Planos: plano anual (preço ou % de desconto) */
+.admin-annual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.admin-plans-table .admin-annual input[name='annualPrice'] {
+  width: 110px;
+}
+.admin-plans-table .admin-annual input[name='annualDiscount'] {
+  width: 64px;
+  min-width: 64px;
+}

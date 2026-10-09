@@ -21,10 +21,18 @@ const cycleOf = (value) => (value === 'yearly' ? 'yearly' : 'monthly')
 export const FREE_PLAN = 'free'
 const DAY = 86_400_000
 
+// Preço anual: o valor definido no admin (annual_price_cents) ou, sem ele,
+// 12 mensalidades com o desconto (annual_discount).
+const yearlyCents = (plan) =>
+  Number(plan.annualPriceCents) > 0
+    ? Math.round(Number(plan.annualPriceCents))
+    : Math.round((Number(plan.priceCents) * 12 * (100 - discountOf(plan))) / 100)
+const yearlyDiscount = (plan) =>
+  Number(plan.priceCents) > 0
+    ? Math.max(0, Math.round((1 - yearlyCents(plan) / (Number(plan.priceCents) * 12)) * 100))
+    : 0
 export const saasAmount = (plan, cycle) =>
-  cycle === 'yearly'
-    ? Math.round((Number(plan.priceCents) * 12 * (100 - discountOf(plan))) / 100)
-    : Math.round(Number(plan.priceCents))
+  cycle === 'yearly' ? yearlyCents(plan) : Math.round(Number(plan.priceCents))
 
 export async function saasPlans(db, { includeInactive = false } = {}) {
   const select = (extra) =>
@@ -34,11 +42,16 @@ export async function saasPlans(db, { includeInactive = false } = {}) {
        ${includeInactive ? '' : 'WHERE active=1'} ORDER BY position`,
     )
   try {
-    // Sem a migração 048 ainda: segue com o desconto padrão.
-    const rows = (await select(', annual_discount AS "annualDiscount"').catch(() => select(''))).rows
+    // Sem as migrações 048/049 ainda: segue com o desconto padrão.
+    const rows = (
+      await select(', annual_discount AS "annualDiscount", annual_price_cents AS "annualPriceCents"')
+        .catch(() => select(', annual_discount AS "annualDiscount"'))
+        .catch(() => select(''))
+    ).rows
     return rows.map((plan) => ({
       ...plan,
-      annualDiscount: discountOf(plan),
+      annualDiscount: yearlyDiscount(plan),
+      annualPriceCents: Number(plan.priceCents) > 0 ? yearlyCents(plan) : 0,
       active: Boolean(plan.active),
       isTrial: Boolean(plan.isTrial),
       isFree: !Number(plan.priceCents),
@@ -48,7 +61,7 @@ export async function saasPlans(db, { includeInactive = false } = {}) {
             cycle,
             label: SAAS_CYCLES[cycle].label,
             months: SAAS_CYCLES[cycle].months,
-            discount: cycle === 'yearly' ? discountOf(plan) : 0,
+            discount: cycle === 'yearly' ? yearlyDiscount(plan) : 0,
             amountCents: saasAmount(plan, cycle),
             monthlyCents: Math.round(saasAmount(plan, cycle) / SAAS_CYCLES[cycle].months),
           })),
@@ -476,20 +489,36 @@ export async function adminSavePlans(db, body) {
   const paid = plans.find((plan) => plan.code === 'unlimited')
   if (paid && !(Math.round(Number(paid.priceCents)) >= 100))
     return { error: 'Informe o preço mensal do plano pago (mínimo R$ 1,00).', status: 400 }
-  const hasDiscount = await db
-    .query('SELECT annual_discount FROM saas_plans LIMIT 1')
-    .then(() => true)
-    .catch(() => false)
+  // Plano anual: preço próprio (mínimo R$ 1,00 e no máximo 12 mensalidades).
+  const annualCents = paid ? Math.round(Number(paid.annualPriceCents) || 0) : 0
+  if (paid && annualCents && (annualCents < 100 || annualCents > Math.round(Number(paid.priceCents)) * 12))
+    return { error: 'O preço anual precisa ser entre R$ 1,00 e o valor de 12 mensalidades.', status: 400 }
+  const has = (column) =>
+    db
+      .query(`SELECT ${column} FROM saas_plans LIMIT 1`)
+      .then(() => true)
+      .catch(() => false)
+  const hasDiscount = await has('annual_discount')
+  const hasPrice = await has('annual_price_cents')
+  if (paid && annualCents && !hasPrice)
+    return { error: 'Falta aplicar a migração 049 no banco para salvar o preço anual.', status: 400 }
   await db.batch(
     plans.map((plan) => ({
-      sql: `UPDATE saas_plans SET name=$2, price_cents=$3, student_limit=$4, description=$5${hasDiscount ? ', annual_discount=$6' : ''} WHERE code=$1`,
+      sql: `UPDATE saas_plans SET name=$2, price_cents=$3, student_limit=$4, description=$5${hasDiscount ? ', annual_discount=$6' : ''}${hasPrice ? `, annual_price_cents=$${hasDiscount ? 7 : 6}` : ''} WHERE code=$1`,
       values: [
         plan.code,
         String(plan.name || plan.code).trim().slice(0, 60) || plan.code,
         plan.code === FREE_PLAN ? 0 : Math.round(Number(plan.priceCents)),
         limitValue(plan.studentLimit),
         String(plan.description || '').slice(0, 200) || null,
-        ...(hasDiscount ? [discountOf({ annualDiscount: plan.annualDiscount })] : []),
+        ...(hasDiscount
+          ? [
+              plan.code === 'unlimited' && annualCents
+                ? yearlyDiscount({ priceCents: plan.priceCents, annualPriceCents: annualCents })
+                : discountOf({ annualDiscount: plan.annualDiscount }),
+            ]
+          : []),
+        ...(hasPrice ? [plan.code === 'unlimited' && annualCents ? annualCents : null] : []),
       ],
     })),
   )

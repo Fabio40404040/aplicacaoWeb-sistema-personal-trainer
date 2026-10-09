@@ -650,13 +650,36 @@ async function renderPlans() {
       else price.append(input('price', (plan.priceCents / 100).toFixed(2), 'number'))
       const limit = el('td')
       limit.append(input('studentLimit', plan.studentLimit, 'number'), el('small', 'admin-muted', plan.studentLimit ? `até ${plan.studentLimit} alunos` : 'sem limite'))
+      // Plano anual: preço editável; o desconto (%) acompanha e vice-versa.
       const annual = el('td')
       if (plan.isFree) annual.append(el('small', 'admin-muted', '—'))
       else {
-        const field = input('annualDiscount', plan.annualDiscount ?? 20, 'number')
-        field.max = '90'
-        const yearly = plan.prices?.find((item) => item.cycle === 'yearly')
-        annual.append(field, el('small', 'admin-muted', yearly ? `anual: ${money(yearly.amountCents)} (${money(yearly.monthlyCents)}/mês)` : ''))
+        const yearly = input('annualPrice', (Number(plan.annualPriceCents || 0) / 100).toFixed(2), 'number')
+        const percent = input('annualDiscount', plan.annualDiscount ?? 20, 'number')
+        yearly.step = '0.01'
+        percent.max = '90'
+        percent.className = 'admin-annual-percent'
+        const hint = el('small', 'admin-muted')
+        const monthly = () => Number(tr.querySelector('[name="price"]')?.value || 0)
+        const paint = () => {
+          const value = Number(yearly.value || 0)
+          hint.textContent = value ? `${money(Math.round(value * 100))}/ano = ${money(Math.round((value * 100) / 12))}/mês` : ''
+        }
+        yearly.addEventListener('input', () => {
+          if (monthly()) percent.value = String(Math.max(0, Math.round((1 - Number(yearly.value || 0) / (monthly() * 12)) * 100)))
+          paint()
+        })
+        const fromPercent = () => {
+          yearly.value = ((monthly() * 12 * (100 - Number(percent.value || 0))) / 100).toFixed(2)
+          paint()
+        }
+        percent.addEventListener('input', fromPercent)
+        // Mudou o mensal: mantém o mesmo % e recalcula o anual.
+        queueMicrotask(() => tr.querySelector('[name="price"]')?.addEventListener('input', fromPercent))
+        const row = el('div', 'admin-annual')
+        row.append(el('span', 'admin-muted', 'R$'), yearly, el('span', 'admin-muted', 'ou'), percent, el('span', 'admin-muted', '% off'))
+        annual.append(row, hint)
+        paint()
       }
       const desc = el('td')
       desc.append(input('description', plan.description))
@@ -674,6 +697,7 @@ async function savePlans() {
     priceCents: Math.round(Number(tr.querySelector('[name="price"]')?.value || 0) * 100),
     studentLimit: Number(tr.querySelector('[name="studentLimit"]').value),
     annualDiscount: Number(tr.querySelector('[name="annualDiscount"]')?.value ?? 20),
+    annualPriceCents: Math.round(Number(tr.querySelector('[name="annualPrice"]')?.value || 0) * 100),
     description: tr.querySelector('[name="description"]').value,
   }))
   status.textContent = 'Salvando…'
