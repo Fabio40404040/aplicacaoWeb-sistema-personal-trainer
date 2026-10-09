@@ -1,3 +1,4 @@
+import { folderSorter } from './folder-order.js'
 import { getData } from './state.js'
 import { legGroupNames } from '../data/library.js'
 import { askConfirm, askText, exerciseGroups, showToast } from './utils.js'
@@ -1137,8 +1138,9 @@ function renderGifLibrary() {
   resumo.className = 'password-requirements'
   resumo.textContent = `${gifs.length} GIF(s) na biblioteca, ${usados.size} já ligados a exercícios.`
   holder.append(resumo)
+  const byFolder = folderSorter()
   ;[...grupos.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+    .sort(([a], [b]) => byFolder(a, b))
     .forEach(([group, lista]) => {
       const folder = document.createElement('details')
       folder.className = 'exercise-folder'

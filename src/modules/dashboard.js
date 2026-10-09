@@ -1,3 +1,4 @@
+import { folderSorter } from './folder-order.js'
 import { showPaidDialog } from './paid-dialog.js'
 import { getData, updateData } from './state.js'
 import { askConfirm, exerciseGroups, formatDate, showToast } from './utils.js'
@@ -503,32 +504,18 @@ function renderExerciseSummary(exercises) {
   const withVideo = exercises.filter((item) => exerciseHasVideo(item)).length
   summary.textContent = `${exercises.length} exercício(s) · ${withGif} com GIF · ${withVideo} com vídeo`
 }
-// Ordem fixa das pastas do catálogo; as suas pastas vêm depois, em ordem alfabética.
-const FOLDER_ORDER = [
-  'Peitoral',
-  'Costas',
-  'Ombros',
-  'Bíceps',
-  'Tríceps',
-  'Antebraços',
-  'Abdômen',
-  'Pernas',
-  'Cardio e condicionamento',
-]
 const exerciseFolderNames = (exercise) => {
   const groups = exerciseGroups(exercise)
   if (!groups.length) return ['Sem grupo']
   return [...new Set(groups.map((name) => (legGroups.includes(name) ? 'Pernas' : name)))]
 }
-// Primeiro a ordem em que você arrastou as pastas; depois a ordem padrão do
-// catálogo; o resto em ordem alfabética.
-const folderPosition = (name) => {
-  const own = (getData().folderOrder || []).indexOf(name)
-  if (own !== -1) return own
-  const index = FOLDER_ORDER.indexOf(name)
-  return 1000 + (index === -1 ? FOLDER_ORDER.length : index)
+// Ordem das pastas: a mesma das abas GIFs e Vídeos (ver folder-order.js).
+let folderSort = { at: 0, compare: null }
+const sortFolders = (a, b) => {
+  // Recalcula no máximo a cada 200 ms (uma ordenação usa a mesma regra).
+  if (Date.now() - folderSort.at > 200) folderSort = { at: Date.now(), compare: folderSorter() }
+  return folderSort.compare(a, b)
 }
-const sortFolders = (a, b) => folderPosition(a) - folderPosition(b) || a.localeCompare(b, 'pt-BR')
 // Pastinhas de grupo ("Todos 123", "Peitoral 18"…) acima da lista.
 function renderExerciseChips(counts, total, active) {
   const holder = document.querySelector('[data-exercise-chips]')

@@ -1,3 +1,4 @@
+import { folderSorter } from './folder-order.js'
 import {
   deleteExerciseVideo,
   deleteMuscleGroup,
@@ -1711,6 +1712,9 @@ function renderExerciseVideoLibrary() {
       exercises: videos.filter((video) => group.memberNames.includes(video.group)),
     }))
     .filter((group) => group.exercises.length || customNames.has(group.name))
+  // Mesma ordem das pastas de Exercícios e GIFs.
+  const byFolder = folderSorter()
+  visibleGroups.sort((a, b) => byFolder(a.name, b.name))
   if (!visibleGroups.length) {
     const empty = document.createElement('p')
     empty.className = 'video-library-empty'
