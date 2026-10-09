@@ -57,7 +57,8 @@ function cleanReferrals(body) {
   const link = webLink(nutritionist.link)
   const appLink = webLink(app.link)
   const appLinkIos = webLink(app.linkIos)
-  if (link === undefined || appLink === undefined || appLinkIos === undefined) return { error: 'Confira os links das indicações (ex.: instagram.com/perfil).' }
+  const appLinkWeb = webLink(app.linkWeb)
+  if (link === undefined || appLink === undefined || appLinkIos === undefined || appLinkWeb === undefined) return { error: 'Confira os links das indicações (ex.: instagram.com/perfil).' }
   const value = {
     nutritionist: {
       name: clean(nutritionist.name, 80),
@@ -66,7 +67,7 @@ function cleanReferrals(body) {
       link,
       note: clean(nutritionist.note, 240),
     },
-    app: { name: clean(app.name, 60), link: appLink, linkIos: appLinkIos, note: clean(app.note, 240) },
+    app: { name: clean(app.name, 60), link: appLink, linkIos: appLinkIos, linkWeb: appLinkWeb, note: clean(app.note, 240) },
   }
   if (!value.nutritionist.name) value.nutritionist = null
   if (!value.app.name) value.app = null

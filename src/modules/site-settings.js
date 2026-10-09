@@ -501,8 +501,9 @@ function referralsCard(form) {
   const appGrid = el('div', 'field-grid')
   appGrid.append(
     field('App de alimentação (nome)', 'refAppName', app.name, { maxLength: 60, placeholder: 'Ex.: nome do app que você recomenda' }),
-    field('Link do app (Android ou site)', 'refAppLink', app.link, { maxLength: 200, placeholder: 'Link da Play Store ou do site' }),
+    field('Link para Android', 'refAppLink', app.link, { maxLength: 200, placeholder: 'Link da Play Store' }),
     field('Link para iPhone (opcional)', 'refAppLinkIos', app.linkIos, { maxLength: 200, placeholder: 'Link da App Store' }),
+    field('Site para computador (opcional)', 'refAppLinkWeb', app.linkWeb, { maxLength: 200, placeholder: 'Ex.: site do app para usar no PC' }),
   )
   // Sugestão pronta: preenche os campos; o personal confere e salva.
   const suggest = el('button', 'button button--secondary', 'Usar sugestão: FatSecret (gratuito)')
@@ -510,13 +511,15 @@ function referralsCard(form) {
   suggest.addEventListener('click', () => {
     form.elements.refAppName.value = 'FatSecret'
     form.elements.refAppLink.value = 'https://play.google.com/store/apps/details?id=com.fatsecret.android'
+    form.elements.refAppLinkIos.value = 'https://apps.apple.com/br/app/id347184248'
+    form.elements.refAppLinkWeb.value = 'https://www.fatsecret.com.br/'
     form.elements.refAppNote.value =
       'Indico o app FatSecret (gratuito) para você registrar sua alimentação e acompanhar as calorias.'
   })
   const warning = el(
     'p',
     'support-muted',
-    'O aluno sempre vê este aviso junto do app: "⚠️ É só uma ferramenta de registro, não uma dieta montada por mim. Para um plano alimentar individualizado, procure um(a) nutricionista." Sem link para iPhone, aparece a orientação de buscar o app na App Store. Seu Instagram (em Contato e redes sociais) também aparece para o aluno tirar dúvidas.',
+    'O aluno sempre vê este aviso junto do app: "⚠️ É só uma ferramenta de registro, não uma dieta montada por mim. Para um plano alimentar individualizado, procure um(a) nutricionista." Sem link para iPhone, aparece a orientação de buscar o app na App Store. Com o site, o aluno também pode usar pelo computador. Seu Instagram (em Contato e redes sociais) também aparece para o aluno tirar dúvidas.',
   )
   card.append(
     who,
@@ -585,7 +588,7 @@ function render() {
                     link: values.refNutriLink,
                     note: values.refNutriNote,
                   },
-                  app: { name: values.refAppName, link: values.refAppLink, linkIos: values.refAppLinkIos, note: values.refAppNote },
+                  app: { name: values.refAppName, link: values.refAppLink, linkIos: values.refAppLinkIos, linkWeb: values.refAppLinkWeb, note: values.refAppNote },
                 },
               }
             : {}),

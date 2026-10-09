@@ -924,6 +924,8 @@ export function referralsCard(referrals, studentName) {
     const ios = safeLink(app.linkIos);
     if (android) actions.append(linkButton(ios ? "Android" : /play\.google\.com/iu.test(android) ? "Baixar no Android" : "Abrir o app", android, false));
     if (ios) actions.append(linkButton("iPhone", ios, false));
+    const web = safeLink(app.linkWeb);
+    if (web) actions.append(linkButton("💻 Computador (site)", web, false));
     if (actions.childElementCount) box.append(actions);
     if (!ios) box.append(el("small", "student-referral-ios", `iPhone: busque “${app.name}” na App Store.`));
     card.append(box);
