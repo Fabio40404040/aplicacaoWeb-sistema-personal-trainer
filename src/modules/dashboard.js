@@ -260,14 +260,15 @@ function confirmStudentDeletion(student) {
   })
 }
 
-// Aluno que acabou de pagar (estava pendente e agora está pago): janela "PAGO".
+// Aluno que acabou de pagar pelo site (primeiro pagamento, renovação ou
+// mudança de plano): janela "PAGO". Lançamento manual do personal não conta.
 const lastPayment = new Map()
 let paymentsSeen = false
 function announcePayments(students) {
   const paidNow = students.filter(
-    (s) => s.paymentStatus === 'paid' && lastPayment.has(s.id) && lastPayment.get(s.id) !== 'paid',
+    (s) => s.lastPaidAt && lastPayment.has(s.id) && lastPayment.get(s.id) !== s.lastPaidAt,
   )
-  students.forEach((s) => lastPayment.set(s.id, s.paymentStatus))
+  students.forEach((s) => lastPayment.set(s.id, s.lastPaidAt || ''))
   if (!paymentsSeen) {
     paymentsSeen = true
     return

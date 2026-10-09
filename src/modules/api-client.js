@@ -271,7 +271,7 @@ export async function syncRemoteData() {
 // Situação de pagamento dos alunos, para perceber quando alguém pagou.
 const paymentKey = (data) =>
   (data?.students || [])
-    .map((student) => `${student.id}:${student.paymentStatus}:${student.accessStatus}`)
+    .map((student) => `${student.id}:${student.paymentStatus}:${student.accessStatus}:${student.lastPaidAt || ''}`)
     .sort()
     .join("|");
 // A cada 2 minutos (com a aba à vista) confere se algum aluno pagou. Só

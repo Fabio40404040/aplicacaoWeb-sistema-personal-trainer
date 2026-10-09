@@ -89,6 +89,8 @@ export async function dashboard(db, trainerId) {
        s.access_status AS "accessStatus", s.plan_code AS "planCode", s.access_type AS "accessType", s.billing_cycle AS "billingCycle",
        s.access_expires_at AS "accessExpiresAt", s.payment_status AS "paymentStatus",
        s.payment_method AS "paymentMethod", s.account_id AS "accountId",
+       (SELECT MAX(p.paid_at) FROM payments p WHERE p.student_id=s.id AND p.trainer_id=s.trainer_id
+          AND p.status='paid' AND COALESCE(p.provider,'')<>'manual') AS "lastPaidAt",
        ${withStudentAvatar ? `(SELECT a.avatar FROM student_accounts a WHERE a.id=s.account_id${avatarSeen}) AS avatar,` : ""}
        COALESCE((SELECT name FROM workouts WHERE student_id=s.id AND trainer_id=s.trainer_id ORDER BY created_at DESC LIMIT 1),'Aguardando ficha') AS workout,
        CASE WHEN s.account_id IS NOT NULL AND s.payment_status='pending' THEN 'Pré-cadastro aguardando pagamento'
