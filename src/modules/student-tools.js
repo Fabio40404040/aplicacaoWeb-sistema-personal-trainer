@@ -200,7 +200,7 @@ export function restTimer(exercise) {
 const TIMER_KEY = "farisa-student-timer";
 const TIMER_PRESETS = [30, 45, 60, 90, 120, 180];
 // Estado fora do cartão: a área do aluno se redesenha e o tempo continua.
-const freeTimer = { total: 60, endsAt: 0, left: 0, done: false, paint: null, interval: 0 };
+const freeTimer = { total: 60, endsAt: 0, left: 0, done: false, zeroed: false, paint: null, interval: 0 };
 try {
   const saved = Number(localStorage.getItem(TIMER_KEY));
   if (saved >= 5 && saved <= 3600) freeTimer.total = saved;
@@ -282,6 +282,7 @@ export function freeTimerCard() {
     freeTimer.endsAt = 0;
     freeTimer.left = 0;
     freeTimer.done = false;
+    freeTimer.zeroed = false;
     window.clearInterval(freeTimer.interval);
     freeTimer.interval = 0;
     try {
@@ -311,6 +312,7 @@ export function freeTimerCard() {
       unlockSound();
       if (freeTimer.done) freeTimer.left = 0;
       freeTimer.done = false;
+      freeTimer.zeroed = false;
       freeTimer.endsAt = Date.now() + (freeTimer.left || freeTimer.total) * 1000;
       freeTimer.left = 0;
       window.clearInterval(freeTimer.interval);
@@ -318,18 +320,33 @@ export function freeTimerCard() {
     }
     paint();
   });
-  reset.addEventListener("click", () => choose(freeTimer.total));
+  // Zerar: para e mostra 0:00. "Iniciar" começa de novo do tempo escolhido.
+  reset.addEventListener("click", () => {
+    choose(freeTimer.total);
+    freeTimer.zeroed = true;
+    paint();
+  });
 
   function paint() {
-    const left = freeTimer.done ? 0 : timerLeft();
+    const zero = freeTimer.done || freeTimer.zeroed;
+    const left = zero ? 0 : timerLeft();
     const paused = !running() && freeTimer.left > 0;
-    digits.textContent = freeTimer.done ? "0:00" : clock(left);
-    state.textContent = freeTimer.done ? "✓ Tempo!" : running() ? "contando" : paused ? "pausado" : `de ${clock(freeTimer.total)}`;
+    digits.textContent = zero ? "0:00" : clock(left);
+    state.textContent = freeTimer.done
+      ? "✓ Tempo!"
+      : freeTimer.zeroed
+        ? `zerado · ${clock(freeTimer.total)}`
+        : running()
+          ? "contando"
+          : paused
+            ? "pausado"
+            : `de ${clock(freeTimer.total)}`;
     // O anel mostra o tempo que falta (cheio no início, esvazia até o fim).
-    const fraction = freeTimer.done ? 1 : left / freeTimer.total;
+    const fraction = freeTimer.done ? 1 : freeTimer.zeroed ? 0 : left / freeTimer.total;
     progress.setAttribute("stroke-dashoffset", (LENGTH * (1 - fraction)).toFixed(1));
     card.classList.toggle("is-running", running());
     card.classList.toggle("is-done", freeTimer.done);
+    reset.disabled = freeTimer.zeroed;
     main.textContent = running() ? "Pausar" : paused ? "Continuar" : freeTimer.done ? "De novo" : "Iniciar";
     dial.setAttribute("aria-label", `${digits.textContent} ${state.textContent}`);
     presetButtons.forEach((button, index) =>
