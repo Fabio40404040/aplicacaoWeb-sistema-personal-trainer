@@ -1,4 +1,4 @@
-// Ferramentas da área do aluno: cronômetro de descanso, evolução da carga,
+// Ferramentas da área do aluno: cronômetro de descanso e cronômetro livre, evolução da carga,
 // calendário de treinos concluídos (com recado ao personal), água e o
 // resultado da avaliação física em formato visual.
 import "../styles/student-tools.css";
@@ -39,10 +39,75 @@ const numberBr = (value, digits = 1) =>
 
 let stopRunningTimer = null;
 
-function beep() {
+// Som do fim do descanso. No iPhone o som só sai se for "liberado" num toque
+// do aluno: unlockSound() roda ao tocar em Iniciar e deixa o áudio pronto.
+// Usa um <audio> com o bipe (toca mesmo com o Safari em modo silencioso de
+// Web Audio) e, se ele falhar, o Web Audio.
+let audioContext = null;
+let beepAudio = null;
+function beepWav() {
+  const rate = 8000;
+  const samples = Math.round(rate * 0.7);
+  const bytes = new Uint8Array(44 + samples * 2);
+  const view = new DataView(bytes.buffer);
+  const text = (offset, value) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+  text(0, "RIFF");
+  view.setUint32(4, 36 + samples * 2, true);
+  text(8, "WAVEfmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  text(36, "data");
+  view.setUint32(40, samples * 2, true);
+  for (let index = 0; index < samples; index += 1) {
+    const time = index / rate;
+    const inTone = [0, 0.25, 0.5].some((start) => time >= start && time < start + 0.15);
+    const value = inTone ? Math.sin(2 * Math.PI * 880 * time) * 0.6 : 0;
+    view.setInt16(44 + index * 2, Math.round(value * 32767), true);
+  }
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return `data:audio/wav;base64,${btoa(binary)}`;
+}
+export function unlockSound() {
   try {
-    const Audio = window.AudioContext || window.webkitAudioContext;
-    const context = new Audio();
+    if (!beepAudio) {
+      beepAudio = new Audio(beepWav());
+      beepAudio.preload = "auto";
+    }
+    beepAudio.muted = true;
+    const playing = beepAudio.play();
+    const release = () => {
+      beepAudio.pause();
+      beepAudio.currentTime = 0;
+      beepAudio.muted = false;
+    };
+    if (playing?.then) playing.then(release, () => (beepAudio.muted = false));
+    else release();
+  } catch {
+    /* sem <audio>: fica o Web Audio */
+  }
+  try {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!audioContext && Context) audioContext = new Context();
+    if (audioContext?.state === "suspended") void audioContext.resume();
+  } catch {
+    /* sem som */
+  }
+}
+function webBeep() {
+  try {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!audioContext && Context) audioContext = new Context();
+    const context = audioContext;
+    if (!context) return;
+    if (context.state === "suspended") void context.resume();
     [0, 0.25, 0.5].forEach((start) => {
       const tone = context.createOscillator();
       const gain = context.createGain();
@@ -52,14 +117,28 @@ function beep() {
       tone.start(context.currentTime + start);
       tone.stop(context.currentTime + start + 0.15);
     });
-    window.setTimeout(() => void context.close(), 1200);
   } catch {
     /* sem som: fica o aviso na tela */
   }
+}
+function beep() {
+  let viaAudio = false;
+  if (beepAudio) {
+    try {
+      beepAudio.muted = false;
+      beepAudio.currentTime = 0;
+      const playing = beepAudio.play();
+      viaAudio = true;
+      playing?.catch?.(() => webBeep());
+    } catch {
+      viaAudio = false;
+    }
+  }
+  if (!viaAudio) webBeep();
   try {
     navigator.vibrate?.([200, 100, 200]);
   } catch {
-    /* sem vibração */
+    /* sem vibração (o iPhone não vibra pelo navegador) */
   }
 }
 
@@ -87,6 +166,7 @@ export function restTimer(exercise) {
     idle();
   };
   const start = () => {
+    unlockSound();
     stopRunningTimer?.();
     stopRunningTimer = stop;
     // Conta pelo relógio: continua certo mesmo se a aba ficar em segundo plano.
@@ -111,6 +191,155 @@ export function restTimer(exercise) {
   button.addEventListener("click", () => (interval || button.classList.contains("is-done") ? stop() : start()));
   idle();
   return button;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cronômetro livre (fora das pastas): o aluno escolhe o tempo          */
+/* ------------------------------------------------------------------ */
+
+const TIMER_KEY = "farisa-student-timer";
+const TIMER_PRESETS = [30, 45, 60, 90, 120, 180];
+// Estado fora do cartão: a área do aluno se redesenha e o tempo continua.
+const freeTimer = { total: 60, endsAt: 0, left: 0, done: false, paint: null, interval: 0 };
+try {
+  const saved = Number(localStorage.getItem(TIMER_KEY));
+  if (saved >= 5 && saved <= 3600) freeTimer.total = saved;
+} catch {
+  /* sem armazenamento: 60 s */
+}
+const clock = (seconds) => `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`;
+const presetLabel = (seconds) =>
+  seconds < 60 ? `${seconds}s` : seconds % 60 ? `${Math.floor(seconds / 60)}:${pad(seconds % 60)}` : `${seconds / 60} min`;
+const timerLeft = () =>
+  freeTimer.endsAt ? Math.max(0, Math.ceil((freeTimer.endsAt - Date.now()) / 1000)) : freeTimer.left || freeTimer.total;
+function timerTick() {
+  if (freeTimer.endsAt && timerLeft() === 0) {
+    freeTimer.endsAt = 0;
+    freeTimer.left = 0;
+    freeTimer.done = true;
+    window.clearInterval(freeTimer.interval);
+    freeTimer.interval = 0;
+    beep();
+  }
+  freeTimer.paint?.();
+}
+
+export function freeTimerCard() {
+  const card = el("article", "student-tool student-timer");
+  card.append(el("h2", "", "⏱ Cronômetro"));
+  card.append(el("p", "student-timer-hint", "Escolha o tempo e toque em Iniciar. Ao terminar, toca um bipe."));
+
+  const RADIUS = 88;
+  const LENGTH = 2 * Math.PI * RADIUS;
+  const dial = el("div", "student-timer-dial");
+  const ring = svg("svg", { viewBox: "0 0 200 200", "aria-hidden": "true" });
+  ring.append(
+    svg("circle", { cx: 100, cy: 100, r: RADIUS, class: "student-timer-track" }),
+    svg("circle", {
+      cx: 100,
+      cy: 100,
+      r: RADIUS,
+      class: "student-timer-progress",
+      "stroke-dasharray": LENGTH.toFixed(1),
+      transform: "rotate(-90 100 100)",
+    }),
+  );
+  const progress = ring.lastChild;
+  const digits = el("strong", "student-timer-digits");
+  const state = el("small", "student-timer-state");
+  const center = el("div", "student-timer-center");
+  center.append(digits, state);
+  dial.setAttribute("role", "timer");
+  dial.append(ring, center);
+
+  const adjust = el("div", "student-timer-adjust");
+  const minus = el("button", "student-timer-step", "−15s");
+  const plus = el("button", "student-timer-step", "+15s");
+  minus.type = plus.type = "button";
+  minus.setAttribute("aria-label", "Diminuir 15 segundos");
+  plus.setAttribute("aria-label", "Aumentar 15 segundos");
+  adjust.append(minus, dial, plus);
+
+  const presets = el("div", "student-timer-presets");
+  const presetButtons = TIMER_PRESETS.map((seconds) => {
+    const button = el("button", "", presetLabel(seconds));
+    button.type = "button";
+    button.addEventListener("click", () => choose(seconds));
+    presets.append(button);
+    return button;
+  });
+
+  const actions = el("div", "student-timer-actions");
+  const main = el("button", "button button--primary student-timer-main");
+  const reset = el("button", "button button--secondary", "Zerar");
+  main.type = reset.type = "button";
+  actions.append(main, reset);
+  card.append(adjust, presets, actions);
+
+  const running = () => Boolean(freeTimer.endsAt);
+  const choose = (seconds) => {
+    freeTimer.total = Math.max(5, Math.min(3600, seconds));
+    freeTimer.endsAt = 0;
+    freeTimer.left = 0;
+    freeTimer.done = false;
+    window.clearInterval(freeTimer.interval);
+    freeTimer.interval = 0;
+    try {
+      localStorage.setItem(TIMER_KEY, String(freeTimer.total));
+    } catch {
+      /* sem armazenamento */
+    }
+    paint();
+  };
+  const step = (delta) => {
+    if (running()) {
+      // Contando: soma/tira do tempo que falta.
+      freeTimer.endsAt = Math.max(Date.now() + 1000, freeTimer.endsAt + delta * 1000);
+      freeTimer.total = Math.max(freeTimer.total, timerLeft());
+      paint();
+    } else choose((freeTimer.left || freeTimer.total) + delta);
+  };
+  minus.addEventListener("click", () => step(-15));
+  plus.addEventListener("click", () => step(15));
+  main.addEventListener("click", () => {
+    if (running()) {
+      freeTimer.left = timerLeft();
+      freeTimer.endsAt = 0;
+      window.clearInterval(freeTimer.interval);
+      freeTimer.interval = 0;
+    } else {
+      unlockSound();
+      if (freeTimer.done) freeTimer.left = 0;
+      freeTimer.done = false;
+      freeTimer.endsAt = Date.now() + (freeTimer.left || freeTimer.total) * 1000;
+      freeTimer.left = 0;
+      window.clearInterval(freeTimer.interval);
+      freeTimer.interval = window.setInterval(timerTick, 250);
+    }
+    paint();
+  });
+  reset.addEventListener("click", () => choose(freeTimer.total));
+
+  function paint() {
+    const left = freeTimer.done ? 0 : timerLeft();
+    const paused = !running() && freeTimer.left > 0;
+    digits.textContent = freeTimer.done ? "0:00" : clock(left);
+    state.textContent = freeTimer.done ? "✓ Tempo!" : running() ? "contando" : paused ? "pausado" : `de ${clock(freeTimer.total)}`;
+    // O anel mostra o tempo que falta (cheio no início, esvazia até o fim).
+    const fraction = freeTimer.done ? 1 : left / freeTimer.total;
+    progress.setAttribute("stroke-dashoffset", (LENGTH * (1 - fraction)).toFixed(1));
+    card.classList.toggle("is-running", running());
+    card.classList.toggle("is-done", freeTimer.done);
+    main.textContent = running() ? "Pausar" : paused ? "Continuar" : freeTimer.done ? "De novo" : "Iniciar";
+    dial.setAttribute("aria-label", `${digits.textContent} ${state.textContent}`);
+    presetButtons.forEach((button, index) =>
+      button.classList.toggle("is-active", TIMER_PRESETS[index] === freeTimer.total),
+    );
+  }
+  freeTimer.paint = paint;
+  if (running() && !freeTimer.interval) freeTimer.interval = window.setInterval(timerTick, 250);
+  paint();
+  return card;
 }
 
 /* ------------------------------------------------------------------ */

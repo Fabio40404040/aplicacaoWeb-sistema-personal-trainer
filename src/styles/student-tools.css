@@ -893,3 +893,144 @@
   color: var(--tool-muted);
   font-size: 0.76rem;
 }
+
+/* Cronômetro livre (fora das pastas de treino) */
+.student-timer {
+  align-items: center;
+  text-align: center;
+}
+.student-timer h2 {
+  align-self: stretch;
+  text-align: left;
+}
+.student-timer-hint {
+  align-self: stretch;
+  margin: -6px 0 0;
+  color: var(--tool-muted);
+  font-size: 0.85rem;
+  text-align: left;
+}
+.student-timer-adjust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.student-timer-dial {
+  position: relative;
+  width: min(200px, calc(100% - 112px));
+  aspect-ratio: 1;
+  flex: none;
+}
+.student-timer-dial svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.35));
+}
+.student-timer-track {
+  fill: #121b29;
+  stroke: #24344b;
+  stroke-width: 12;
+}
+.student-timer-progress {
+  fill: none;
+  stroke: var(--tool-accent);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear, stroke 0.3s;
+}
+.student-timer.is-done .student-timer-progress {
+  stroke: #34d399;
+}
+.student-timer-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+}
+.student-timer-digits {
+  color: #fff;
+  font-size: clamp(2.2rem, 11vw, 3rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.student-timer-state {
+  color: var(--tool-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.student-timer.is-done .student-timer-state {
+  color: #6ee7b7;
+}
+.student-timer.is-done .student-timer-dial {
+  animation: student-timer-pulse 0.9s ease-in-out 3;
+}
+@keyframes student-timer-pulse {
+  50% {
+    transform: scale(1.05);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .student-timer.is-done .student-timer-dial {
+    animation: none;
+  }
+}
+.student-timer-step {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border: 1px solid var(--tool-line);
+  border-radius: 50%;
+  background: var(--tool-soft);
+  color: #dce9f8;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.student-timer-step:hover,
+.student-timer-presets button:hover {
+  border-color: var(--tool-accent);
+}
+.student-timer-presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.student-timer-presets button {
+  min-width: 58px;
+  padding: 7px 12px;
+  border: 1px solid var(--tool-line);
+  border-radius: 999px;
+  background: var(--tool-soft);
+  color: #dce9f8;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-timer-presets button.is-active {
+  border-color: var(--tool-accent);
+  background: var(--tool-accent);
+  color: #fff;
+}
+.student-timer-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.student-timer-actions .button {
+  min-width: 120px;
+}
+.student-timer-main {
+  flex: 1;
+  max-width: 220px;
+}

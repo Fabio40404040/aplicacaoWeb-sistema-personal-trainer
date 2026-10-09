@@ -15,6 +15,7 @@ import {
   progressCard,
   referralsCard,
   restTimer,
+  freeTimerCard,
   trainingCalendarCard,
   waterCard,
 } from "./student-tools.js";
@@ -800,6 +801,8 @@ function renderPortal(container, data) {
     });
   }
   renderReadyWorkoutLibrary(container, data);
+  // Cronômetro livre, fora das pastas de treino: o aluno escolhe o tempo.
+  container.append(freeTimerCard());
   if (data.access.planCode !== "ready") {
     const workouts = article("Minha ficha personalizada");
     workouts.classList.add("student-card--wide");
@@ -877,7 +880,7 @@ function renderPortal(container, data) {
     checkin.id = "student-checkin";
     const form = element("form");
     form.dataset.checkinForm = "";
-    form.innerHTML = `<label class="field"><span>Energia (1 a 5)</span><input name="energy" type="number" min="1" max="5" required></label><label class="field"><span>Qualidade do sono (1 a 5)</span><input name="sleep" type="number" min="1" max="5" required></label><label class="field"><span>Dor ou desconforto</span><input name="pain" maxlength="200"></label><label class="field"><span>Como foi sua semana?</span><textarea name="notes" rows="3" maxlength="1000"></textarea></label><button class="button button--primary" type="submit">Enviar check-in</button><p role="status"></p>`;
+    form.innerHTML = `<label class="field"><span>Energia (1 a 5)</span><input name="energy" type="number" min="1" max="5" required></label><label class="field"><span>Qualidade do sono (1 a 5)</span><input name="sleep" type="number" min="1" max="5" required></label><label class="field"><span>Dor ou desconforto</span><input name="pain" maxlength="200"></label><label class="field"><span>Como foi sua semana?</span><textarea name="notes" rows="3" maxlength="1000"></textarea></label><button class="button button--primary student-checkin-send" type="submit">Enviar check-in</button><p role="status"></p>`;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const status = form.querySelector('[role="status"]');
@@ -1013,7 +1016,7 @@ export function initStudentAccess() {
     )
       return true;
     // Cronômetro de descanso contando: não redesenha por cima dele.
-    if (container.querySelector(".student-rest.is-running")) return true;
+    if (container.querySelector(".student-rest.is-running, .student-timer.is-running")) return true;
     return [...container.querySelectorAll("form")].some((form) =>
       [...form.elements].some(
         (field) =>

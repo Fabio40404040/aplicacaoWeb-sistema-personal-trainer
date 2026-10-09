@@ -1669,3 +1669,8 @@
 .student-plan-strip > .student-paid-badge::before {
   content: none !important;
 }
+
+/* Check-in semanal: espaço em volta do botão de enviar */
+.student-checkin-send {
+  margin: 8px 0 12px;
+}
