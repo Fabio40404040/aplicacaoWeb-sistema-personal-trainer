@@ -23,6 +23,17 @@ import {
 let studentTools = null;
 // Pagamento feito nesta tela: ao confirmar, mostra a janela "PAGO".
 const PAID_FLAG = "farisa-student-paid-pending";
+// Situação do plano na última atualização (pagamento, plano, vencimento e
+// mudança pendente). O "PAGO" só aparece quando ela muda depois de pagar —
+// assim a mudança de plano de quem já estava pago também funciona.
+let accessSignature = "";
+const signatureOf = (data) =>
+  [
+    data.access?.paymentStatus,
+    data.access?.planName,
+    data.access?.expiresAt,
+    data.pendingChange?.planName || "",
+  ].join("|");
 
 // Recarrega a área do aluno (definido quando a área inicia).
 let reloadStudentPanel = async () => {};
@@ -354,7 +365,7 @@ function paymentControls(onRefresh) {
         }
       });
       pixCheckout.replaceChildren(title, instructions, image, copy);
-      sessionStorage.setItem(PAID_FLAG, "1");
+      sessionStorage.setItem(PAID_FLAG, accessSignature || "1");
       paymentStatus.textContent =
         "Aguardando o pagamento. A situação será consultada automaticamente.";
     } catch (error) {
@@ -368,7 +379,7 @@ function paymentControls(onRefresh) {
     try {
       await openSecureCardForm(studentRequest, {
         onApproved() {
-          sessionStorage.setItem(PAID_FLAG, "1");
+          sessionStorage.setItem(PAID_FLAG, accessSignature || "1");
           sessionStorage.setItem(
             "farisa-student-payment-message",
             "Pagamento confirmado. Seu cadastro foi concluído e o acesso está liberado.",
@@ -1035,11 +1046,19 @@ export function initStudentAccess() {
       }
       // Estava aguardando o pagamento e agora está pago: mostra o "PAGO".
       const paidNow = data.access.paymentStatus === "paid" && data.access.active;
-      if (paidNow && (lastPaymentStatus && lastPaymentStatus !== "paid" || sessionStorage.getItem(PAID_FLAG))) {
+      const waiting = sessionStorage.getItem(PAID_FLAG);
+      const accessNow = signatureOf(data);
+      if (
+        paidNow &&
+        !data.pendingChange &&
+        ((lastPaymentStatus && lastPaymentStatus !== "paid") ||
+          (waiting && waiting !== accessNow))
+      ) {
         sessionStorage.removeItem(PAID_FLAG);
         showStudentPaid(data.access);
       }
       lastPaymentStatus = data.access.paymentStatus || "";
+      accessSignature = accessNow;
       hasLoadedOnce = true;
       studentDisplayName = data.name || "";
       document.querySelector("[data-student-name]").textContent =
