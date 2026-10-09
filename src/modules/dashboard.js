@@ -616,8 +616,8 @@ function renderExercises() {
       folders.get(name).push(exercise)
     })
   })
-  const expandAll =
-    Boolean(query) || group !== 'all' || mediaFilter !== 'all' || equipment !== 'all'
+  // Pastas fechadas: só abrem quando você clica (ou ao buscar pelo nome).
+  const expandAll = Boolean(query)
   list.replaceChildren(
     ...[...folders.entries()]
       .sort(([a], [b]) => sortFolders(a, b))

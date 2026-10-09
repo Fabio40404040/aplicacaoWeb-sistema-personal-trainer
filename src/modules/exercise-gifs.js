@@ -1066,7 +1066,7 @@ let recentGifIds = new Set()
 function showSentGifs(result) {
   const gifs = result?.gifs || []
   recentGifIds = new Set(gifs.map((gif) => gif.id))
-  gifs.forEach((gif) => gif.group && openGifFolders.add(gif.group))
+  // As pastas continuam fechadas: só abrem quando você clica.
   renderGifLibrary()
   const first = document.querySelector('[data-gif-groups] .gif-card.is-new')
   if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' })
