@@ -1674,3 +1674,19 @@
 .student-checkin-send {
   margin: 8px 0 12px;
 }
+
+/* Check-in na largura toda: três campos curtos lado a lado */
+@media (min-width: 601px) {
+  .student-card--solo form[data-checkin-form] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 14px;
+  }
+  .student-card--solo form[data-checkin-form] > label:nth-of-type(n + 4),
+  .student-card--solo form[data-checkin-form] > p {
+    grid-column: 1 / -1;
+  }
+  .student-card--solo form[data-checkin-form] > button {
+    justify-self: start;
+  }
+}

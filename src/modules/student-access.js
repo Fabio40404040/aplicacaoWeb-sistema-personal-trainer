@@ -790,19 +790,11 @@ function renderPortal(container, data) {
     pending.append(pay, quit);
     plan.append(pending);
   }
+  // Ordem da área: plano → treinos (prontos e ficha) → cronômetro ao lado
+  // de "Meus treinos" → água e agenda → avaliação e progresso → nutrição e
+  // check-in → recursos de outros planos.
   container.replaceChildren(plan);
-  // "Minha agenda": atendimentos online/presenciais e agendamento pelo app.
-  if (!data.trainerLocked) {
-    const agenda = element("article");
-    container.append(agenda);
-    void renderStudentAgenda(agenda, {
-      request: studentRequest,
-      reload: () => reloadStudentPanel(),
-    });
-  }
   renderReadyWorkoutLibrary(container, data);
-  // Cronômetro livre, fora das pastas de treino: o aluno escolhe o tempo.
-  container.append(freeTimerCard());
   if (data.access.planCode !== "ready") {
     const workouts = article("Minha ficha personalizada");
     workouts.classList.add("student-card--wide");
@@ -848,14 +840,21 @@ function renderPortal(container, data) {
     });
     container.append(workouts);
   }
-  if (studentTools) {
-    container.append(
-      trainingCalendarCard(studentTools, studentRequest),
-      waterCard(studentTools, studentRequest),
-    );
-  }
+  // Cronômetro livre, fora das pastas de treino: o aluno escolhe o tempo.
+  container.append(freeTimerCard());
+  if (studentTools) container.append(trainingCalendarCard(studentTools, studentRequest));
+  if (studentTools) container.append(waterCard(studentTools, studentRequest));
   const referrals = referralsCard(data.referrals, data.name);
   if (referrals) container.append(referrals);
+  // "Minha agenda": atendimentos online/presenciais e agendamento pelo app.
+  if (!data.trainerLocked) {
+    const agenda = element("article", "student-card--wide");
+    container.append(agenda);
+    void renderStudentAgenda(agenda, {
+      request: studentRequest,
+      reload: () => reloadStudentPanel(),
+    });
+  }
   if (data.access.features.includes("assessments"))
     container.append(
       assessmentCard(data.assessments, data.trainerLocked ? null : downloadReport, loadStudentPhoto),
@@ -978,6 +977,22 @@ function renderPortal(container, data) {
       );
       container.append(locked);
     });
+  pairCards(container);
+}
+// Cartões de meia largura andam em pares; se um ficar sozinho na linha,
+// ele ocupa a largura toda (sem buraco ao lado).
+function pairCards(container) {
+  let run = [];
+  const close = () => {
+    if (run.length % 2) run[run.length - 1].classList.add("student-card--wide", "student-card--solo");
+    run = [];
+  };
+  [...container.children].forEach((card) => {
+    card.classList.remove("student-card--solo");
+    if (card.classList.contains("student-card--wide")) close();
+    else run.push(card);
+  });
+  close();
 }
 function applyPlanFromHash() {
   const select = document.querySelector(
