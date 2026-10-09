@@ -81,8 +81,25 @@ function validDocument(type, value) {
   )
 }
 
+// O tipo de documento às vezes fica no texto "Documento" (lista ainda não
+// escolhida) e o Mercado Pago recusa. No Brasil o padrão é CPF.
+function ensureDocumentType(form) {
+  const select = form.querySelector('#mp-identification-type')
+  if (!select) return
+  const valid = [...select.options].filter((option) => /^(CPF|CNPJ)$/u.test(option.value))
+  if (valid.some((option) => option.value === select.value)) return
+  const cpf = valid.find((option) => option.value === 'CPF') || valid[0]
+  if (cpf) select.value = cpf.value
+  else {
+    // Lista não carregou: põe o CPF à mão.
+    select.replaceChildren(new Option('CPF', 'CPF', true, true))
+  }
+  select.dispatchEvent(new Event('change', { bubbles: true }))
+}
+
 // Confere o que dá para conferir antes de mandar ao Mercado Pago.
 function holderProblem(form) {
+  ensureDocumentType(form)
   const name = form.querySelector('#mp-cardholder-name').value.trim()
   const email = form.querySelector('#mp-cardholder-email').value.trim()
   const type = form.querySelector('#mp-identification-type').value || 'CPF'
@@ -195,6 +212,7 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
       (event) => {
         if (event.target.id !== 'mp-card-form') return
         tried = true
+        ensureDocumentType(event.target)
         const problem = holderProblem(event.target)
         if (!problem) return
         event.preventDefault()
@@ -230,7 +248,7 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
       cardholderEmail: { id: 'mp-cardholder-email', placeholder: 'E-mail' },
       issuer: { id: 'mp-issuer', placeholder: 'Banco emissor' },
       installments: { id: 'mp-installments', placeholder: 'Parcelas' },
-      identificationType: { id: 'mp-identification-type', placeholder: 'Documento' },
+      identificationType: { id: 'mp-identification-type' },
       identificationNumber: { id: 'mp-identification-number', placeholder: 'CPF' },
     },
     callbacks: {
@@ -241,6 +259,10 @@ export async function openSecureCardForm(request, { onApproved } = {}) {
         }
         dialog.querySelector('[data-card-loading]').hidden = true
         form.hidden = false
+        // A lista de documentos chega um pouco depois: deixa o CPF escolhido.
+        ensureDocumentType(form)
+        window.setTimeout(() => ensureDocumentType(form), 800)
+        window.setTimeout(() => ensureDocumentType(form), 2500)
       },
       onPaymentMethodsReceived(error, paymentMethods) {
         updateCardBrand(dialog, error ? undefined : paymentMethods)
