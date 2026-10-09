@@ -220,12 +220,31 @@ async function render() {
   root.replaceChildren(list, main)
 }
 
+// Conta da sessão atual (o "sub" dentro do token).
+function sessionAccount() {
+  try {
+    const token = sessionStorage.getItem('farisa-coach-api-token') || ''
+    const payload = token.split('.')[0].replace(/-/gu, '+').replace(/_/gu, '/')
+    return JSON.parse(atob(payload)).sub || ''
+  } catch {
+    return ''
+  }
+}
+
 function supportBanner() {
   const name = sessionStorage.getItem('farisa-support-mode')
   if (!name || document.querySelector('[data-support-banner]')) return
+  const account = sessionAccount()
+  // O modo Biblioteca FARISA só vale com a sessão da própria biblioteca. Se a
+  // aba ficou marcada e você entrou com outra conta, a marca é apagada.
+  const library = sessionStorage.getItem('farisa-library-mode') === '1' && account === 'farisa-library'
+  if (!library) sessionStorage.removeItem('farisa-library-mode')
+  if (name === 'Biblioteca FARISA' && account !== 'farisa-library') {
+    sessionStorage.removeItem('farisa-support-mode')
+    return
+  }
   const bar = el('div', 'support-mode-banner')
   bar.dataset.supportBanner = ''
-  const library = sessionStorage.getItem('farisa-library-mode') === '1'
   bar.append(
     el(
       'span',

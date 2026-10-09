@@ -76,6 +76,9 @@ export async function login(credentials, signal) {
   if (!result?.token)
     throw new Error("O servidor não retornou uma sessão válida.");
   sessionStorage.setItem(TOKEN_KEY, result.token);
+  // Entrou com a própria conta: sai do modo suporte / Biblioteca FARISA.
+  sessionStorage.removeItem("farisa-support-mode");
+  sessionStorage.removeItem("farisa-library-mode");
   return result;
 }
 export function clearApiSession() {
