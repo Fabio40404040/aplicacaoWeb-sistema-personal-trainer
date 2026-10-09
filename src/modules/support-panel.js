@@ -225,11 +225,25 @@ function supportBanner() {
   if (!name || document.querySelector('[data-support-banner]')) return
   const bar = el('div', 'support-mode-banner')
   bar.dataset.supportBanner = ''
-  bar.append(el('span', '', `🛟 Modo suporte — você está no painel de ${name}. Tudo o que fizer aqui fica registrado.`))
+  const library = sessionStorage.getItem('farisa-library-mode') === '1'
+  bar.append(
+    el(
+      'span',
+      '',
+      library
+        ? '📚 Você está abastecendo a Biblioteca FARISA. O que salvar em “Biblioteca de exercícios” vai para todos os personais.'
+        : `🛟 Modo suporte — você está no painel de ${name}. Tudo o que fizer aqui fica registrado.`,
+    ),
+  )
+  if (library) {
+    bar.classList.add('support-mode-banner--library')
+    // Só a biblioteca interessa aqui: esconde o resto do menu.
+    document.body.classList.add('is-library-mode')
+  }
   const exit = el('button', 'button button--secondary', 'Encerrar acesso')
   exit.type = 'button'
   exit.addEventListener('click', () => {
-    ;['farisa-support-mode', 'farisa-coach-api-token', 'farisa-coach-session-v2', 'farisa-coach-data-v1'].forEach((key) =>
+    ;['farisa-support-mode', 'farisa-library-mode', 'farisa-coach-api-token', 'farisa-coach-session-v2', 'farisa-coach-data-v1'].forEach((key) =>
       sessionStorage.removeItem(key),
     )
     window.close()

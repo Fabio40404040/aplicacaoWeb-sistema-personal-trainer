@@ -125,15 +125,15 @@ export async function adminTrainers(db) {
     // Completa (migrações 018 e 020).
     `SELECT t.id, t.name, t.email, t.created_at AS "createdAt", t.last_login_at AS "lastLoginAt",
        t.avatar, t.plan_name AS "planName", t.student_limit AS "studentLimit", ${counts}
-     FROM trainers t ORDER BY t.created_at`,
+     FROM trainers t WHERE t.id<>'farisa-library' ORDER BY t.created_at`,
     // Sem a migração 020 (último acesso).
     `SELECT t.id, t.name, t.email, t.created_at AS "createdAt", NULL AS "lastLoginAt",
        t.avatar, t.plan_name AS "planName", t.student_limit AS "studentLimit", ${counts}
-     FROM trainers t ORDER BY t.created_at`,
+     FROM trainers t WHERE t.id<>'farisa-library' ORDER BY t.created_at`,
     // Banco antigo, sem a migração 018 (perfil).
     `SELECT t.id, t.name, t.email, t.created_at AS "createdAt", NULL AS "lastLoginAt",
        NULL AS "avatar", NULL AS "planName", NULL AS "studentLimit", ${counts}
-     FROM trainers t ORDER BY t.created_at`,
+     FROM trainers t WHERE t.id<>'farisa-library' ORDER BY t.created_at`,
   ]
   const extras = new Map((await adminTrainerExtras(db)).map((row) => [row.id, row]))
   // Fim do teste completo de 30 dias (migração 041).
@@ -519,7 +519,7 @@ export async function adminBilling(db) {
     await safe(
       `SELECT COUNT(*) AS total,
          SUM(CASE WHEN p.price_cents > 0 THEN 0 ELSE 1 END) AS free
-       FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id<>'demo-trainer'`,
+       FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id NOT IN ('demo-trainer','farisa-library')`,
     )
   )[0] || {}
   const now = Date.now()

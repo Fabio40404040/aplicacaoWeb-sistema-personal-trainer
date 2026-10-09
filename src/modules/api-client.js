@@ -81,6 +81,7 @@ export async function login(credentials, signal) {
 export function clearApiSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem("farisa-support-mode");
+  sessionStorage.removeItem("farisa-library-mode");
   clearStoredData();
 }
 export function persistRecord(collection, record, editingId = null) {

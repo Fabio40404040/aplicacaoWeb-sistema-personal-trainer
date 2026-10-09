@@ -109,9 +109,15 @@
               sessionStorage.setItem('farisa-coach-api-token', q.get('token'))
               sessionStorage.setItem('farisa-coach-session-v2', 'active')
               sessionStorage.setItem('farisa-support-mode', q.get('nome') || 'personal')
+              if (q.get('biblioteca')) sessionStorage.setItem('farisa-library-mode', '1')
+              else sessionStorage.removeItem('farisa-library-mode')
             }
           } catch (error) {}
-          history.replaceState(null, '', location.pathname + '#painel')
+          var goLibrary = false
+          try {
+            goLibrary = sessionStorage.getItem('farisa-library-mode') === '1'
+          } catch (error) {}
+          history.replaceState(null, '', location.pathname + (goLibrary ? '#exercicios' : '#painel'))
         }
         var logged = false
         try {

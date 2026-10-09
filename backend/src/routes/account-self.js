@@ -20,6 +20,8 @@ export async function mediaUsage(db, trainerId) {
     }
   }
   const used = (await sum('exercise_videos')) + (await sum('ready_workout_pdfs'))
+  // A Biblioteca FARISA não tem limite de espaço.
+  if (trainerId === 'farisa-library') return { used, limit: 0 }
   const state = await saasState(db, trainerId)
   return { used, limit: state?.isFree ? FREE_MEDIA_BYTES : 0 }
 }

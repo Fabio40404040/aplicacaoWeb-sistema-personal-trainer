@@ -1,3 +1,4 @@
+import { adminOpenLibrary, libraryOverview } from "./routes/farisa-library.js";
 import { activateTrainer, switchTrainer } from "./routes/student-links.js";
 import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
@@ -411,6 +412,11 @@ async function handleRoutes(request, env) {
         await audit(db, admin, "errors_cleared", { type: "errors", label: "Erros do sistema" });
         return { data: { ok: true } };
       }
+      // Biblioteca FARISA: números e abrir para editar no painel.
+      if (request.method === "GET" && route === "admin/library")
+        return { data: await libraryOverview(db) };
+      if (request.method === "POST" && route === "admin/library/open")
+        return adminOpenLibrary(env, db, admin);
       if (request.method === "GET" && route === "admin/billing")
         return { data: await adminBilling(db) };
       if (request.method === "GET" && route === "admin/audit")

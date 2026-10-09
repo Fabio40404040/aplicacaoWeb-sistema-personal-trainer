@@ -39,7 +39,7 @@ export async function planAccess(db, trainerId) {
     return {
       ready: true,
       // O dono da plataforma nunca é limitado.
-      full: paid || inTrial || row.ownerId === trainerId,
+      full: paid || inTrial || row.ownerId === trainerId || trainerId === 'farisa-library',
       inTrial,
       trialEndsAt: paid ? null : row.trialEndsAt || null,
       trialDaysLeft: inTrial ? Math.ceil((trialEnd - Date.now()) / DAY) : null,

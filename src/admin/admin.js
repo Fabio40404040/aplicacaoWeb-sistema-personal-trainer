@@ -850,6 +850,7 @@ const ACTIONS = {
   trainer_password_reset: 'Nova senha gerada',
   trainer_deleted: 'Personal excluído',
   trainer_impersonated: 'Acesso de suporte ao painel',
+  library_opened: 'Biblioteca FARISA aberta para edição',
   trainer_plan_set: 'Plano definido',
   saas_plans_updated: 'Planos editados',
   support_replied: 'Resposta de suporte',
@@ -1025,6 +1026,55 @@ function showTab(name) {
   if (name === 'registro') void renderAudit()
   if (name === 'planos') void renderPlans()
   if (name === 'faturamento') void renderBilling()
+  if (name === 'biblioteca') void renderLibrary()
+}
+
+// Biblioteca FARISA: o admin abre a biblioteca no painel (mesmas ferramentas
+// da biblioteca do personal: arrastar pastas de GIF/MP4, conferir, editar).
+async function renderLibrary() {
+  const root = $('[data-admin-library]')
+  if (!root) return
+  const info = (await api('/admin/library').catch(() => null)) || {}
+  const stats = el('div', 'admin-library-stats')
+  ;[
+    ['Exercícios', info.exercises],
+    ['Pastas', info.folders],
+    ['Com GIF', info.gifs],
+    ['Com vídeo', info.videos],
+  ].forEach(([label, value]) => {
+    const card = el('article', 'panel admin-library-stat')
+    card.append(el('strong', '', String(value ?? 0)), el('span', '', label))
+    stats.append(card)
+  })
+  const how = el('article', 'panel admin-library-how')
+  how.append(
+    el('h2', '', 'Como abastecer'),
+    el('p', '', 'Clique em “Abrir a Biblioteca FARISA”. Ela abre numa nova aba, no mesmo painel do personal, já na Biblioteca de exercícios.'),
+    el('p', '', 'Arraste as pastas de GIF e MP4 (Peitoral, Costas, Ombros…), confira a lista e salve. Você também pode editar nome, grupo, equipamento e instruções de cada exercício.'),
+    el('p', 'admin-muted', 'Tudo o que estiver nesta biblioteca será mostrado para todos os personais, que poderão usar nas fichas sem poder apagar ou alterar. O acesso fica no Registro de ações.'),
+  )
+  const open = el('button', 'button button--primary', 'Abrir a Biblioteca FARISA')
+  open.type = 'button'
+  open.addEventListener('click', async () => {
+    open.disabled = true
+    const tab = window.open('about:blank', '_blank')
+    try {
+      const result = await api('/admin/library/open', { method: 'POST', body: '{}' })
+      const url = `/personal/#suporte-acesso?token=${encodeURIComponent(result.token)}&nome=${encodeURIComponent(result.name)}&biblioteca=1`
+      if (tab) tab.location.href = url
+      else window.location.href = url
+    } catch (error) {
+      tab?.close()
+      root.querySelector('[data-library-error]')?.remove()
+      const line = el('p', 'admin-alert', error.message)
+      line.dataset.libraryError = ''
+      how.append(line)
+    } finally {
+      open.disabled = false
+    }
+  })
+  how.append(open)
+  root.replaceChildren(stats, how)
 }
 
 // Telas da entrada: login, "esqueci a senha" e "nova senha" (link do e-mail).

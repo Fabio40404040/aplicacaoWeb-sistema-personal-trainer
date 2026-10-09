@@ -681,3 +681,32 @@
   border-radius: 10px;
   font: inherit;
 }
+
+/* Biblioteca FARISA */
+.admin-library-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.admin-library-stat {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+}
+.admin-library-stat strong {
+  font-size: 1.8rem;
+}
+.admin-library-stat span {
+  color: var(--ink-600, #64748b);
+}
+.admin-library-how {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 22px;
+}
+.admin-library-how h2,
+.admin-library-how p {
+  margin: 0;
+}

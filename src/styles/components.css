@@ -5072,3 +5072,16 @@ button.is-loading {
   color: #475569;
   cursor: default;
 }
+
+/* Abastecendo a Biblioteca FARISA (aberta pelo admin). */
+.support-mode-banner--library {
+  background: #bfdbfe;
+  color: #0f172a;
+}
+
+/* Biblioteca FARISA: o menu mostra só a biblioteca. */
+.is-library-mode .sidebar .nav-link[data-route-link]:not([data-route-link="exercicios"]),
+.is-library-mode .sidebar .nav-label,
+.is-library-mode .sidebar-footer {
+  display: none;
+}
