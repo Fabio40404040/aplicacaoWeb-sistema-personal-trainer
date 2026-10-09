@@ -11,24 +11,34 @@ import { mediaUsage } from './account-self.js'
 import { heldSeats, LOCKED_TOOLS, planAccess } from './plan-access.js'
 
 export const SAAS_CYCLES = {
-  monthly: { label: 'Mensal', months: 1, factor: 1 },
+  monthly: { label: 'Mensal', months: 1 },
+  // Anual: 12 meses com o desconto do plano (annual_discount, editável no admin).
+  yearly: { label: 'Anual', months: 12 },
 }
+export const DEFAULT_ANNUAL_DISCOUNT = 20
+const discountOf = (plan) => Math.max(0, Math.min(90, Math.round(Number(plan.annualDiscount ?? DEFAULT_ANNUAL_DISCOUNT))))
+const cycleOf = (value) => (value === 'yearly' ? 'yearly' : 'monthly')
 export const FREE_PLAN = 'free'
 const DAY = 86_400_000
 
 export const saasAmount = (plan, cycle) =>
-  Math.round(Number(plan.priceCents) * SAAS_CYCLES[cycle].months * SAAS_CYCLES[cycle].factor)
+  cycle === 'yearly'
+    ? Math.round((Number(plan.priceCents) * 12 * (100 - discountOf(plan))) / 100)
+    : Math.round(Number(plan.priceCents))
 
 export async function saasPlans(db, { includeInactive = false } = {}) {
+  const select = (extra) =>
+    db.query(
+      `SELECT code, name, price_cents AS "priceCents", student_limit AS "studentLimit", description,
+         position, active, is_trial AS "isTrial"${extra} FROM saas_plans
+       ${includeInactive ? '' : 'WHERE active=1'} ORDER BY position`,
+    )
   try {
-    return (
-      await db.query(
-        `SELECT code, name, price_cents AS "priceCents", student_limit AS "studentLimit", description,
-           position, active, is_trial AS "isTrial" FROM saas_plans
-         ${includeInactive ? '' : 'WHERE active=1'} ORDER BY position`,
-      )
-    ).rows.map((plan) => ({
+    // Sem a migração 048 ainda: segue com o desconto padrão.
+    const rows = (await select(', annual_discount AS "annualDiscount"').catch(() => select(''))).rows
+    return rows.map((plan) => ({
       ...plan,
+      annualDiscount: discountOf(plan),
       active: Boolean(plan.active),
       isTrial: Boolean(plan.isTrial),
       isFree: !Number(plan.priceCents),
@@ -37,6 +47,8 @@ export async function saasPlans(db, { includeInactive = false } = {}) {
         : Object.keys(SAAS_CYCLES).map((cycle) => ({
             cycle,
             label: SAAS_CYCLES[cycle].label,
+            months: SAAS_CYCLES[cycle].months,
+            discount: cycle === 'yearly' ? discountOf(plan) : 0,
             amountCents: saasAmount(plan, cycle),
             monthlyCents: Math.round(saasAmount(plan, cycle) / SAAS_CYCLES[cycle].months),
           })),
@@ -229,7 +241,7 @@ export async function startSaasCheckout(env, db, trainerId, body) {
   const plans = await saasPlans(db)
   const plan = plans.find((item) => item.code === body?.planCode && !item.isFree)
   if (!plan) return { error: 'Escolha um plano.', status: 400 }
-  const cycle = 'monthly'
+  const cycle = cycleOf(body?.cycle)
   const method = body?.method === 'card' ? 'card' : 'pix'
   const trainer = (await db.query('SELECT name, email FROM trainers WHERE id=$1', [trainerId])).rows[0]
   const amountCents = saasAmount(plan, cycle)
@@ -287,7 +299,8 @@ async function paidPlan(db, planCode) {
   return (await saasPlans(db)).find((item) => item.code === planCode && !item.isFree)
 }
 
-export async function saasCardConfig(env, db, trainerId, planCode) {
+export async function saasCardConfig(env, db, trainerId, planCode, cycleName) {
+  const cycle = cycleOf(cycleName)
   if (!env.MERCADO_PAGO_ACCESS_TOKEN || !env.MERCADO_PAGO_PUBLIC_KEY)
     return { error: 'Pagamento com cartão ainda não configurado. Pague com Pix ou fale com o suporte.', status: 503 }
   const plan = await paidPlan(db, planCode)
@@ -296,8 +309,8 @@ export async function saasCardConfig(env, db, trainerId, planCode) {
   return {
     data: {
       publicKey: String(env.MERCADO_PAGO_PUBLIC_KEY),
-      amount: (saasAmount(plan, 'monthly') / 100).toFixed(2),
-      description: `FARISA ${plan.name} — ${SAAS_CYCLES.monthly.label}`,
+      amount: (saasAmount(plan, cycle) / 100).toFixed(2),
+      description: `FARISA ${plan.name} — ${SAAS_CYCLES[cycle].label}`,
       payerEmail: trainer?.email || '',
     },
   }
@@ -321,7 +334,7 @@ export async function saasCardPayment(env, db, trainerId, body) {
     return { error: 'Confira os dados do cartão e do titular.', status: 400 }
   const plan = await paidPlan(db, body?.planCode)
   if (!plan) return { error: 'Escolha um plano.', status: 400 }
-  const cycle = 'monthly'
+  const cycle = cycleOf(body?.cycle)
   const trainer = (await db.query('SELECT email FROM trainers WHERE id=$1', [trainerId])).rows[0]
   const amountCents = saasAmount(plan, cycle)
   const intentId = `saas_${crypto.randomUUID().replace(/-/gu, '')}`
@@ -463,15 +476,20 @@ export async function adminSavePlans(db, body) {
   const paid = plans.find((plan) => plan.code === 'unlimited')
   if (paid && !(Math.round(Number(paid.priceCents)) >= 100))
     return { error: 'Informe o preço mensal do plano pago (mínimo R$ 1,00).', status: 400 }
+  const hasDiscount = await db
+    .query('SELECT annual_discount FROM saas_plans LIMIT 1')
+    .then(() => true)
+    .catch(() => false)
   await db.batch(
     plans.map((plan) => ({
-      sql: `UPDATE saas_plans SET name=$2, price_cents=$3, student_limit=$4, description=$5 WHERE code=$1`,
+      sql: `UPDATE saas_plans SET name=$2, price_cents=$3, student_limit=$4, description=$5${hasDiscount ? ', annual_discount=$6' : ''} WHERE code=$1`,
       values: [
         plan.code,
         String(plan.name || plan.code).trim().slice(0, 60) || plan.code,
         plan.code === FREE_PLAN ? 0 : Math.round(Number(plan.priceCents)),
         limitValue(plan.studentLimit),
         String(plan.description || '').slice(0, 200) || null,
+        ...(hasDiscount ? [discountOf({ annualDiscount: plan.annualDiscount })] : []),
       ],
     })),
   )

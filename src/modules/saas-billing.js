@@ -33,11 +33,22 @@ function planCard(plan, { selectable = false } = {}) {
   const card = el(selectable ? 'button' : 'div', `saas-plan${choice.plan === plan.code ? ' is-active' : ''}`)
   if (selectable) card.type = 'button'
   const monthly = plan.prices.find((price) => price.cycle === 'monthly')
+  const yearly = plan.prices.find((price) => price.cycle === 'yearly')
   card.append(
     el('strong', '', plan.name),
-    el('span', 'saas-plan-price', plan.isFree ? 'Grátis para sempre' : `Grátis por 30 dias · depois ${money(monthly?.amountCents)}/mês`),
+    el(
+      'span',
+      'saas-plan-price',
+      plan.isFree
+        ? 'Grátis para sempre'
+        : selectable
+          ? `${money(monthly?.amountCents)}/mês`
+          : `Grátis por 30 dias · depois ${money(monthly?.amountCents)}/mês`,
+    ),
     el('small', '', limitText(plan.studentLimit)),
   )
+  if (yearly?.discount && !selectable)
+    card.append(el('small', 'saas-plan-annual', `ou ${money(yearly.amountCents)}/ano (${yearly.discount}% de desconto)`))
   if (plan.description) card.append(el('small', 'saas-plan-desc', plan.description))
   return card
 }
@@ -91,7 +102,7 @@ function statusLine(state) {
     return ['Grátis', state.studentLimit ? `Sem vencimento · até ${state.studentLimit} alunos` : 'Sem vencimento · alunos ilimitados']
   if (state.status === 'courtesy') return ['Ativa', 'Sem vencimento (cortesia da plataforma)']
   return [
-    'Ativa',
+    state.cycle === 'yearly' ? 'Ativa · anual' : 'Ativa',
     `Válida até ${day(state.expiresAt)}${state.daysLeft <= 7 ? ` · vence em ${state.daysLeft} dia(s). Sem renovação, a conta volta para o Grátis.` : ''}`,
   ]
 }
@@ -115,17 +126,45 @@ function checkoutBox(root) {
   section.append(grid)
   const plan = plans.find((item) => item.code === choice.plan)
   if (plan) {
+    // Período: mensal ou anual com desconto.
+    const cycles = el('div', 'saas-cycles')
+    cycles.setAttribute('role', 'radiogroup')
+    cycles.setAttribute('aria-label', 'Período da assinatura')
+    plan.prices.forEach((option) => {
+      const button = el('button', `saas-cycle${option.cycle === choice.cycle ? ' is-active' : ''}`)
+      button.type = 'button'
+      button.setAttribute('role', 'radio')
+      button.setAttribute('aria-checked', String(option.cycle === choice.cycle))
+      const full = plan.prices.find((item) => item.cycle === 'monthly')
+      button.append(
+        el('strong', '', option.cycle === 'yearly' ? 'Anual' : 'Mensal'),
+        el('span', '', option.cycle === 'yearly' ? `${money(option.amountCents)}/ano` : `${money(option.amountCents)}/mês`),
+      )
+      if (option.cycle === 'yearly') {
+        button.append(el('small', '', `equivale a ${money(option.monthlyCents)}/mês`))
+        if (option.discount && full)
+          button.append(
+            el('em', 'saas-cycle-save', `${option.discount}% off · economize ${money(full.amountCents * 12 - option.amountCents)}`),
+          )
+      }
+      button.addEventListener('click', () => {
+        choice.cycle = option.cycle
+        render()
+      })
+      cycles.append(button)
+    })
+    if (plan.prices.length > 1) section.append(cycles)
     const price = plan.prices.find((item) => item.cycle === choice.cycle) || plan.prices[0]
     const actions = el('div', 'saas-pay-actions')
     const pix = el('button', 'button button--primary', `Pagar ${money(price.amountCents)} com Pix`)
-    const card = el('button', 'button button--secondary', 'Pagar com cartão')
+    const card = el('button', 'button button--secondary', `Pagar ${money(price.amountCents)} com cartão`)
     pix.type = card.type = 'button'
     const result = el('div', 'saas-pay-result')
     const pay = async (method, button) => {
       button.disabled = true
       result.replaceChildren(el('p', 'support-muted', 'Preparando o pagamento seguro do Mercado Pago…'))
       try {
-        const checkout = await startBillingCheckout({ planCode: plan.code, cycle: choice.cycle, method })
+        const checkout = await startBillingCheckout({ planCode: plan.code, cycle: price.cycle, method })
         if (checkout.checkoutUrl) {
           location.href = checkout.checkoutUrl
           return
@@ -167,8 +206,8 @@ function checkoutBox(root) {
         await openSecureCardForm(
           (path, body) =>
             path === 'payments/card-config'
-              ? fetchBillingCardConfig(plan.code)
-              : payBillingCard({ ...body, planCode: plan.code }),
+              ? fetchBillingCardConfig(plan.code, price.cycle)
+              : payBillingCard({ ...body, planCode: plan.code, cycle: price.cycle }),
           {
             onApproved: async () => {
               await load()
@@ -184,7 +223,12 @@ function checkoutBox(root) {
       }
     })
     actions.append(pix, card)
-    section.append(el('p', 'support-muted', 'Cada pagamento libera 1 mês. Renovar antes de vencer soma o mês ao prazo atual.'), actions, result)
+        const period = price.cycle === 'yearly' ? '12 meses' : '1 mês'
+    section.append(
+      el('p', 'support-muted', `Este pagamento libera ${period}. Renovar antes de vencer soma o período ao prazo atual.`),
+      actions,
+      result,
+    )
   }
   root.append(section)
 }
@@ -281,7 +325,7 @@ function render() {
     el(
       'p',
       'support-muted saas-legal',
-      'Pagamento mensal, sem renovação automática. Se não renovar, a conta volta para o plano Grátis e nada é apagado. Você pode cancelar em até 7 dias da contratação com reembolso (CDC, art. 49). Dúvidas: Falar com o suporte.',
+      'Pagamento mensal ou anual, sem renovação automática. Se não renovar, a conta volta para o plano Grátis e nada é apagado. Você pode cancelar em até 7 dias da contratação com reembolso (CDC, art. 49). Dúvidas: Falar com o suporte.',
     ),
     accountCard(),
   )

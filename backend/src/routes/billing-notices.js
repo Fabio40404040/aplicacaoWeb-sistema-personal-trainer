@@ -146,7 +146,7 @@ export async function runBillingNotices(env, db, { force = false } = {}) {
         if (
           await send(env, db, trainer, 'week', trainer.expiresAt, `Seu plano ${trainer.planName || 'Ilimitado'} vence em ${Math.ceil(left / DAY)} dias — FARISA`, [
             `Seu plano <strong>${plan}</strong> vence em <strong>${day(trainer.expiresAt)}</strong>.`,
-            `A renovação não é automática. Renovando antes do vencimento, o novo mês é somado ao prazo atual: você não perde nenhum dia.`,
+            `A renovação não é automática. Renovando antes do vencimento, o novo período (mês ou ano) é somado ao prazo atual: você não perde nenhum dia.`,
             `Valor: ${money(trainer.priceCents)}, com Pix ou cartão.`,
           ], 'Renovar agora')
         )

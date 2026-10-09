@@ -92,6 +92,12 @@ async function fillPlans() {
     if (paid) {
       document.querySelector('[data-saas-paid-limit]').textContent = limit(paid)
       document.querySelector('[data-saas-paid-price]').textContent = money(paid.priceCents)
+      const yearly = paid.prices?.find((price) => price.cycle === 'yearly')
+      const annual = document.querySelector('[data-saas-paid-annual]')
+      if (annual && yearly?.discount) {
+        annual.textContent = `ou ${money(yearly.amountCents)}/ano · ${yearly.discount}% de desconto`
+        annual.hidden = false
+      }
     }
   } catch {
     /* sem conexão: ficam os textos padrão */

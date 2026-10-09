@@ -1,5 +1,6 @@
 // Área do administrador da plataforma (o dono do SaaS), em /admin.
 import { payoutModes } from './payout.js'
+import { saasAmount, saasPlans } from './saas.js'
 // A conta de administrador fica na tabela platform_admins, separada das
 // contas de personal. As rotas /api/admin/* só aceitam sessão com papel
 // "admin" (criada por adminLogin) — sessão de personal ou aluno é recusada.
@@ -511,7 +512,8 @@ export async function adminBilling(db) {
      WHERE i.status='approved' AND t.id<>'demo-trainer' ORDER BY i.updated_at DESC LIMIT 5000`,
   )
   const subscribers = await safe(
-    `SELECT t.id, t.name, t.email, t.saas_expires_at AS "expiresAt", p.name AS "planName", p.price_cents AS "priceCents"
+    `SELECT t.id, t.name, t.email, t.saas_expires_at AS "expiresAt", t.saas_cycle AS "cycle", t.saas_plan_code AS "planCode",
+       p.name AS "planName", p.price_cents AS "priceCents"
      FROM trainers t JOIN saas_plans p ON p.code=t.saas_plan_code
      WHERE p.price_cents > 0 AND t.id<>'demo-trainer' ORDER BY t.saas_expires_at IS NULL, t.saas_expires_at`,
   )
@@ -523,6 +525,7 @@ export async function adminBilling(db) {
     )
   )[0] || {}
   const now = Date.now()
+  const plans = await saasPlans(db, { includeInactive: true })
   const paying = subscribers.filter((item) => item.expiresAt && Date.parse(item.expiresAt) > now)
   return {
     payments: payments.map((item) => ({
@@ -535,7 +538,11 @@ export async function adminBilling(db) {
       paying: paying.length,
       // Sem vencimento = cortesia (liberado por você, não paga).
       courtesy: subscribers.filter((item) => !item.expiresAt).length,
-      monthlyCents: paying.reduce((sum, item) => sum + Number(item.priceCents || 0), 0),
+      // Anual entra como 1/12 do valor com desconto.
+      monthlyCents: paying.reduce((sum, item) => {
+        const plan = plans.find((row) => row.code === item.planCode)
+        return sum + (item.cycle === 'yearly' && plan ? saasAmount(plan, 'yearly') / 12 : Number(item.priceCents || 0))
+      }, 0),
     },
     expiring: subscribers
       .filter((item) => item.expiresAt)

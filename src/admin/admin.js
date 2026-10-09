@@ -650,9 +650,17 @@ async function renderPlans() {
       else price.append(input('price', (plan.priceCents / 100).toFixed(2), 'number'))
       const limit = el('td')
       limit.append(input('studentLimit', plan.studentLimit, 'number'), el('small', 'admin-muted', plan.studentLimit ? `até ${plan.studentLimit} alunos` : 'sem limite'))
+      const annual = el('td')
+      if (plan.isFree) annual.append(el('small', 'admin-muted', '—'))
+      else {
+        const field = input('annualDiscount', plan.annualDiscount ?? 20, 'number')
+        field.max = '90'
+        const yearly = plan.prices?.find((item) => item.cycle === 'yearly')
+        annual.append(field, el('small', 'admin-muted', yearly ? `anual: ${money(yearly.amountCents)} (${money(yearly.monthlyCents)}/mês)` : ''))
+      }
       const desc = el('td')
       desc.append(input('description', plan.description))
-      tr.append(name, price, limit, desc)
+      tr.append(name, price, limit, annual, desc)
       return tr
     }),
   )
@@ -665,6 +673,7 @@ async function savePlans() {
     name: tr.querySelector('[name="name"]').value,
     priceCents: Math.round(Number(tr.querySelector('[name="price"]')?.value || 0) * 100),
     studentLimit: Number(tr.querySelector('[name="studentLimit"]').value),
+    annualDiscount: Number(tr.querySelector('[name="annualDiscount"]')?.value ?? 20),
     description: tr.querySelector('[name="description"]').value,
   }))
   status.textContent = 'Salvando…'

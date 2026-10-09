@@ -592,7 +592,7 @@ async function handleRoutes(request, env) {
     if (request.method === "POST" && route === "account/delete")
       return deleteOwnAccount(env, db, session, await readJson(request));
     if (request.method === "GET" && route === "billing/card-config")
-      return saasCardConfig(env, db, session.sub, new URL(request.url).searchParams.get("plan"));
+      return saasCardConfig(env, db, session.sub, new URL(request.url).searchParams.get("plan"), new URL(request.url).searchParams.get("cycle"));
     if (request.method === "POST" && route === "billing/card")
       return saasCardPayment(env, db, session.sub, await readJson(request));
     if (request.method === "POST" && route === "billing/checkout")

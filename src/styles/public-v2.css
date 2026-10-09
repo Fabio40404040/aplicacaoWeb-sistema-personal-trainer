@@ -1607,3 +1607,15 @@ html[data-site-loading] [data-public-screen] {
   color: #cbd5e1;
   line-height: 1.5;
 }
+
+/* Página inicial: preço anual com desconto do plano Ilimitado */
+.plan-price:has(+ .plan-annual:not([hidden])) {
+  margin-bottom: 6px;
+}
+.plan-card .plan-annual,
+.plan-annual {
+  margin: 0 0 22px;
+  color: #86efac;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
