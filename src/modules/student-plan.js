@@ -154,7 +154,7 @@ export function openPlanChange(data, { request, reload, paymentControls, resume 
         if (keep) {
           await request('plan-change', { cancel: true })
           box.close()
-          await reload()
+          void reload()
           return
         }
         const result = await request('plan-change', { planCode: state.plan.code, billingCycle: state.cycle })
@@ -179,5 +179,6 @@ export function openPlanChange(data, { request, reload, paymentControls, resume 
 
 export async function cancelPlanChange({ request, reload }) {
   await request('plan-change', { cancel: true })
-  await reload()
+  // Atualiza a área em segundo plano: a mudança já foi cancelada.
+  void reload()
 }

@@ -770,7 +770,22 @@ function renderPortal(container, data) {
     pay.addEventListener("click", () => openPlanChange(data, { ...planOptions, resume: true }));
     const quit = element("button", "button button--secondary", "Desistir");
     quit.type = "button";
-    quit.addEventListener("click", () => void cancelPlanChange(planOptions));
+    // Desistir: some na hora (sem esperar o servidor); se der erro, volta.
+    quit.addEventListener("click", async () => {
+      pay.disabled = true;
+      quit.disabled = true;
+      quit.textContent = "Cancelando…";
+      pending.hidden = true;
+      try {
+        await cancelPlanChange(planOptions);
+      } catch (error) {
+        pending.hidden = false;
+        pay.disabled = false;
+        quit.disabled = false;
+        quit.textContent = "Desistir";
+        pending.querySelector("span").textContent = error.message;
+      }
+    });
     pending.append(pay, quit);
     plan.append(pending);
   }
