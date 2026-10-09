@@ -51,6 +51,21 @@ async function studentAvatarReady(db) {
   }
 }
 
+// GIFs e vídeos da Biblioteca FARISA (para miniaturas e "▶ com MP4").
+async function libraryMedia(db, trainerId, withGifs) {
+  if (trainerId === "farisa-library") return { libraryGifs: [], libraryVideos: [], libraryFolderOrder: [] };
+  const rows = async (sql) => (await db.query(sql, ["farisa-library"]).catch(() => ({ rows: [] }))).rows;
+  return {
+    libraryGifs: withGifs
+      ? await rows(`SELECT id,name,muscle_group AS "group",created_at AS "createdAt" FROM exercise_gifs WHERE trainer_id=$1`)
+      : [],
+    libraryVideos: await rows(
+      `SELECT id,name,muscle_group AS "group",published,created_at AS "createdAt" FROM exercise_videos WHERE trainer_id=$1`,
+    ),
+    libraryFolderOrder: await folderOrder(db, "farisa-library"),
+  };
+}
+
 export async function dashboard(db, trainerId) {
   const withGifs = await gifSchemaReady(db);
   const withCustomGroups = await customGroupsReady(db);
@@ -102,8 +117,9 @@ export async function dashboard(db, trainerId) {
     db.query(
       `SELECT id, name, muscle_group AS "group", equipment, instructions, difficulty,
        media_type AS "mediaType", media_url AS "mediaUrl", thumbnail_url AS "thumbnailUrl",
-       animation_clip AS "animationClip", is_active AS "isActive", created_at AS "createdAt"${gifColumn}
-       FROM exercises WHERE trainer_id=$1 ORDER BY created_at DESC`,
+       animation_clip AS "animationClip", is_active AS "isActive", created_at AS "createdAt",
+       (trainer_id<>$1) AS "library"${gifColumn}
+       FROM exercises WHERE trainer_id IN ($1,'farisa-library') ORDER BY created_at DESC`,
       [trainerId],
     ),
     db.query(
@@ -229,6 +245,8 @@ export async function dashboard(db, trainerId) {
     exerciseVideos: exerciseVideos.rows,
     exerciseGifs: exerciseGifs.rows,
     customGroups: customGroups.rows,
+    // Biblioteca FARISA (abastecida pelo admin): arquivos e ordem das pastas.
+    ...(await libraryMedia(db, trainerId, withGifs)),
     // Ordem das pastas da biblioteca (a ordem em que o personal arrastou).
     folderOrder: await folderOrder(db, trainerId),
     // Perfil do personal (foto, nome, limite de alunos). null sem a migração 018.

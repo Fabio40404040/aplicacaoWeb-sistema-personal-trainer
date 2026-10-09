@@ -235,9 +235,9 @@ async function saveWorkoutExercises(db, trainerId, workoutId, body) {
     queries.push({
       sql: withLoad
         ? `INSERT INTO workout_exercises (workout_id,exercise_id,position,sets,repetitions,rest_seconds,notes,session_label,load,load_by,load_at)
-      SELECT $1,id,$2,$3,$4,$5,$6,$7,$10,$11,$12 FROM exercises WHERE id=$8 AND trainer_id=$9`
+      SELECT $1,id,$2,$3,$4,$5,$6,$7,$10,$11,$12 FROM exercises WHERE id=$8 AND trainer_id IN ($9,'farisa-library')`
         : `INSERT INTO workout_exercises (workout_id,exercise_id,position,sets,repetitions,rest_seconds,notes,session_label)
-      SELECT $1,id,$2,$3,$4,$5,$6,$7 FROM exercises WHERE id=$8 AND trainer_id=$9`,
+      SELECT $1,id,$2,$3,$4,$5,$6,$7 FROM exercises WHERE id=$8 AND trainer_id IN ($9,'farisa-library')`,
       values: [
         workoutId,
         index + 1,
@@ -503,7 +503,10 @@ export async function deleteResource(db, resource, trainerId, id) {
         .filter(Boolean)
         .join(" e ");
       return {
-        error: `Este exercício está sendo usado em ${onde}. Remova ele de lá antes de excluir.`,
+        error:
+          trainerId === "farisa-library"
+            ? `Este exercício da Biblioteca FARISA já está em ${onde} de personais. Ele não pode ser excluído, para não quebrar o treino dos alunos.`
+            : `Este exercício está sendo usado em ${onde}. Remova ele de lá antes de excluir.`,
         status: 409,
       };
     }

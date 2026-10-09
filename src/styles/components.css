@@ -5099,3 +5099,33 @@ body.has-support-banner .main-content {
 .is-library-mode .sidebar-footer {
   display: none;
 }
+
+/* Biblioteca FARISA dentro da biblioteca do personal. */
+.library-block-heading {
+  display: grid;
+  gap: 2px;
+  margin: 18px 0 6px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+.library-block-heading small {
+  color: #475569;
+}
+.exercise-folder--library .exercise-folder-name::after {
+  content: ' · FARISA';
+  color: #2563eb;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+.library-seal {
+  align-self: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}

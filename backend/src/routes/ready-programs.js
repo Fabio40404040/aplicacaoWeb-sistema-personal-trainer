@@ -42,7 +42,7 @@ async function saveExercises(db, trainerId, programId, body) {
     queries.push({
       sql: `INSERT INTO ready_program_exercises
         (program_id,exercise_id,position,session_label,sets,repetitions,rest_seconds,notes)
-        SELECT $1,id,$2,$3,$4,$5,$6,$7 FROM exercises WHERE id=$8 AND trainer_id=$9`,
+        SELECT $1,id,$2,$3,$4,$5,$6,$7 FROM exercises WHERE id=$8 AND trainer_id IN ($9,'farisa-library')`,
       values: [
         programId,
         item.position,

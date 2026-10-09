@@ -510,6 +510,17 @@ const exerciseFolderNames = (exercise) => {
   return [...new Set(groups.map((name) => (legGroups.includes(name) ? 'Pernas' : name)))]
 }
 // Ordem das pastas: a mesma das abas GIFs e Vídeos (ver folder-order.js).
+// Pastas da Biblioteca FARISA: na ordem em que a FARISA adicionou.
+function librarySorter() {
+  const data = getData()
+  return folderSorter({
+    exercises: (data.exercises || []).filter((item) => item.library),
+    gifs: data.libraryGifs || [],
+    videos: data.libraryVideos || [],
+    custom: [],
+    explicit: data.libraryFolderOrder || [],
+  })
+}
 let folderSort = { at: 0, compare: null }
 const sortFolders = (a, b) => {
   // Recalcula no máximo a cada 200 ms (uma ordenação usa a mesma regra).
@@ -604,26 +615,45 @@ function renderExercises() {
   // um grupo muscular (ex.: afundo no smith = quadríceps e glúteos).
   const folderNamesFor = exerciseFolderNames
   const folders = new Map()
+  // Biblioteca FARISA (abastecida pelo admin): fica num bloco à parte, só
+  // para usar nas fichas (sem editar nem excluir).
+  const libraryFolders = new Map()
   // Pastas criadas por você aparecem mesmo sem exercício dentro.
   const custom = getData().customGroups || []
   if (!query && group === 'all' && mediaFilter === 'all' && equipment === 'all')
     custom.forEach((item) => folders.set(item.name, []))
   filtered.forEach((exercise) => {
+    const target = exercise.library ? libraryFolders : folders
     folderNamesFor(exercise).forEach((name) => {
-      if (!folders.has(name)) folders.set(name, [])
-      folders.get(name).push(exercise)
+      if (!target.has(name)) target.set(name, [])
+      target.get(name).push(exercise)
     })
   })
   const expandAll =
     Boolean(query) || group !== 'all' || mediaFilter !== 'all' || equipment !== 'all'
+  const librarySort = librarySorter()
+  const libraryBlock = libraryFolders.size
+    ? [
+        libraryHeading(),
+        ...[...libraryFolders.entries()]
+          .sort(([a], [b]) => librarySort(a, b))
+          .map(([name, exercises]) => renderFolder(name, exercises, true)),
+      ]
+    : []
   list.replaceChildren(
     ...[...folders.entries()]
       .sort(([a], [b]) => sortFolders(a, b))
-      .map(([name, exercises]) => {
+      .map(([name, exercises]) => renderFolder(name, exercises, false)),
+    ...libraryBlock,
+  )
+  document.querySelector('[data-exercises-empty]').hidden = filtered.length > 0
+
+  function renderFolder(name, exercises, library) {
+        const key = library ? `farisa:${name}` : name
         const folder = document.createElement('details')
-        folder.className = 'exercise-folder'
-        folder.dataset.group = name
-        folder.open = expandAll || openExerciseFolders.has(name)
+        folder.className = `exercise-folder${library ? ' exercise-folder--library' : ''}`
+        folder.dataset.group = key
+        folder.open = expandAll || openExerciseFolders.has(key)
         const summary = document.createElement('summary')
         const label = document.createElement('span')
         label.className = 'exercise-folder-name'
@@ -632,12 +662,14 @@ function renderExercises() {
         count.className = 'exercise-folder-count'
         count.textContent = `${exercises.length} ${exercises.length === 1 ? 'exercício' : 'exercícios'}`
         const owned = custom.find((item) => item.name === name)
-        summary.append(
-          label,
-          count,
-          folderAddButton(name),
-          exerciseFolderRemoveButton(name, exercises, owned),
-        )
+        if (library) summary.append(label, count)
+        else
+          summary.append(
+            label,
+            count,
+            folderAddButton(name),
+            exerciseFolderRemoveButton(name, exercises, owned),
+          )
         const body = document.createElement('div')
         body.className = 'exercise-folder-body'
         body.append(
@@ -688,6 +720,17 @@ function renderExercises() {
                 })
               }
             }
+            if (e.library) {
+              // Da Biblioteca FARISA: só usar nas fichas.
+              item.classList.add('exercise-item--library')
+              item.querySelector('[data-action="edit"]')?.remove()
+              const seal = document.createElement('span')
+              seal.className = 'library-seal'
+              seal.textContent = '📚 FARISA'
+              seal.title = 'Da Biblioteca FARISA: use nas fichas. Não pode ser editado nem excluído.'
+              item.append(seal)
+              return item
+            }
             const remove = document.createElement('button')
             remove.className = 'icon-button exercise-remove'
             remove.type = 'button'
@@ -701,9 +744,19 @@ function renderExercises() {
         )
         folder.append(summary, body)
         return folder
-      }),
-  )
-  document.querySelector('[data-exercises-empty]').hidden = filtered.length > 0
+  }
+}
+
+// Cabeçalho do bloco "Biblioteca FARISA" na lista de exercícios.
+function libraryHeading() {
+  const heading = document.createElement('div')
+  heading.className = 'library-block-heading'
+  const title = document.createElement('strong')
+  title.textContent = '📚 Biblioteca FARISA'
+  const note = document.createElement('small')
+  note.textContent = 'Exercícios prontos com GIF e vídeo para usar nas suas fichas. Atualizada pela FARISA.'
+  heading.append(title, note)
+  return heading
 }
 // Avaliações agrupadas por aluno: uma pasta por aluno (fechada), com a
 // última avaliação e a variação no resumo. Ao clicar no nome, abrem os cards.

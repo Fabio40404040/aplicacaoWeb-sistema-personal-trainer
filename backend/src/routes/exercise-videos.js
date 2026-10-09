@@ -132,7 +132,7 @@ export async function trainerExerciseVideoFile(env, db, trainerId, id) {
   const row = (
     await db.query(
       `SELECT object_key AS "objectKey",original_filename AS "originalFilename"
-       FROM exercise_videos WHERE id=$1 AND trainer_id=$2 LIMIT 1`,
+       FROM exercise_videos WHERE id=$1 AND trainer_id IN ($2,'farisa-library') LIMIT 1`,
       [id, trainerId],
     )
   ).rows[0];
@@ -151,7 +151,7 @@ export async function studentExerciseVideoFile(env, db, accountId, id) {
        FROM student_accounts a
        JOIN students s ON s.id=a.student_id AND s.account_id=a.id
        JOIN plans p ON p.code=s.plan_code
-       JOIN exercise_videos v ON v.trainer_id=s.trainer_id
+       JOIN exercise_videos v ON v.trainer_id IN (s.trainer_id,'farisa-library')
        WHERE a.id=$1 AND v.id=$2 AND v.published=1
          AND s.access_status='active' AND s.payment_status IN ('paid','waived')
          AND instr(p.features_json, '"exercises"') > 0

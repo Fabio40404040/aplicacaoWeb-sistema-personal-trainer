@@ -8,9 +8,17 @@ import { exerciseGroups } from './utils.js'
 
 const folderOf = (group) => (legGroupNames.includes(group) ? 'Pernas' : group)
 
-export function folderSorter() {
+export function folderSorter(source = null) {
   const data = getData()
-  const explicit = data.folderOrder || []
+  // Sem "source": só a sua biblioteca (a Biblioteca FARISA tem ordem própria).
+  const own = source || {
+    exercises: (data.exercises || []).filter((item) => !item.library),
+    gifs: data.exerciseGifs || [],
+    videos: data.exerciseVideos || [],
+    custom: data.customGroups || [],
+    explicit: data.folderOrder || [],
+  }
+  const explicit = own.explicit || []
   const firstSeen = new Map()
   const note = (group, when) => {
     if (!group) return
@@ -19,12 +27,12 @@ export function folderSorter() {
       if (!firstSeen.has(name) || stamp < firstSeen.get(name)) firstSeen.set(name, stamp)
     })
   }
-  ;(data.exercises || []).forEach((item) =>
+  ;(own.exercises || []).forEach((item) =>
     exerciseGroups(item).forEach((group) => note(group, item.createdAt)),
   )
-  ;(data.exerciseGifs || []).forEach((item) => note(item.group, item.createdAt))
-  ;(data.exerciseVideos || []).forEach((item) => note(item.group, item.createdAt))
-  ;(data.customGroups || []).forEach((item) => note(item.name, item.createdAt))
+  ;(own.gifs || []).forEach((item) => note(item.group, item.createdAt))
+  ;(own.videos || []).forEach((item) => note(item.group, item.createdAt))
+  ;(own.custom || []).forEach((item) => note(item.name, item.createdAt))
   return (a, b) => {
     const ea = explicit.indexOf(a)
     const eb = explicit.indexOf(b)

@@ -364,7 +364,8 @@ function renderWorkoutExerciseCatalog(form) {
         .filter((exercise) =>
           exerciseGroups(exercise).some((name) => group.memberNames.includes(name)),
         )
-        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+        // Os seus primeiro; depois os da Biblioteca FARISA (📚).
+        .sort((a, b) => Number(Boolean(a.library)) - Number(Boolean(b.library)) || a.name.localeCompare(b.name, 'pt-BR'))
       const details = document.createElement('details')
       details.className = 'ready-exercise-group'
       const selectedCount = items.filter(
@@ -393,7 +394,7 @@ function renderWorkoutExerciseCatalog(form) {
         const thumb = exerciseGifThumb(exercise)
         if (thumb) checkbox.after(thumb)
         checkbox.checked = assignment?.sessionLabel === form.workoutActiveSession
-        label.querySelector('strong').textContent = exercise.name
+        label.querySelector('strong').textContent = exercise.library ? `${exercise.name} 📚` : exercise.name
         label.querySelector('small').textContent = assignment
           ? assignment.sessionLabel === form.workoutActiveSession
             ? `${exercise.equipment || 'Sem equipamento'} · neste treino`
@@ -938,7 +939,8 @@ function renderReadyExerciseCatalog(form) {
         .filter((exercise) =>
           exerciseGroups(exercise).some((name) => group.memberNames.includes(name)),
         )
-        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+        // Os seus primeiro; depois os da Biblioteca FARISA (📚).
+        .sort((a, b) => Number(Boolean(a.library)) - Number(Boolean(b.library)) || a.name.localeCompare(b.name, 'pt-BR'))
       const details = document.createElement('details')
       details.className = 'ready-exercise-group'
       const selectedCount = items.filter(
@@ -972,7 +974,7 @@ function renderReadyExerciseCatalog(form) {
         const thumb = exerciseGifThumb(exercise)
         if (thumb) checkbox.after(thumb)
         checkbox.checked = assignment?.sessionLabel === form.readyActiveSession
-        label.querySelector('span strong').textContent = exercise.name
+        label.querySelector('span strong').textContent = exercise.library ? `${exercise.name} 📚` : exercise.name
         label.querySelector('small').textContent = assignment
           ? assignment.sessionLabel === form.readyActiveSession
             ? `${exercise.equipment || 'Sem equipamento'} · selecionado neste treino`

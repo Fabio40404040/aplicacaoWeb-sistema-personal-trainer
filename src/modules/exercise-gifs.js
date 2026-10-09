@@ -150,7 +150,13 @@ export function gifsForGroup(group) {
 }
 
 export function findGif(id) {
-  return (getData().exerciseGifs || []).find((gif) => gif.id === id) || null
+  const data = getData()
+  // A Biblioteca FARISA também tem GIFs (os exercícios dela usam esses).
+  return (
+    (data.exerciseGifs || []).find((gif) => gif.id === id) ||
+    (data.libraryGifs || []).find((gif) => gif.id === id) ||
+    null
+  )
 }
 
 // Primeiro quadro do GIF em JPEG pequeno: e o que entra no PDF, porque PDF
@@ -274,7 +280,9 @@ export async function openVideoLightbox(id, name) {
 }
 
 export function findVideo(id) {
-  return (getData().exerciseVideos || []).find((video) => String(video.id) === String(id)) || null
+  const data = getData()
+  const same = (video) => String(video.id) === String(id)
+  return (data.exerciseVideos || []).find(same) || (data.libraryVideos || []).find(same) || null
 }
 
 // Usada pela Biblioteca para trocar o bonequinho pela miniatura do GIF.
