@@ -265,6 +265,22 @@ function videoPickerSelect(exercise) {
       })
     if (optgroup.children.length) select.append(optgroup)
   })
+  // Vídeos da Biblioteca FARISA (ex.: cópia de um exercício da FARISA).
+  const libraryVideos = getData().libraryVideos || []
+  if (libraryVideos.length) {
+    const optgroup = document.createElement('optgroup')
+    optgroup.label = '📚 Biblioteca FARISA'
+    libraryVideos
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+      .forEach((video) => {
+        const option = document.createElement('option')
+        option.value = String(video.id)
+        option.textContent = video.name
+        optgroup.append(option)
+      })
+    select.append(optgroup)
+  }
   const current = exercise.videoId ? String(exercise.videoId) : ''
   select.value = current
   // Vídeo apagado da biblioteca: o select volta para "sem vídeo" em vez de

@@ -728,7 +728,14 @@ function renderExercises() {
               seal.className = 'library-seal'
               seal.textContent = '📚 FARISA'
               seal.title = 'Da Biblioteca FARISA: use nas fichas. Não pode ser editado nem excluído.'
-              item.append(seal)
+              // Quer mudar algo? Faz uma cópia na sua biblioteca e edita a cópia.
+              const copy = document.createElement('button')
+              copy.type = 'button'
+              copy.className = 'button button--secondary library-copy'
+              copy.dataset.action = 'copy-exercise'
+              copy.textContent = 'Copiar para minha biblioteca'
+              copy.title = 'Cria uma cópia sua deste exercício (mesmo GIF e vídeo) para você editar'
+              item.append(seal, copy)
               return item
             }
             const remove = document.createElement('button')
@@ -1376,6 +1383,40 @@ export function initDashboard() {
           detail: edit.closest('[data-id]').dataset.id,
         }),
       )
+      return
+    }
+    // Exercício da Biblioteca FARISA → cópia na biblioteca do personal
+    // (mesmo GIF e vídeo, sem gastar espaço), e já abre para editar.
+    const copy = event.target.closest('[data-action="copy-exercise"]')
+    if (copy) {
+      const source = getData().exercises.find((item) => item.id === copy.closest('[data-id]')?.dataset.id)
+      if (!source) return
+      copy.disabled = true
+      copy.textContent = 'Copiando…'
+      try {
+        const saved = await persistRecord('exercises', {
+          name: source.name,
+          group: source.group,
+          equipment: source.equipment,
+          instructions: source.instructions,
+          difficulty: source.difficulty,
+          mediaType: source.mediaType,
+          mediaUrl: source.mediaUrl,
+          thumbnailUrl: source.thumbnailUrl,
+          animationClip: source.animationClip,
+          gifId: source.gifId,
+          videoId: source.videoId,
+        })
+        await syncRemoteData()
+        showToast(`“${source.name}” foi copiado para a sua biblioteca. Agora você pode editar a sua cópia.`)
+        if (saved?.id)
+          window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: saved.id }))
+      } catch (error) {
+        showToast(error.message)
+      } finally {
+        copy.disabled = false
+        copy.textContent = 'Copiar para minha biblioteca'
+      }
       return
     }
     const remove = event.target.closest('[data-action="delete-exercise"]')

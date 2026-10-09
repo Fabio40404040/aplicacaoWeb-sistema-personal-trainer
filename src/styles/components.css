@@ -5129,3 +5129,22 @@ body.has-support-banner .main-content {
   font-weight: 700;
   white-space: nowrap;
 }
+.exercise-item--library .library-copy {
+  align-self: center;
+  padding: 6px 10px;
+  min-height: 0;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.exercise-item.exercise-item--library {
+  grid-template-columns: 44px minmax(0, 1fr) auto auto auto;
+}
+@media (max-width: 700px) {
+  .exercise-item.exercise-item--library {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+  .exercise-item--library .library-copy {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
