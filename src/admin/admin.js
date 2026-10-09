@@ -932,7 +932,7 @@ async function renderErrors() {
       el('small', '', [when ? when.toLocaleString('pt-BR') : '', row.route].filter(Boolean).join(' · ')),
     )
     // E-mail que não saiu: o motivo da Brevo fica à vista.
-    if (row.route === 'E-MAIL' && row.detail) text.append(el('small', 'admin-alert', row.detail))
+    if (['E-MAIL', 'PAGAMENTO'].includes(row.route) && row.detail) text.append(el('small', 'admin-alert', row.detail))
     item.append(text)
     item.title = row.detail || ''
     details.append(item)

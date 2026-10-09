@@ -52,11 +52,26 @@ export async function mercadoPago(path, env, options = {}) {
     console.error('Mercado Pago:', response.status, data)
     // O motivo técnico fica só no registro do servidor; quem paga vê um texto simples.
     console.error('Mercado Pago (detalhe):', mercadoPagoErrorDetail(data))
-    throw new Error(
+    const error = new Error(
       'Não foi possível iniciar o pagamento. Confira os dados e tente de novo, ou use outra forma de pagamento.',
     )
+    error.detail = `${response.status} ${mercadoPagoErrorDetail(data)}`.slice(0, 400)
+    throw error
   }
   return data
+}
+
+// Pagamento que não saiu: o motivo do Mercado Pago fica em Admin → Erros do
+// sistema (rota "PAGAMENTO"); quem paga vê só o texto simples.
+export async function logPaymentError(db, where, error) {
+  try {
+    await db.query("INSERT INTO error_log (route, message, detail) VALUES ('PAGAMENTO',$1,$2)", [
+      String(where).slice(0, 120),
+      String(error?.detail || error?.message || '').slice(0, 400),
+    ])
+  } catch {
+    /* sem a tabela */
+  }
 }
 
 // Dados extras que o antifraude do Mercado Pago usa para aprovar mais
@@ -251,7 +266,9 @@ export async function createPixPayment(db, accountId, platformEnv) {
       `UPDATE payment_intents SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
       [intentId],
     )
-    return { error: error.message, status: 502 }
+    await logPaymentError(db, `Aluno ${row.studentId} · ${row.planName}`, error)
+    // 422 (e não 502): o Cloudflare troca respostas 502 pela página de erro dele.
+    return { error: error.message, status: 422 }
   }
 }
 
@@ -421,7 +438,9 @@ export async function createCardPayment(db, accountId, platformEnv, body) {
       `UPDATE payment_intents SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
       [intentId],
     )
-    return { error: error.message, status: 502 }
+    await logPaymentError(db, `Aluno ${row.studentId} · ${row.planName}`, error)
+    // 422 (e não 502): o Cloudflare troca respostas 502 pela página de erro dele.
+    return { error: error.message, status: 422 }
   }
 }
 

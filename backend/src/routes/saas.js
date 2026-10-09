@@ -4,7 +4,7 @@
 // para aquele personal (0 = sem limite). Quando o Ilimitado vence, o personal
 // volta sozinho para o Grátis.
 import { createSession, hashPassword, isStrongPassword } from '../lib/session.js'
-import { antifraud, mercadoPago, officialPaymentForIntent } from './payments.js'
+import { antifraud, logPaymentError, mercadoPago, officialPaymentForIntent } from './payments.js'
 import { sendSaasReceipt } from './billing-notices.js'
 import { emailStatus, sendTrainerWelcome } from './account-emails.js'
 import { mediaUsage } from './account-self.js'
@@ -275,7 +275,9 @@ export async function startSaasCheckout(env, db, trainerId, body) {
     throw new Error('Para pagar com cartão, use o botão "Pagar com cartão" em Minha assinatura.')
   } catch (error) {
     await db.query("UPDATE saas_payment_intents SET status='failed' WHERE id=$1", [intentId])
-    return { error: error.message, status: 502 }
+    await logPaymentError(db, `Assinatura ${trainerId}`, error)
+    // 422 (e não 502): o Cloudflare troca respostas 502 pela página de erro dele.
+    return { error: error.message, status: 422 }
   }
 }
 
@@ -370,7 +372,9 @@ export async function saasCardPayment(env, db, trainerId, body) {
     return { data: { status, statusDetail: String(payment.status_detail || ''), paymentId: String(payment.id || '') } }
   } catch (error) {
     await db.query("UPDATE saas_payment_intents SET status='failed' WHERE id=$1", [intentId])
-    return { error: error.message, status: 502 }
+    await logPaymentError(db, `Assinatura ${trainerId}`, error)
+    // 422 (e não 502): o Cloudflare troca respostas 502 pela página de erro dele.
+    return { error: error.message, status: 422 }
   }
 }
 
