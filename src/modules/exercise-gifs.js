@@ -186,7 +186,7 @@ export async function firstFrameBlob(file) {
   }
 }
 
-function gifImage(id, className) {
+export function gifImage(id, className) {
   const image = document.createElement('img')
   image.className = className
   image.alt = ''

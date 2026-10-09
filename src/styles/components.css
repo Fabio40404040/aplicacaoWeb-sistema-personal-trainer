@@ -5148,3 +5148,150 @@ body.has-support-banner .main-content {
     justify-self: start;
   }
 }
+
+/* Aba "📚 Biblioteca FARISA" na biblioteca do personal. */
+[data-route='exercicios']:not([data-library-view='farisa']) [data-farisa-library],
+[data-route='exercicios'][data-library-view='farisa'] .content-panel,
+[data-route='exercicios'][data-library-view='farisa'] [data-gif-library],
+[data-route='exercicios'][data-library-view='farisa'] [data-exercise-video-library] {
+  display: none;
+}
+.library-tabs [data-farisa-tab].is-active {
+  background: #1d4ed8;
+}
+.farisa-library {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px;
+}
+.farisa-intro {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+.farisa-intro p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+.farisa-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.farisa-switch button {
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 999px;
+  background: #fff;
+  padding: 7px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.farisa-switch button.is-active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.farisa-switch small {
+  opacity: 0.75;
+}
+.farisa-search {
+  max-width: 420px;
+}
+.farisa-list {
+  display: grid;
+}
+.farisa-folder-body {
+  display: grid;
+}
+.farisa-folder-body.gif-grid {
+  display: grid;
+  padding: 12px 0;
+}
+.farisa-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+  border-top: 1px solid var(--line, #e2e8f0);
+}
+.farisa-thumb {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+.farisa-thumb-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.farisa-row-info {
+  display: grid;
+  min-width: 0;
+}
+.farisa-row-info small {
+  color: var(--ink-600, #64748b);
+}
+.farisa-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.farisa-row-actions .button {
+  padding: 6px 10px;
+  min-height: 0;
+  font-size: 0.78rem;
+}
+.farisa-gif-card {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+.farisa-video-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px;
+  border: 0;
+  border-top: 1px solid var(--line, #e2e8f0);
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.farisa-video-play {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.farisa-empty {
+  color: var(--ink-600, #64748b);
+}
+@media (max-width: 640px) {
+  .farisa-library {
+    padding: 14px;
+  }
+  .farisa-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .farisa-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}

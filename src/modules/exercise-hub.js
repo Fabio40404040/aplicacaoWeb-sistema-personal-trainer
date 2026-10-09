@@ -23,6 +23,7 @@ import {
   groupFromFolder,
 } from './exercise-gifs.js'
 import { showToast } from './utils.js'
+import { initFarisaLibraryTab, renderFarisaLibrary } from './farisa-library-tab.js'
 
 const VIEW_KEY = 'farisa-library-view'
 
@@ -51,7 +52,7 @@ function readView() {
   try {
     const saved = localStorage.getItem(VIEW_KEY)
     if (saved === 'arquivos') return 'gifs'
-    return ['gifs', 'videos'].includes(saved) ? saved : 'exercicios'
+    return ['gifs', 'videos', 'farisa'].includes(saved) ? saved : 'exercicios'
   } catch {
     return 'exercicios'
   }
@@ -75,6 +76,7 @@ function setView(page, view) {
     tab.setAttribute('aria-selected', String(active))
   })
   saveView(view)
+  if (view === 'farisa') renderFarisaLibrary()
 }
 
 function createTabs(page) {
@@ -84,7 +86,8 @@ function createTabs(page) {
   tabs.className = 'library-tabs'
   tabs.setAttribute('role', 'tablist')
   tabs.innerHTML = `
-    <button type="button" role="tab" data-library-tab="exercicios">Exercícios <small data-library-count="exercicios"></small></button>
+    <button type="button" role="tab" data-library-tab="exercicios">Meus exercícios <small data-library-count="exercicios"></small></button>
+    <button type="button" role="tab" data-library-tab="farisa" data-farisa-tab hidden>📚 Biblioteca FARISA <small data-library-count="farisa"></small></button>
     <button type="button" role="tab" data-library-tab="gifs">GIFs <small data-library-count="gifs"></small></button>
     <button type="button" role="tab" data-library-tab="videos">Vídeos <small data-library-count="videos"></small></button>`
   tabs.addEventListener('click', (event) => {
@@ -99,10 +102,20 @@ function createTabs(page) {
 
 function paintCounts() {
   const data = getData()
+  const library = (data.exercises || []).filter((item) => item.library).length
   const counts = {
-    exercicios: (data.exercises || []).length,
+    exercicios: (data.exercises || []).filter((item) => !item.library).length,
+    farisa: library,
     gifs: (data.exerciseGifs || []).length,
     videos: (data.exerciseVideos || []).length,
+  }
+  // A aba da Biblioteca FARISA só aparece quando há algo nela (e nunca para
+  // a própria Biblioteca FARISA, aberta pelo admin).
+  const tab = document.querySelector('[data-farisa-tab]')
+  if (tab) {
+    tab.hidden = !library
+    const page = document.querySelector('[data-route="exercicios"]')
+    if (!library && page?.dataset.libraryView === 'farisa') setView(page, 'exercicios')
   }
   Object.entries(counts).forEach(([key, value]) => {
     const node = document.querySelector(`[data-library-count="${key}"]`)
@@ -474,4 +487,5 @@ export function initExerciseHub() {
   createTabs(page)
   createUploadPanel(page)
   createMediaFilter(page)
+  initFarisaLibraryTab(page)
 }

@@ -510,17 +510,6 @@ const exerciseFolderNames = (exercise) => {
   return [...new Set(groups.map((name) => (legGroups.includes(name) ? 'Pernas' : name)))]
 }
 // Ordem das pastas: a mesma das abas GIFs e Vídeos (ver folder-order.js).
-// Pastas da Biblioteca FARISA: na ordem em que a FARISA adicionou.
-function librarySorter() {
-  const data = getData()
-  return folderSorter({
-    exercises: (data.exercises || []).filter((item) => item.library),
-    gifs: data.libraryGifs || [],
-    videos: data.libraryVideos || [],
-    custom: [],
-    explicit: data.libraryFolderOrder || [],
-  })
-}
 let folderSort = { at: 0, compare: null }
 const sortFolders = (a, b) => {
   // Recalcula no máximo a cada 200 ms (uma ordenação usa a mesma regra).
@@ -580,7 +569,9 @@ function renderExercises() {
   const used = exercisesInUse()
   // Busca, mídia e equipamento valem para as pastinhas e para a lista; o
   // grupo escolhido só filtra a lista.
+  // A Biblioteca FARISA tem aba própria; aqui ficam só os seus exercícios.
   const matching = getData().exercises.filter((e) => {
+    if (e.library) return false
     if (!e.name.toLocaleLowerCase('pt-BR').includes(query)) return false
     if (mediaFilter === 'gif' && !exerciseHasGif(e)) return false
     if (mediaFilter === 'no-gif' && exerciseHasGif(e)) return false
@@ -615,36 +606,22 @@ function renderExercises() {
   // um grupo muscular (ex.: afundo no smith = quadríceps e glúteos).
   const folderNamesFor = exerciseFolderNames
   const folders = new Map()
-  // Biblioteca FARISA (abastecida pelo admin): fica num bloco à parte, só
-  // para usar nas fichas (sem editar nem excluir).
-  const libraryFolders = new Map()
   // Pastas criadas por você aparecem mesmo sem exercício dentro.
   const custom = getData().customGroups || []
   if (!query && group === 'all' && mediaFilter === 'all' && equipment === 'all')
     custom.forEach((item) => folders.set(item.name, []))
   filtered.forEach((exercise) => {
-    const target = exercise.library ? libraryFolders : folders
     folderNamesFor(exercise).forEach((name) => {
-      if (!target.has(name)) target.set(name, [])
-      target.get(name).push(exercise)
+      if (!folders.has(name)) folders.set(name, [])
+      folders.get(name).push(exercise)
     })
   })
   const expandAll =
     Boolean(query) || group !== 'all' || mediaFilter !== 'all' || equipment !== 'all'
-  const librarySort = librarySorter()
-  const libraryBlock = libraryFolders.size
-    ? [
-        libraryHeading(),
-        ...[...libraryFolders.entries()]
-          .sort(([a], [b]) => librarySort(a, b))
-          .map(([name, exercises]) => renderFolder(name, exercises, true)),
-      ]
-    : []
   list.replaceChildren(
     ...[...folders.entries()]
       .sort(([a], [b]) => sortFolders(a, b))
       .map(([name, exercises]) => renderFolder(name, exercises, false)),
-    ...libraryBlock,
   )
   document.querySelector('[data-exercises-empty]').hidden = filtered.length > 0
 
@@ -754,17 +731,6 @@ function renderExercises() {
   }
 }
 
-// Cabeçalho do bloco "Biblioteca FARISA" na lista de exercícios.
-function libraryHeading() {
-  const heading = document.createElement('div')
-  heading.className = 'library-block-heading'
-  const title = document.createElement('strong')
-  title.textContent = '📚 Biblioteca FARISA'
-  const note = document.createElement('small')
-  note.textContent = 'Exercícios prontos com GIF e vídeo para usar nas suas fichas. Atualizada pela FARISA.'
-  heading.append(title, note)
-  return heading
-}
 // Avaliações agrupadas por aluno: uma pasta por aluno (fechada), com a
 // última avaliação e a variação no resumo. Ao clicar no nome, abrem os cards.
 const openAssessmentGroups = new Set()
@@ -1383,40 +1349,6 @@ export function initDashboard() {
           detail: edit.closest('[data-id]').dataset.id,
         }),
       )
-      return
-    }
-    // Exercício da Biblioteca FARISA → cópia na biblioteca do personal
-    // (mesmo GIF e vídeo, sem gastar espaço), e já abre para editar.
-    const copy = event.target.closest('[data-action="copy-exercise"]')
-    if (copy) {
-      const source = getData().exercises.find((item) => item.id === copy.closest('[data-id]')?.dataset.id)
-      if (!source) return
-      copy.disabled = true
-      copy.textContent = 'Copiando…'
-      try {
-        const saved = await persistRecord('exercises', {
-          name: source.name,
-          group: source.group,
-          equipment: source.equipment,
-          instructions: source.instructions,
-          difficulty: source.difficulty,
-          mediaType: source.mediaType,
-          mediaUrl: source.mediaUrl,
-          thumbnailUrl: source.thumbnailUrl,
-          animationClip: source.animationClip,
-          gifId: source.gifId,
-          videoId: source.videoId,
-        })
-        await syncRemoteData()
-        showToast(`“${source.name}” foi copiado para a sua biblioteca. Agora você pode editar a sua cópia.`)
-        if (saved?.id)
-          window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: saved.id }))
-      } catch (error) {
-        showToast(error.message)
-      } finally {
-        copy.disabled = false
-        copy.textContent = 'Copiar para minha biblioteca'
-      }
       return
     }
     const remove = event.target.closest('[data-action="delete-exercise"]')
