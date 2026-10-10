@@ -744,6 +744,36 @@ function renderExercises() {
   }
 }
 
+// Relatório em PDF (o mesmo que o aluno baixa): avaliação, todas as medidas
+// e a evolução, com a marca e a cor do personal.
+async function downloadStudentReport(items, name, button) {
+  if (!items?.length) {
+    showToast('Este aluno ainda não tem avaliação física.')
+    return
+  }
+  if (window.farisaBilling?.state && window.farisaBilling.state.full === false) {
+    showToast('O relatório em PDF faz parte do plano Ilimitado. Assine em Minha assinatura.')
+    return
+  }
+  if (button) button.disabled = true
+  let site = null
+  try {
+    site = await fetchSiteSettings()
+  } catch {
+    /* sem os dados do site: sai com a marca padrão */
+  }
+  const mark = site?.brandMark || (site?.trainerName || '').split(/\s+/u)[0]
+  downloadAssessmentPdf(
+    items,
+    { name },
+    {
+      brand: mark ? `${mark} ${site?.brandName || 'Personal'}` : '',
+      accent: ACCENTS[site?.accent] || ACCENTS.blue,
+    },
+  )
+  if (button) button.disabled = false
+}
+
 // Avaliações agrupadas por aluno: uma pasta por aluno (fechada), com a
 // última avaliação e a variação no resumo. Ao clicar no nome, abrem os cards.
 const openAssessmentGroups = new Set()
@@ -908,29 +938,7 @@ function renderAssessments() {
       pdfButton.type = 'button'
       pdfButton.className = 'button button--secondary'
       pdfButton.textContent = '⬇ Baixar relatório em PDF'
-      pdfButton.addEventListener('click', async () => {
-        if (window.farisaBilling?.state && window.farisaBilling.state.full === false) {
-          showToast('O relatório em PDF faz parte do plano Ilimitado. Assine em Minha assinatura.')
-          return
-        }
-        pdfButton.disabled = true
-        let site = null
-        try {
-          site = await fetchSiteSettings()
-        } catch {
-          /* sem os dados do site: sai com a marca padrão */
-        }
-        const mark = site?.brandMark || (site?.trainerName || '').split(/\s+/u)[0]
-        downloadAssessmentPdf(
-          items,
-          { name: latest.student },
-          {
-            brand: mark ? `${mark} ${site?.brandName || 'Personal'}` : '',
-            accent: ACCENTS[site?.accent] || ACCENTS.blue,
-          },
-        )
-        pdfButton.disabled = false
-      })
+      pdfButton.addEventListener('click', () => void downloadStudentReport(items, latest.student, pdfButton))
       pdfBar.append(pdfButton)
       body.append(pdfBar)
       body.append(...items.map(assessmentCard))
@@ -1205,6 +1213,21 @@ function renderProgress() {
     `${workouts.length} ficha${workouts.length === 1 ? '' : 's'}`
   document.querySelector('[data-progress-adherence]').textContent =
     averageProgress === null ? '—' : `${Math.round(averageProgress)}%`
+  // Progresso: baixar o mesmo relatório que o aluno baixa.
+  const profile = document.querySelector('.progress-profile')
+  let report = profile?.querySelector('[data-progress-report]')
+  if (profile && !report) {
+    report = document.createElement('button')
+    report.type = 'button'
+    report.className = 'button button--secondary progress-report-button'
+    report.dataset.progressReport = ''
+    report.textContent = '⬇ Baixar avaliação e evolução em PDF'
+    profile.append(report)
+  }
+  if (report) {
+    report.hidden = !assessments.length
+    report.onclick = () => void downloadStudentReport(assessments, student.name, report)
+  }
   const metric = document.querySelector('[data-progress-metric]').value
   const entries = assessments
     .map((item) => ({

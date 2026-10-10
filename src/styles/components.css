@@ -5395,3 +5395,9 @@ body.has-support-banner .main-content {
   background: #fee2e2;
   color: #991b1b;
 }
+
+/* Progresso: baixar o relatório do aluno */
+.progress-report-button {
+  width: 100%;
+  margin-top: 14px;
+}

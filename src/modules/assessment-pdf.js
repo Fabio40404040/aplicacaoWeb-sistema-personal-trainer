@@ -190,36 +190,69 @@ function bmiBlock(page, theme, bmi, top, note = "") {
   return top + 98;
 }
 
-function table(page, theme, latest, previous, top) {
-  const rows = ROWS.filter(([, key]) => has(latest[key]));
-  if (latest.bloodPressure) rows.splice(Math.min(rows.length, 10), 0, ["Pressão arterial", "bloodPressure", "mmHg", null]);
+// Medidas e testes de TODAS as avaliações (da mais antiga para a mais
+// recente) e a variação total. Mais de 5 avaliações: a tabela continua em
+// blocos de 5 colunas; se não couber na página, segue na próxima.
+const PER_TABLE = 5;
+function table(ctx, theme, ordered, top) {
+  const timeline = [...ordered].reverse();
+  const latest = ordered[0];
+  const first = timeline[0];
+  const rows = ROWS.filter(([, key]) => timeline.some((item) => has(item[key])));
+  if (timeline.some((item) => item.bloodPressure))
+    rows.splice(Math.min(rows.length, 10), 0, ["Pressão arterial", "bloodPressure", "mmHg", null]);
   if (!rows.length) return top;
-  const columns = [LEFT + 14, 300, 400, 490];
-  rect(page, LEFT, top, RIGHT - LEFT, 20, theme.dark);
-  ["Medida", "Atual", previous ? `Anterior (${shortDate(previous.assessedAt)})` : "Anterior", "Variação"].forEach((label, index) =>
-    text(page, label, columns[index], top + 6, 8, { bold: true, color: "1 1 1" }),
-  );
-  let y = top + 20;
-  rows.forEach(([label, key, unit, digits], index) => {
-    if (index % 2 === 0) rect(page, LEFT, y, RIGHT - LEFT, 18, PANEL);
-    text(page, label, columns[0], y + 5, 9);
-    const show = (value) => (digits === null ? String(value) : num(value, digits)) + (unit ? ` ${unit}` : "");
-    text(page, show(latest[key]), columns[1], y + 5, 9.5, { bold: true });
-    const before = previous?.[key];
-    const hasBefore = digits === null ? Boolean(before) : has(before);
-    text(page, hasBefore ? show(before) : "-", columns[2], y + 5, 9, { color: MUTED });
-    if (hasBefore && digits !== null) {
-      const diff = Number(latest[key]) - Number(before);
-      const flat = Math.abs(diff) < 0.5 / 10 ** digits;
-      text(page, flat ? "igual" : `${diff > 0 ? "+" : "-"}${num(Math.abs(diff), digits)}${unit ? ` ${unit}` : ""}`, columns[3], y + 5, 9, {
-        bold: !flat,
-        color: flat ? MUTED : theme.dark,
+  const blocks = [];
+  for (let start = 0; start < timeline.length; start += PER_TABLE) blocks.push(timeline.slice(start, start + PER_TABLE));
+  const labelWidth = 150;
+  blocks.forEach((block, blockIndex) => {
+    const last = blockIndex === blocks.length - 1;
+    const showChange = last && timeline.length > 1;
+    const height = 20 + rows.length * 18 + 16;
+    if (top + height > 800) top = ctx.newPage("MEDIDAS E TESTES");
+    const page = ctx.page;
+    const valueWidth = (RIGHT - LEFT - labelWidth - (showChange ? 70 : 0)) / Math.max(block.length, PER_TABLE);
+    const columnX = (index) => LEFT + labelWidth + index * valueWidth;
+    const changeX = RIGHT - 66;
+    rect(page, LEFT, top, RIGHT - LEFT, 20, theme.dark);
+    text(page, blocks.length > 1 ? `Medida (${blockIndex + 1}/${blocks.length})` : "Medida", LEFT + 14, top + 6, 8, { bold: true, color: "1 1 1" });
+    block.forEach((item, index) =>
+      text(page, dateBr(item.assessedAt), columnX(index), top + 6, 8, { bold: true, color: "1 1 1" }),
+    );
+    if (showChange) text(page, "Variação", changeX, top + 6, 8, { bold: true, color: "1 1 1" });
+    let y = top + 20;
+    rows.forEach(([label, key, unit, digits], index) => {
+      if (index % 2 === 0) rect(page, LEFT, y, RIGHT - LEFT, 18, PANEL);
+      text(page, label.length > 28 ? `${label.slice(0, 27)}…` : label, LEFT + 14, y + 5, 8.5);
+      const show = (value) => (digits === null ? String(value) : num(value, digits)) + (unit && digits !== null ? ` ${unit}` : "");
+      const hasValue = (value) => (digits === null ? Boolean(value) : has(value));
+      block.forEach((item, column) => {
+        const value = item[key];
+        const isLatest = item === latest;
+        text(page, hasValue(value) ? show(value) : "-", columnX(column), y + 5, 8.5, {
+          bold: isLatest,
+          color: hasValue(value) ? INK : MUTED,
+        });
       });
-    } else text(page, "-", columns[3], y + 5, 9, { color: MUTED });
-    y += 18;
+      if (showChange) {
+        const from = timeline.find((item) => hasValue(item[key]));
+        if (digits !== null && from && from !== latest && hasValue(latest[key])) {
+          const diff = Number(latest[key]) - Number(from[key]);
+          const flat = Math.abs(diff) < 0.5 / 10 ** digits;
+          text(page, flat ? "igual" : `${diff > 0 ? "+" : "-"}${num(Math.abs(diff), digits)}${unit ? ` ${unit}` : ""}`, changeX, y + 5, 8.5, {
+            bold: !flat,
+            color: flat ? MUTED : theme.dark,
+          });
+        } else text(page, "-", changeX, y + 5, 8.5, { color: MUTED });
+      }
+      y += 18;
+    });
+    stroke(page, [[LEFT, y], [RIGHT, y]], LINE, 0.8);
+    top = y + 16;
   });
-  stroke(page, [[LEFT, y], [RIGHT, y]], LINE, 0.8);
-  return y + 16;
+  if (timeline.length > 1)
+    text(ctx.page, `Variação = da primeira medida (${dateBr(first.assessedAt)}) até a mais recente. Em negrito, a avaliação atual.`, LEFT, top - 8, 7, { color: MUTED });
+  return top + 6;
 }
 
 function chart(page, theme, series, x, top, width) {
@@ -275,9 +308,20 @@ export function buildAssessmentPdfBytes(assessments, student, options = {}) {
         : item,
     )
     .sort((a, b) => asDate(b.assessedAt) - asDate(a.assessedAt));
-  const [latest, previous] = ordered;
+  const [latest] = ordered;
   const pages = [];
   let page = [];
+  const ctx = {
+    get page() {
+      return page;
+    },
+    newPage: (title) => {
+      pages.push(page);
+      page = [];
+      header(page, theme, title, String(student?.name || ""), brand);
+      return 96;
+    },
+  };
   header(page, theme, "AVALIAÇÃO FÍSICA", "Relatório de resultados e evolução", brand);
 
   rect(page, LEFT, 86, RIGHT - LEFT, 46, PANEL, LINE);
@@ -297,7 +341,7 @@ export function buildAssessmentPdfBytes(assessments, student, options = {}) {
   if (has(latest.bmi))
     top = bmiBlock(page, theme, Number(latest.bmi), top, composition ? bmiNote(latest.bmi, latest.sex, latest.bodyFatPercent) : "");
   top = sectionTitle(page, theme, "Medidas e testes", top);
-  top = table(page, theme, latest, previous, top);
+  top = table(ctx, theme, ordered, top);
 
   const series = [
     ["Peso", "weightKg", "kg"],
@@ -314,12 +358,7 @@ export function buildAssessmentPdfBytes(assessments, student, options = {}) {
         .map((item) => ({ value: Number(item[key]), label: shortDate(item.assessedAt) })),
     }))
     .filter((item) => item.points.length >= 2);
-  const newPage = (title) => {
-    pages.push(page);
-    page = [];
-    header(page, theme, title, String(student?.name || ""), brand);
-    return 96;
-  };
+  const newPage = ctx.newPage;
   if (series.length) {
     if (top + 150 > 790) top = newPage("EVOLUÇÃO");
     top = sectionTitle(page, theme, `Evolução em ${ordered.length} avaliações`, top);
