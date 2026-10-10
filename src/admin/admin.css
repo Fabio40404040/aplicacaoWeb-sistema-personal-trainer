@@ -730,3 +730,8 @@
   width: 64px;
   min-width: 64px;
 }
+
+/* Erro na tela de quem usa: várias linhas (área, conta, página, aparelho) */
+.admin-screen-error {
+  white-space: pre-line;
+}

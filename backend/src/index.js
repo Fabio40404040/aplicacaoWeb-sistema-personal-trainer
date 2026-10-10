@@ -277,6 +277,40 @@ async function handleRoutes(request, env) {
   // Link de confirmação que vai no e-mail de boas-vindas.
   if (request.method === "GET" && route === "public/verify-email")
     return withDb(env, (db) => verifyEmailPage(db, new URL(request.url).searchParams.get("token")));
+  // Erro na tela de quem usa (aluno, personal ou admin): o navegador avisa
+  // aqui. Fica em Admin → Registro de ações → Erros do sistema ("TELA").
+  if (request.method === "POST" && route === "public/client-error") {
+    const body = await request.json().catch(() => ({}));
+    const clip = (value, max) => String(value || "").replace(/[\u0000-\u001f<>]/gu, " ").trim().slice(0, max);
+    const message = clip(body?.message, 200);
+    if (message) {
+      const who = await readSession(request, env).catch(() => null);
+      const area = ["aluno", "personal", "admin", "site"].includes(body?.area) ? body.area : "site";
+      const detail = [
+        `Área: ${area}`,
+        who?.email ? `Conta: ${clip(who.email, 120)}${who.viewAs ? " (vendo como aluno)" : ""}` : "",
+        `Página: ${clip(body?.page, 160)}`,
+        body?.source ? `Arquivo: ${clip(body.source, 160)}:${Number(body.line) || 0}` : "",
+        `Aparelho: ${clip(body?.device, 160)}`,
+        body?.stack ? `Detalhe: ${clip(body.stack, 500)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      await withDb(env, async (db) => {
+        // Mesmo erro na mesma área nas últimas 6 h: não repete na lista.
+        const text = `[${area}] ${message}`;
+        const seen = (
+          await db.query("SELECT 1 AS x FROM error_log WHERE route='TELA' AND message=$1 AND created_at >= datetime('now','-6 hours') LIMIT 1", [text])
+        ).rows[0];
+        if (!seen)
+          await db.batch([
+            { sql: "INSERT INTO error_log (route, message, detail) VALUES ('TELA',$1,$2)", values: [text, detail] },
+            { sql: "DELETE FROM error_log WHERE id <= (SELECT MAX(id) FROM error_log) - 500", values: [] },
+          ]);
+      }).catch(() => {});
+    }
+    return new Response(null, { status: 204 });
+  }
   // Modo "só observar" da política de segurança: o navegador avisa aqui o que
   // seria bloqueado. Fica em Admin → Registro de ações → Erros do sistema.
   if (request.method === "POST" && route === "public/csp-report") {

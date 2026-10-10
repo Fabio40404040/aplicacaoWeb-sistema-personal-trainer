@@ -1,3 +1,5 @@
+import { initClientErrors } from './modules/client-errors.js'
+initClientErrors()
 import { initAuth } from './modules/auth.js'
 import { initNavigation } from './modules/router.js'
 import { initDashboard } from './modules/dashboard.js'

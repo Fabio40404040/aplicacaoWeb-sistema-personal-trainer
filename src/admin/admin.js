@@ -2,9 +2,13 @@
 // login próprio (conta de administrador, não de personal) e código que só é
 // baixado por quem abre /admin.
 import './admin.css'
+import { initClientErrors } from '../modules/client-errors.js'
 import { paintAvatar } from '../modules/profile-kit.js'
 import { initPasswordControls } from '../modules/password-controls.js'
 import { historyBox } from '../modules/payout-history.js'
+
+// Erros na tela do admin também vão para Erros do sistema.
+initClientErrors()
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const TOKEN_KEY = 'farisa-admin-token'
@@ -968,6 +972,12 @@ async function renderErrors() {
     )
     // E-mail que não saiu: o motivo da Brevo fica à vista.
     if (['E-MAIL', 'PAGAMENTO'].includes(row.route) && row.detail) text.append(el('small', 'admin-alert', row.detail))
+    // Erro na tela de quem usa: área, conta, página e aparelho.
+    if (row.route === 'TELA' && row.detail) {
+      const info = el('small', 'admin-alert admin-screen-error')
+      info.textContent = row.detail
+      text.append(info)
+    }
     item.append(text)
     item.title = row.detail || ''
     details.append(item)
