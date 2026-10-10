@@ -707,8 +707,10 @@ async function handleRoutes(request, env) {
     }
     if (request.method === "PUT" && route === "profile")
       return updateTrainerProfile(db, session.sub, await readJson(request));
-    // "Ver como o aluno": sessão de aluno só leitura, por 1 hora.
+    // "Ver como o aluno" (só suporte): sessão de aluno só leitura, por 1 hora.
     if (request.method === "POST" && segments[0] === "students" && segments[1] && segments[2] === "view-as") {
+      // Só o suporte FARISA (Admin → Acessar painel) usa; o personal não.
+      if (!session.support) return { error: "Recurso exclusivo do suporte FARISA.", status: 403 };
       const student = (
         await db.query(
           `SELECT s.name, a.id, a.email, a.auth_version FROM students s JOIN student_accounts a ON a.id=s.account_id

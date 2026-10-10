@@ -336,7 +336,8 @@ function renderStudents() {
       manage.textContent = '⚙'
       row.querySelector('.row-actions').prepend(manage)
       // Ver a Área do Aluno como ele vê (só leitura), numa aba nova.
-      if (student.accountId) {
+      // Só no acesso de suporte (Admin → Acessar painel); o personal não vê.
+      if (student.accountId && sessionStorage.getItem('farisa-support-mode')) {
         const view = document.createElement('button')
         view.className = 'icon-button'
         view.type = 'button'
