@@ -409,3 +409,20 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Avaliações: os cards se ajustam à largura real do espaço (com o menu
+   lateral aberto, a tela larga não garante espaço para 2 ou 3 colunas).
+   Antes ficavam presos em 2–3 colunas e um card sumia para o lado. */
+.assessment-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+}
+.assessment-grid > * {
+  min-width: 0;
+}
+.assessment-pdf-bar {
+  flex-wrap: wrap;
+}
+.assessment-pdf-bar .button {
+  max-width: 100%;
+  white-space: normal;
+}
