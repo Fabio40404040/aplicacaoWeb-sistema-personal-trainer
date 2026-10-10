@@ -153,10 +153,21 @@ function paintPlanChip(cell, student) {
   holder.append(chip)
 }
 // Acesso liberado = situação ativa + pagamento confirmado OU liberado pelo
-// personal sem pagamento ('waived').
+// personal sem pagamento ('waived') + dentro do prazo (igual à área do aluno).
+// "2026-12-08 10:37:07" (UTC do banco) também no Safari do iPhone.
+const dbTime = (value) => {
+  const text = String(value || '')
+  if (!text) return NaN
+  const iso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/u.test(text) ? `${text.replace(' ', 'T')}Z` : text
+  return new Date(iso).getTime()
+}
+const accessExpired = (student) =>
+  student.accessType !== 'permanent' && !(dbTime(student.accessExpiresAt) > Date.now())
 export const hasAccess = (student) =>
-  student.accessStatus === 'active' && ['paid', 'waived'].includes(student.paymentStatus)
+  student.accessStatus === 'active' && ['paid', 'waived'].includes(student.paymentStatus) && !accessExpired(student)
 function accessLabel(student) {
+  if (student.accessStatus === 'active' && ['paid', 'waived'].includes(student.paymentStatus) && accessExpired(student))
+    return student.accessExpiresAt ? 'Vencido' : 'Sem prazo definido'
   if (hasAccess(student) && student.paymentStatus === 'waived')
     return 'Liberado sem pagamento'
   if (hasAccess(student) && student.paymentStatus === 'paid')
