@@ -175,18 +175,17 @@ export async function trainerPhoto(db, trainerId, assessmentId, pose) {
 }
 
 export async function studentPhoto(db, accountId, assessmentId, pose) {
-  try {
-    return imageResponse(
-      (
-        await db.query(
-          `SELECT p.image FROM assessment_photos p
-           JOIN assessments a ON a.id=p.assessment_id
-           JOIN student_accounts s ON s.student_id=a.student_id
-           WHERE p.assessment_id=$1 AND p.pose=$2 AND s.id=$3 AND a.published_at IS NOT NULL`,
-          [assessmentId, pose, accountId],
-        )
-      ).rows[0],
+  // Avaliação publicada ou a autoavaliação que o próprio aluno enviou (052).
+  const query = (extra) =>
+    db.query(
+      `SELECT p.image FROM assessment_photos p
+       JOIN assessments a ON a.id=p.assessment_id
+       JOIN student_accounts s ON s.student_id=a.student_id
+       WHERE p.assessment_id=$1 AND p.pose=$2 AND s.id=$3 AND (a.published_at IS NOT NULL${extra})`,
+      [assessmentId, pose, accountId],
     );
+  try {
+    return imageResponse((await query(" OR a.source='student'").catch(() => query(""))).rows[0]);
   } catch {
     return { error: "Foto não encontrada.", status: 404 };
   }

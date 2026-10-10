@@ -124,3 +124,103 @@ export function poseModel(model, label = '') {
   holder.innerHTML = `<svg viewBox="0 0 100 200" role="img" aria-label="Modelo da pose: ${String(label).replace(/[<>"&]/gu, '')}">${(MODELS[model] || MODELS.free)()}</svg>`
   return holder
 }
+
+// Foto enquadrada: toda foto vira 3:4 (900 × 1200) com a pessoa inteira,
+// sem cortar, e o espaço que sobra é preenchido com a própria foto desfocada.
+// Assim fotos de celulares diferentes (em pé, deitadas, quadradas) ficam
+// iguais lado a lado no "Antes e Depois".
+export async function framePhoto(file) {
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/u.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/iu.test(file.name || ''))
+    throw new Error('Escolha uma foto JPG, PNG ou WebP.')
+  if (file.size > 25 * 1024 * 1024) throw new Error('Esta foto é muito pesada. Escolha uma de até 25 MB.')
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null)
+  if (!bitmap) throw new Error('Não foi possível abrir esta foto. Tente outra (JPG ou PNG).')
+  const width = 900
+  const height = 1200
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+  // Fundo: a foto em "cobrir", reduzida bem pequena e ampliada (desfoque que
+  // funciona em qualquer celular) e um pouco escurecida.
+  const tiny = document.createElement('canvas')
+  tiny.width = 18
+  tiny.height = 24
+  const cover = Math.max(tiny.width / bitmap.width, tiny.height / bitmap.height)
+  tiny
+    .getContext('2d')
+    .drawImage(bitmap, (tiny.width - bitmap.width * cover) / 2, (tiny.height - bitmap.height * cover) / 2, bitmap.width * cover, bitmap.height * cover)
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+  context.drawImage(tiny, 0, 0, width, height)
+  context.fillStyle = 'rgba(15, 23, 42, 0.35)'
+  context.fillRect(0, 0, width, height)
+  // Foto mais larga que 3:4 (deitada/quadrada): corta as laterais e
+  // centraliza na pessoa (a parte com mais "detalhe" — a parede costuma ser
+  // lisa). Foto mais alta: entra inteira, com o fundo desfocado dos lados.
+  let sourceX = 0
+  let sourceWidth = bitmap.width
+  if (bitmap.width / bitmap.height > width / height) {
+    sourceWidth = Math.round(bitmap.height * (width / height))
+    sourceX = Math.round((bitmap.width - sourceWidth) / 2)
+    try {
+      const probe = document.createElement('canvas')
+      probe.width = 96
+      probe.height = Math.max(24, Math.round((96 * bitmap.height) / bitmap.width))
+      const probeContext = probe.getContext('2d', { willReadFrequently: true })
+      probeContext.drawImage(bitmap, 0, 0, probe.width, probe.height)
+      const pixels = probeContext.getImageData(0, 0, probe.width, probe.height).data
+      // Variação de cor de cada coluna.
+      const score = []
+      for (let x = 0; x < probe.width; x += 1) {
+        let sum = 0
+        let sumSquares = 0
+        for (let y = 0; y < probe.height; y += 1) {
+          const index = (y * probe.width + x) * 4
+          const value = pixels[index] * 0.3 + pixels[index + 1] * 0.59 + pixels[index + 2] * 0.11
+          sum += value
+          sumSquares += value * value
+        }
+        const mean = sum / probe.height
+        score.push(sumSquares / probe.height - mean * mean)
+      }
+      // Centro da pessoa = média das colunas com mais variação que o fundo.
+      const sorted = [...score].sort((first, second) => first - second)
+      const base = sorted[Math.floor(sorted.length / 2)]
+      let weight = 0
+      let weighted = 0
+      score.forEach((value, x) => {
+        const extra = Math.max(0, value - base)
+        weight += extra
+        weighted += extra * (x + 0.5)
+      })
+      const centerColumn = weight > 0 ? weighted / weight : probe.width / 2
+      const centerX = (centerColumn / probe.width) * bitmap.width
+      const bestStart = ((centerX - sourceWidth / 2) / bitmap.width) * probe.width
+      sourceX = Math.round((bestStart / probe.width) * bitmap.width)
+      sourceX = Math.max(0, Math.min(bitmap.width - sourceWidth, sourceX))
+    } catch {
+      /* sem leitura de pixels: corta no centro */
+    }
+  }
+  const fit = Math.min(width / sourceWidth, height / bitmap.height)
+  const drawWidth = Math.round(sourceWidth * fit)
+  const drawHeight = Math.round(bitmap.height * fit)
+  context.drawImage(
+    bitmap,
+    sourceX,
+    0,
+    sourceWidth,
+    bitmap.height,
+    Math.round((width - drawWidth) / 2),
+    Math.round((height - drawHeight) / 2),
+    drawWidth,
+    drawHeight,
+  )
+  bitmap.close?.()
+  for (const quality of [0.82, 0.72, 0.62, 0.52]) {
+    const data = canvas.toDataURL('image/jpeg', quality)
+    if (data.length < 600_000) return data
+  }
+  throw new Error('Não foi possível reduzir esta foto. Tente outra imagem.')
+}

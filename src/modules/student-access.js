@@ -75,12 +75,12 @@ const siteHeader = () => {
   const site = currentSiteSlug();
   return site ? { "X-Farisa-Site": site } : {};
 };
-async function studentRequest(path, data) {
+async function studentRequest(path, data, method = "") {
   const token = sessionStorage.getItem(TOKEN_KEY);
   let response;
   try {
     response = await fetch(`${API_URL}/api/student/${path}`, {
-      method: data ? "POST" : "GET",
+      method: method || (data ? "POST" : "GET"),
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -506,6 +506,9 @@ function loadEditor(exercise, onSaved) {
   input.maxLength = 20;
   input.placeholder = "ex.: 20 kg";
   input.value = exercise.load || "";
+  // Valor salvo = "padrão" do campo: só conta como digitando se o aluno mudar
+  // (antes a área nunca se atualizava sozinha quando havia carga).
+  input.defaultValue = input.value;
   input.setAttribute("aria-label", `Carga de ${exercise.name}`);
   label.append(element("span", "", "Carga"), input);
   const save = element("button", "", "Salvar");
@@ -535,6 +538,7 @@ function loadEditor(exercise, onSaved) {
       Object.assign(exercise, { load: result.load || "", loadBy: result.loadBy, loadAt: result.loadAt });
       onSaved?.(result, previous);
       input.value = exercise.load;
+      input.defaultValue = input.value;
       save.hidden = true;
       note.textContent = describe();
     } catch (error) {
@@ -900,7 +904,13 @@ function renderPortal(container, data) {
   }
   if (data.access.features.includes("assessments"))
     container.append(
-      assessmentCard(data.assessments, data.trainerLocked ? null : downloadReport, loadStudentPhoto, data.photoPoses),
+      assessmentCard(data.assessments, data.trainerLocked ? null : downloadReport, loadStudentPhoto, data.photoPoses, {
+        pending: data.selfAssessment || null,
+        save: (body) => studentRequest("self-assessment", body),
+        uploadPhoto: (id, pose, image) => studentRequest(`self-assessment/${id}/photos/${pose}`, { image }, "PUT"),
+        removePhoto: (id, pose) => studentRequest(`self-assessment/${id}/photos/${pose}`, {}, "DELETE"),
+        reload: () => reloadStudentPanel(),
+      }),
     );
   if (data.access.features.includes("progress"))
     container.append(progressCard(data.assessments));

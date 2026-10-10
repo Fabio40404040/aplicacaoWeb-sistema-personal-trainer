@@ -98,9 +98,9 @@ export async function dashboard(db, trainerId) {
     (withGifs ? "'gifId',e.gif_id," : "") +
     (withVideoLink ? "'videoId',e.video_id," : "");
   // Sexo na avaliação (migração 050).
-  const sexColumn = (await db.query("SELECT sex FROM assessments LIMIT 1").then(() => true).catch(() => false))
-    ? ', a.sex'
-    : '';
+  const sexColumn =
+    ((await db.query("SELECT sex FROM assessments LIMIT 1").then(() => true).catch(() => false)) ? ', a.sex' : '') +
+    ((await db.query("SELECT source FROM assessments LIMIT 1").then(() => true).catch(() => false)) ? ', a.source' : '');
   const [
     students,
     exercises,

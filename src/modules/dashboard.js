@@ -12,6 +12,7 @@ import {
   syncRemoteData,
   fetchSiteSettings,
   updateStudentAccess,
+  accountRequest,
 } from './api-client.js'
 import { downloadWorkoutPdf } from './workout-pdf.js'
 import { downloadAssessmentPdf } from './assessment-pdf.js'
@@ -782,13 +783,16 @@ function assessmentCard(a) {
   const card = cloneTemplate('assessment-card-template')
   paintStudent(card.querySelector('.avatar'), a.student, a.studentId)
   card.querySelector('h2').textContent = a.student
+  const fromStudent = a.source === 'student' && !a.publishedAt
   card.querySelector('.person-cell p').textContent = a.publishedAt
     ? 'Publicada para o aluno'
-    : 'Rascunho do personal'
+    : fromStudent
+      ? '📤 Enviada pelo aluno'
+      : 'Rascunho do personal'
   card.querySelector('[data-value="weight"]').textContent = a.weight
   card.querySelector('[data-value="bmi"]').textContent = a.bmi || '—'
-  card.querySelector('[data-value="fat"]').textContent = a.fat
-  card.querySelector('[data-value="waist"]').textContent = a.waist
+  card.querySelector('[data-value="fat"]').textContent = a.fat || '—'
+  card.querySelector('[data-value="waist"]').textContent = a.waist || '—'
   card.querySelector('[data-value="whr"]').textContent = a.whr || '—'
   card.querySelector('[data-value="restingHR"]').textContent = a.restingHR || '—'
   card.querySelector('[data-value="date"]').textContent = a.date
@@ -807,6 +811,50 @@ function assessmentCard(a) {
     line.className = `assessment-composition${composition ? ` is-${composition.tone}` : ''}`
     line.textContent = compositionText
     card.querySelector('.assessment-values')?.after(line)
+  }
+  // Autoavaliação enviada pelo aluno: revisar (fotos e medidas) e publicar.
+  if (fromStudent) {
+    const box = document.createElement('div')
+    box.className = 'assessment-from-student'
+    const info = document.createElement('p')
+    info.textContent = 'O aluno enviou estas medidas e fotos. Confira e publique para entrar na evolução dele.'
+    const publish = document.createElement('button')
+    publish.type = 'button'
+    publish.className = 'button button--primary'
+    publish.textContent = '✓ Publicar para o aluno'
+    publish.addEventListener('click', async () => {
+      publish.disabled = true
+      try {
+        await accountRequest(`/assessments/${a.id}/publish`, { method: 'POST', body: '{}' })
+        showToast('Avaliação publicada. O aluno já vê na área dele.')
+        await syncRemoteData()
+      } catch (error) {
+        showToast(error.message)
+        publish.disabled = false
+      }
+    })
+    const discard = document.createElement('button')
+    discard.type = 'button'
+    discard.className = 'assessment-photo-remove'
+    discard.textContent = 'Excluir envio'
+    discard.addEventListener('click', async () => {
+      const ok = await askConfirm({
+        eyebrow: 'Autoavaliação',
+        title: 'Excluir o envio do aluno?',
+        message: 'As medidas e as fotos que o aluno enviou serão apagadas.',
+        confirmLabel: 'Excluir',
+      })
+      if (!ok) return
+      try {
+        await removeRecord('assessments', a.id)
+        showToast('Envio excluído.')
+        await syncRemoteData()
+      } catch (error) {
+        showToast(error.message)
+      }
+    })
+    box.append(info, publish, discard)
+    card.querySelector('.assessment-values')?.after(box)
   }
   // Fotos de evolução (frente, lado, costas) desta avaliação.
   if (a.photosReady) {

@@ -82,6 +82,7 @@ import {
 } from "./routes/student-portal.js";
 import { setTrainingDay, setWater } from "./routes/student-tools.js";
 import { deletePhoto, photoPoses, savePhoto, savePhotoPoses, studentPhoto, trainerPhoto } from "./routes/assessment-photos.js";
+import { deleteSelfPhoto, publishAssessment, saveSelfAssessment, saveSelfPhoto } from "./routes/self-assessment.js";
 import { lockedForAccount, lockedMessage, STUDENT_LOCKED, trainerLocked } from "./routes/plan-access.js";
 import {
   cardPaymentConfig,
@@ -500,6 +501,13 @@ async function handleRoutes(request, env) {
         return studentSetLoad(db, session.sub, segments[2], await readJson(request));
       if (request.method === "GET" && segments[1] === "assessment-photos" && segments[2] && segments[3])
         return studentPhoto(db, session.sub, segments[2], segments[3]);
+      // Autoavaliação: medidas e fotos enviadas pelo aluno (consultoria à distância).
+      if (request.method === "POST" && route === "student/self-assessment")
+        return saveSelfAssessment(db, session.sub, await readJson(request));
+      if (segments[1] === "self-assessment" && segments[2] && segments[3] === "photos" && segments[4]) {
+        if (request.method === "PUT") return saveSelfPhoto(db, session.sub, segments[2], segments[4], await readJson(request));
+        if (request.method === "DELETE") return deleteSelfPhoto(db, session.sub, segments[2], segments[4]);
+      }
       if (request.method === "POST" && route === "student/training-day")
         return setTrainingDay(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/water")
@@ -584,6 +592,9 @@ async function handleRoutes(request, env) {
     if (route === "photo-poses" && request.method === "GET") return { data: await photoPoses(db, session.sub) };
     if (route === "photo-poses" && request.method === "PUT")
       return savePhotoPoses(db, session.sub, await readJson(request));
+    // Publicar uma avaliação (ex.: a autoavaliação enviada pelo aluno).
+    if (request.method === "POST" && segments[0] === "assessments" && segments[1] && segments[2] === "publish")
+      return publishAssessment(db, session.sub, segments[1]);
     // Fotos de evolução de uma avaliação: /assessments/<id>/photos/<pose>
     if (segments[0] === "assessments" && segments[1] && segments[2] === "photos" && segments[3]) {
       if (request.method === "GET") return trainerPhoto(db, session.sub, segments[1], segments[3]);

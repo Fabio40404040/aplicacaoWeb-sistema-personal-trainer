@@ -3,6 +3,7 @@ import { loadReady, loadText } from "./resources.js";
 import { recordLoad, studentTools } from "./student-tools.js";
 import { trainerLocked } from "./plan-access.js";
 import { photoPoses, studentPhotoIndex } from "./assessment-photos.js";
+import { pendingSelfAssessment } from "./self-assessment.js";
 import { linkedTrainers } from "./student-links.js";
 import { trainerPlans, trainerReferrals } from "./site.js";
 import { studentProfileFields } from "./profile.js";
@@ -288,6 +289,12 @@ export async function studentPortal(db, accountId, version, studentId = null) {
         [account.studentId],
       )
     ).rows;
+  }
+  // Autoavaliação enviada pelo aluno, ainda não revisada pelo personal.
+  if (features.includes("assessments")) {
+    response.selfAssessment = await pendingSelfAssessment(db, account.studentId).catch(() => null);
+    if (!response.photoPoses)
+      response.photoPoses = await photoPoses(db, account.trainerId || account.accountTrainerId);
   }
   // Fotos de evolução das avaliações publicadas.
   if (response.assessments.length) {

@@ -202,6 +202,21 @@ function trainerNotifications() {
     })
   })
 
+  // Autoavaliação enviada pelo aluno (medidas e fotos) esperando revisão.
+  ;(data.assessments || [])
+    .filter((item) => item.source === 'student' && !item.publishedAt)
+    .slice(0, 10)
+    .forEach((item) => {
+      items.push({
+        id: `autoavaliacao:${item.id}:${item.photos?.length || 0}:${item.assessedAt || ''}`,
+        tone: 'info',
+        icon: '📤',
+        title: `${item.student || 'Aluno'} enviou medidas${item.photos?.length ? ` e ${item.photos.length} foto(s)` : ''}`,
+        detail: 'Confira em Avaliações e publique para entrar na evolução dele.',
+        href: '#avaliacoes',
+      })
+    })
+
   // Treinos que os alunos marcaram (últimos 7 dias): com recado, um aviso
   // por recado; sem recado, um aviso por aluno com os dias marcados.
   const recent = (data.trainingNotes || []).filter((item) => now - new Date(item.createdAt) < 7 * 86_400_000)

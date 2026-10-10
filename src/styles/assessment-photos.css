@@ -167,3 +167,9 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Fotos sempre inteiras (sem cortar a cabeça ou os pés) */
+.assessment-photo-frame img {
+  object-fit: contain;
+  background: #0f172a;
+}

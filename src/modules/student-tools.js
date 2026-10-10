@@ -3,7 +3,7 @@
 // resultado da avaliação física em formato visual.
 import "../styles/student-tools.css";
 import { FAT_BANDS, FAT_SCALE, bmiNote, fatClass } from "./body-composition.js";
-import { PHOTO_TIPS, poseModel, posesFor } from "./photo-poses.js";
+import { PHOTO_TIPS, framePhoto, poseModel, posesFor } from "./photo-poses.js";
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -950,6 +950,227 @@ function openPoseGuide(poses) {
   poseGuide.replaceChildren(head, grid, el("strong", "student-pose-subtitle", "Para comparar bem"), tips, el("small", "student-tool-hint", "Envie as fotos para o seu personal pelo canal que vocês combinaram. 🔒 Só você e ele veem as fotos aqui."));
   poseGuide.showModal();
 }
+// ---------- Autoavaliação (consultoria à distância)
+// O aluno envia peso, medidas e fotos; o personal revisa e publica. Fica
+// numa janela própria para não encher a área do aluno.
+const SELF_FIELDS = [
+  ["weight", "Peso (kg)", "weightKg", "De manhã, em jejum, depois de ir ao banheiro.", true],
+  ["height", "Altura (cm)", "heightCm", "Descalço, encostado na parede."],
+  ["waist", "Cintura (cm)", "waistCm", "Na altura do umbigo, barriga relaxada."],
+  ["hip", "Quadril (cm)", "hipCm", "Na parte mais larga do bumbum, pés juntos."],
+  ["chest", "Peitoral (cm)", "chestCm", "Na altura dos mamilos, depois de soltar o ar."],
+  ["arm", "Braço (cm)", "armCm", "No meio do braço, relaxado ao lado do corpo."],
+  ["thigh", "Coxa (cm)", "thighCm", "No meio da coxa, em pé e com o peso nas duas pernas."],
+  ["calf", "Panturrilha (cm)", "calfCm", "Na parte mais grossa, em pé."],
+];
+let selfDialog = null;
+function openSelfAssessment(options, poseList, loadPhoto) {
+  if (!selfDialog) {
+    selfDialog = el("dialog", "student-pose-guide student-self");
+    document.body.append(selfDialog);
+    selfDialog.addEventListener("click", (event) => {
+      if (event.target === selfDialog) selfDialog.close();
+    });
+  }
+  let pending = options.pending ? { ...options.pending, photos: [...(options.pending.photos || [])] } : null;
+  let changed = false;
+  const head = el("header");
+  head.append(el("h2", "", "📤 Enviar medidas e fotos"));
+  const close = el("button", "student-pose-close", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Fechar");
+  close.addEventListener("click", () => selfDialog.close());
+  head.append(close);
+  const intro = el("p", "student-self-intro", "Para a consultoria à distância: meça, tire as fotos e envie. O seu personal revisa e publica na sua avaliação.");
+  const tabs = el("div", "student-photos-tabs student-self-tabs");
+  const stage = el("div", "student-self-stage");
+  const status = el("p", "student-tool-status");
+  status.setAttribute("role", "status");
+  const tabButton = (label, show) => {
+    const button = el("button", "", label);
+    button.type = "button";
+    button.addEventListener("click", () => {
+      [...tabs.children].forEach((item) => item.classList.toggle("is-active", item === button));
+      show();
+    });
+    tabs.append(button);
+    return button;
+  };
+
+  const showMeasures = () => {
+    const form = el("form", "student-self-form");
+    SELF_FIELDS.forEach(([name, label, key, hint, required]) => {
+      const field = el("label", "student-self-field");
+      const input = el("input");
+      Object.assign(input, { name, type: "text", inputMode: "decimal", pattern: "[0-9]+([.,][0-9]+)?", maxLength: 6, required: Boolean(required) });
+      input.title = "Somente números (ex.: 78,5)";
+      if (pending?.[key]) input.value = String(pending[key]);
+      field.append(el("span", "", label + (required ? " *" : "")), input, el("small", "", hint));
+      form.append(field);
+    });
+    const sexField = el("label", "student-self-field");
+    const sex = el("select");
+    sex.name = "sex";
+    [["", "Prefiro não informar"], ["M", "Masculino"], ["F", "Feminino"]].forEach(([value, text]) => {
+      const option = el("option", "", text);
+      option.value = value;
+      sex.append(option);
+    });
+    sex.value = pending?.sex || "";
+    sexField.append(el("span", "", "Sexo"), sex, el("small", "", "Ajuda o personal a classificar a composição corporal."));
+    const notesField = el("label", "student-self-field student-self-notes");
+    const notes = el("textarea");
+    notes.name = "notes";
+    notes.rows = 3;
+    notes.maxLength = 500;
+    notes.placeholder = "Como foi a semana, dores, dúvidas…";
+    notes.value = pending?.notes || "";
+    notesField.append(el("span", "", "Recado para o personal"), notes);
+    const submit = el("button", "button button--primary", pending ? "Salvar e ir para as fotos" : "Enviar medidas e ir para as fotos");
+    submit.type = "submit";
+    form.append(sexField, notesField, submit);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      submit.disabled = true;
+      status.textContent = "Enviando…";
+      try {
+        const body = Object.fromEntries(new FormData(form));
+        const result = await options.save(body);
+        pending = { ...(pending || { photos: [] }), id: result.id };
+        SELF_FIELDS.forEach(([name, , key]) => {
+          pending[key] = body[name] ? Number(String(body[name]).replace(",", ".")) : null;
+        });
+        pending.sex = body.sex;
+        pending.notes = body.notes;
+        changed = true;
+        status.textContent = "Medidas enviadas. Agora as fotos (opcional).";
+        photosTab.click();
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+    stage.replaceChildren(form);
+  };
+
+  const showPhotos = () => {
+    if (!pending?.id) {
+      stage.replaceChildren(el("p", "student-tool-empty", "Envie as medidas primeiro (pelo menos o peso)."));
+      return;
+    }
+    const grid = el("div", "student-self-photos");
+    posesFor(poseList).forEach((item) => {
+      const slot = el("div", "student-self-photo");
+      const frame = el("div", "student-photo-frame");
+      const input = el("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.hidden = true;
+      const pick = el("button", "button button--secondary");
+      pick.type = "button";
+      const remove = el("button", "student-link-button", "Remover");
+      remove.type = "button";
+      const paint = async () => {
+        const photo = pending.photos.find((entry) => entry.pose === item.pose);
+        pick.textContent = photo ? "Trocar foto" : "📷 Enviar foto";
+        remove.hidden = !photo;
+        frame.replaceChildren();
+        if (!photo) {
+          frame.append(poseModel(item.model, item.label));
+          return;
+        }
+        frame.append(el("small", "", "Carregando…"));
+        const url = await loadPhoto?.(pending.id, item.pose, photo.v).catch(() => null);
+        frame.replaceChildren();
+        if (!url) return frame.append(el("small", "", "Foto enviada ✓"));
+        const image = el("img");
+        image.src = url;
+        image.alt = item.label;
+        frame.append(image);
+      };
+      pick.addEventListener("click", () => input.click());
+      input.addEventListener("change", async () => {
+        const file = input.files?.[0];
+        input.value = "";
+        if (!file) return;
+        pick.disabled = true;
+        status.textContent = `Enviando a foto "${item.label}"…`;
+        try {
+          const saved = await options.uploadPhoto(pending.id, item.pose, await framePhoto(file));
+          pending.photos = [...pending.photos.filter((entry) => entry.pose !== item.pose), { pose: item.pose, v: saved.v }];
+          changed = true;
+          status.textContent = "Foto enviada.";
+          await paint();
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          pick.disabled = false;
+        }
+      });
+      remove.addEventListener("click", async () => {
+        remove.disabled = true;
+        try {
+          await options.removePhoto(pending.id, item.pose);
+          pending.photos = pending.photos.filter((entry) => entry.pose !== item.pose);
+          changed = true;
+          await paint();
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          remove.disabled = false;
+        }
+      });
+      const caption = el("div", "student-self-photo-caption");
+      caption.append(el("strong", "", item.label), el("small", "", item.tip));
+      const actions = el("div", "student-self-photo-actions");
+      actions.append(pick, remove);
+      slot.append(frame, caption, actions, input);
+      grid.append(slot);
+      void paint();
+    });
+    const tips = el("details", "student-self-tips");
+    tips.append(el("summary", "", "📸 Dicas para as fotos"));
+    const list = el("ul");
+    PHOTO_TIPS.forEach((tip) => list.append(el("li", "", tip)));
+    tips.append(list);
+    const done = el("button", "button button--primary", "Concluir envio");
+    done.type = "button";
+    done.addEventListener("click", () => selfDialog.close());
+    stage.replaceChildren(tips, grid, done);
+  };
+
+  const measuresTab = tabButton("1. Medidas", showMeasures);
+  const photosTab = tabButton("2. Fotos", showPhotos);
+  selfDialog.replaceChildren(head, intro, tabs, stage, status, el("small", "student-tool-hint", "🔒 Só você e o seu personal veem as fotos e medidas."));
+  selfDialog.onclose = () => {
+    if (changed) options.reload?.();
+  };
+  measuresTab.click();
+  selfDialog.showModal();
+}
+
+// Linha de ações do cartão: enviar medidas/fotos e o guia das poses.
+function assessmentActions(poseList, selfOptions, loadPhoto) {
+  const row = el("div", "student-assessment-actions");
+  if (selfOptions?.save) {
+    const pending = selfOptions.pending;
+    const send = el("button", "button button--secondary", pending ? "📤 Editar o envio (aguardando o personal)" : "📤 Enviar medidas e fotos");
+    send.type = "button";
+    send.addEventListener("click", () => openSelfAssessment(selfOptions, poseList, loadPhoto));
+    row.append(send);
+  }
+  row.append(poseGuideButton(poseList));
+  const box = el("div", "student-assessment-actions-box");
+  box.append(row);
+  if (selfOptions?.pending) {
+    const when = new Intl.DateTimeFormat("pt-BR").format(asDate(selfOptions.pending.assessedAt));
+    box.append(el("small", "student-tool-hint", `✓ Você enviou medidas${selfOptions.pending.photos?.length ? ` e ${selfOptions.pending.photos.length} foto(s)` : ""} em ${when}. O personal vai revisar e publicar.`));
+  }
+  return box;
+}
+
 export function poseGuideButton(poses) {
   const button = el("button", "button button--secondary student-pose-button", "📸 Como tirar as fotos (poses)");
   button.type = "button";
@@ -1015,11 +1236,11 @@ function photoCompare(assessments, loadPhoto, poseList) {
   return box;
 }
 
-export function assessmentCard(assessments, onDownload, loadPhoto, poseList = null) {
+export function assessmentCard(assessments, onDownload, loadPhoto, poseList = null, selfOptions = null) {
   const card = el("article", "student-tool student-assessment student-card--wide");
   card.append(el("h2", "", "Avaliação física"));
   if (!assessments.length) {
-    card.append(el("p", "student-tool-empty", "Nenhuma avaliação foi publicada ainda. Quando o personal publicar, o resultado aparece aqui."), poseGuideButton(poseList));
+    card.append(el("p", "student-tool-empty", "Nenhuma avaliação foi publicada ainda. Quando o personal publicar, o resultado aparece aqui."), assessmentActions(poseList, selfOptions, loadPhoto));
     return card;
   }
   const [latest, previous] = assessments;
@@ -1075,7 +1296,7 @@ export function assessmentCard(assessments, onDownload, loadPhoto, poseList = nu
   }
   const compare = photoCompare(assessments, loadPhoto, poseList);
   if (compare) card.append(compare);
-  card.append(poseGuideButton(poseList));
+  card.append(assessmentActions(poseList, selfOptions, loadPhoto));
   if (assessments.length > 1) {
     const older = el("details", "student-assessment-older");
     older.append(el("summary", "", `Avaliações anteriores (${assessments.length - 1})`));

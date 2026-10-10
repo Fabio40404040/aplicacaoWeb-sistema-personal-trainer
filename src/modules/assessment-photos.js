@@ -10,7 +10,7 @@ import {
   syncRemoteData,
 } from './api-client.js'
 import { getData, replaceData } from './state.js'
-import { PHOTO_TIPS, poseModel, posesFor } from './photo-poses.js'
+import { PHOTO_TIPS, framePhoto, poseModel, posesFor } from './photo-poses.js'
 import { showToast } from './utils.js'
 
 export const POSES = posesFor().map((item) => [item.pose, item.label])
@@ -23,23 +23,8 @@ const el = (tag, className, text) => {
   return node
 }
 
-// Reduz para caber em 1000 × 1400 px, sem cortar, em JPEG.
-export async function shrinkPhoto(file) {
-  if (!/^image\/(jpeg|png|webp)$/u.test(file.type)) throw new Error('Escolha uma foto JPG, PNG ou WebP.')
-  if (file.size > 25 * 1024 * 1024) throw new Error('Esta foto é muito pesada. Escolha uma de até 25 MB.')
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null)
-  if (!bitmap) throw new Error('Não foi possível abrir esta foto. Tente outra.')
-  const scale = Math.min(1, 1000 / bitmap.width, 1400 / bitmap.height)
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(bitmap.width * scale)
-  canvas.height = Math.round(bitmap.height * scale)
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-  for (const quality of [0.8, 0.7, 0.6, 0.5]) {
-    const data = canvas.toDataURL('image/jpeg', quality)
-    if (data.length < 600_000) return data
-  }
-  throw new Error('Não foi possível reduzir esta foto. Tente outra imagem.')
-}
+// Foto enquadrada em 3:4 (ver framePhoto em photo-poses.js).
+export const shrinkPhoto = framePhoto
 
 let dialog = null
 

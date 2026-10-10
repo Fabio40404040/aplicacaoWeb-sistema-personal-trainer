@@ -877,7 +877,8 @@
 .student-photo-frame img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #0b1220;
 }
 .student-photo figcaption {
   display: flex;
@@ -1145,4 +1146,134 @@
   color: #c9d6e6;
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+/* Avaliação: ações (enviar medidas/fotos e guia das poses) numa linha só */
+.student-assessment-actions-box {
+  display: grid;
+  gap: 6px;
+}
+.student-assessment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.student-assessment-actions .button {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 0.86rem;
+}
+/* Janela de envio (autoavaliação) */
+.student-self-intro {
+  margin: -4px 0 12px;
+  color: #9fb3cc;
+  font-size: 0.88rem;
+}
+.student-self-tabs {
+  margin-bottom: 12px;
+}
+.student-self-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+.student-self-field {
+  display: grid;
+  gap: 4px;
+}
+.student-self-field span {
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.student-self-field input,
+.student-self-field select,
+.student-self-field textarea {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #3b4f6b;
+  border-radius: 10px;
+  background: #0f1a2a;
+  color: #fff;
+  font: inherit;
+}
+.student-self-field small {
+  color: #8ea3bd;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+.student-self-notes {
+  grid-column: 1 / -1;
+}
+.student-self-form > .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.student-self-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.student-self-photo {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.student-self-photo .student-photo-frame {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px dashed #3b4f6b;
+  border-radius: 12px;
+  background: #0f1a2a;
+  color: var(--site-blue, #3d8bfd);
+}
+.student-self-photo .pose-model {
+  display: grid;
+  width: 64px;
+  height: 128px;
+  opacity: 0.45;
+  --pose-detail: #0f1a2a;
+}
+.student-self-photo .pose-model svg {
+  width: 100%;
+  height: 100%;
+}
+.student-self-photo-caption {
+  display: grid;
+  gap: 2px;
+}
+.student-self-photo-caption strong {
+  color: #fff;
+  font-size: 0.86rem;
+}
+.student-self-photo-caption small {
+  color: #8ea3bd;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.student-self-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.student-self-photo-actions .button {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+}
+.student-self-tips {
+  font-size: 0.86rem;
+}
+.student-self-tips summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.student-self-tips ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: #c9d6e6;
 }
