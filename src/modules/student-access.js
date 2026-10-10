@@ -1099,6 +1099,18 @@ export function initStudentAccess() {
     }
   });
   reloadStudentPanel = () => loadPanel();
+  // Troca de conta (sair / entrar): apaga a área da conta anterior para não
+  // aparecer, nem por um instante, o plano e o pagamento de outra pessoa.
+  function clearStudentPanel() {
+    hasRendered = false;
+    hasLoadedOnce = false;
+    lastSignature = "";
+    lastPaymentStatus = "";
+    lastStudentId = "";
+    document.querySelector(".student-access-features")?.replaceChildren();
+    const status = document.querySelector("[data-student-panel-status]");
+    if (status) status.textContent = "Carregando seu acompanhamento…";
+  }
   async function loadPanel() {
     applyPlanFromHash();
     const current = ++generation;
@@ -1235,6 +1247,7 @@ export function initStudentAccess() {
         }
         if (!result?.token)
           throw new Error("O servidor não retornou uma sessão válida.");
+        clearStudentPanel();
         sessionStorage.setItem(TOKEN_KEY, result.token);
         try {
           if (result.remember) localStorage.setItem(REMEMBER_KEY, result.token);
@@ -1274,8 +1287,7 @@ export function initStudentAccess() {
       sessionStorage.removeItem(TOKEN_KEY);
       forgetStudentLogin();
       hideStudentExtras();
-      hasRendered = false;
-      lastSignature = "";
+      clearStudentPanel();
       document.querySelector("[data-student-name]").textContent =
         "Área do Aluno";
       location.hash = "#entrar-aluno";
@@ -1287,7 +1299,19 @@ export function initStudentAccess() {
     lastAutoLoadAt = now;
     loadPanel();
   }
-  window.addEventListener("hashchange", loadPanel);
+  // Já conectado (ex.: "Manter conectado" e o app abrindo na tela de
+  // entrar): vai direto para a Área do Aluno.
+  const skipLogin = () => {
+    if (location.hash.split("?")[0] === "#entrar-aluno" && sessionStorage.getItem(TOKEN_KEY)) {
+      history.replaceState(null, "", `${location.pathname}${location.search}#painel-aluno`);
+      return true;
+    }
+    return false;
+  };
+  window.addEventListener("hashchange", () => {
+    if (skipLogin()) window.dispatchEvent(new HashChangeEvent("hashchange"));
+    else loadPanel();
+  });
   window.addEventListener("focus", loadPanelThrottled);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) loadPanelThrottled();
@@ -1296,5 +1320,6 @@ export function initStudentAccess() {
     if (!document.hidden && location.hash.split("?")[0] === "#painel-aluno")
       loadPanelThrottled();
   }, 30000);
-  loadPanel();
+  if (skipLogin()) window.dispatchEvent(new HashChangeEvent("hashchange"));
+  else loadPanel();
 }
