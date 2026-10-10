@@ -997,8 +997,10 @@ function openSelfAssessment(options, poseList, loadPhoto) {
     return button;
   };
 
+  let measuresForm = null;
   const showMeasures = () => {
     const form = el("form", "student-self-form");
+    measuresForm = form;
     SELF_FIELDS.forEach(([name, label, key, hint, required]) => {
       const field = el("label", "student-self-field");
       const input = el("input");
@@ -1057,7 +1059,29 @@ function openSelfAssessment(options, poseList, loadPhoto) {
 
   const showPhotos = () => {
     if (!pending?.id) {
-      stage.replaceChildren(el("p", "student-tool-empty", "Envie as medidas primeiro (pelo menos o peso)."));
+      // Já preencheu o peso e tocou em "2. Fotos": envia as medidas sozinho.
+      if (measuresForm?.isConnected && measuresForm.elements.weight?.value.trim() && measuresForm.checkValidity()) {
+        [...tabs.children].forEach((item) => item.classList.toggle("is-active", item === measuresTab));
+        measuresForm.requestSubmit();
+        return;
+      }
+      const box = el("div", "student-self-first");
+      box.append(
+        el("strong", "", "Primeiro, a etapa 1: informe pelo menos o seu peso."),
+        el("span", "", "Depois de enviar as medidas, as fotos são liberadas aqui. Veja as poses que vai fazer:"),
+      );
+      const back = el("button", "button button--primary", "← Preencher as medidas");
+      back.type = "button";
+      back.addEventListener("click", () => measuresTab.click());
+      const preview = el("div", "student-self-preview");
+      posesFor(poseList).forEach((item) => {
+        const pose = el("figure", "");
+        const caption = el("figcaption", "", item.label);
+        pose.append(poseModel(item.model, item.label), caption);
+        preview.append(pose);
+      });
+      box.append(back, preview);
+      stage.replaceChildren(box);
       return;
     }
     const grid = el("div", "student-self-photos");
