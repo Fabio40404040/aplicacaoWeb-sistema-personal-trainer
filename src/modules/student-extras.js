@@ -267,6 +267,7 @@ function openDeleteAccount() {
       })
       try {
         sessionStorage.removeItem('farisa-student-token')
+        localStorage.removeItem('farisa-student-remember')
       } catch {
         // ignora
       }

@@ -8,6 +8,8 @@ import { createSession, hashPassword, isStrongPassword, verifyPassword } from '.
 const PLAN_CODES = new Set(['ready', 'basic', 'premium', 'athlete'])
 const BILLING_CYCLES = new Set(['monthly', 'quarterly', 'semiannual', 'annual'])
 
+const REMEMBER_SECONDS = 30 * 86_400
+
 export async function studentAuth(request, env, db, action) {
   const body = await readJson(request)
   const { email, password, name } = body || {}
@@ -227,13 +229,18 @@ export async function studentAuth(request, env, db, action) {
       if (siteTrainer) await activateTrainer(db, account.id, siteTrainer).catch(() => false)
     }
   }
+  // "Manter conectado neste aparelho": sessão de 30 dias (Sair encerra antes).
+  const remember = body.remember === true || body.remember === 'on' || body.remember === 'true'
   return {
     data: {
       token: await createSession(
         { ...account, auth_version: account.authVersion || 0 },
         env,
         'student',
+        {},
+        remember ? REMEMBER_SECONDS : 0,
       ),
+      remember,
       user: { id: account.id, name: account.name, email: account.email },
       registrationStatus: ['paid', 'waived'].includes(account.paymentStatus) ? 'complete' : 'awaiting_payment',
     },

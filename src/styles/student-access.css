@@ -1690,3 +1690,21 @@
     justify-self: start;
   }
 }
+
+/* Entrar: "Manter conectado neste aparelho" */
+.student-remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 6px;
+  color: #c9d6e6;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.student-remember input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--site-blue, #3d8bfd);
+  flex: none;
+}

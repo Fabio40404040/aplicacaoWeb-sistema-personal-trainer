@@ -46,8 +46,8 @@ export function safeEqual(a, b) {
   return diff === 0
 }
 
-export async function createSession(trainer, env, role = 'coach', extra = {}) {
-  const expiresAt = Math.floor(Date.now() / 1000) + Number(env.SESSION_TTL_SECONDS || 43200)
+export async function createSession(trainer, env, role = 'coach', extra = {}, ttlSeconds = 0) {
+  const expiresAt = Math.floor(Date.now() / 1000) + (Number(ttlSeconds) || Number(env.SESSION_TTL_SECONDS || 43200))
   const payload = base64url(
     encoder.encode(
       JSON.stringify({

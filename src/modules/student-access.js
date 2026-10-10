@@ -41,6 +41,33 @@ const signatureOf = (data) =>
 let reloadStudentPanel = async () => {};
 
 const TOKEN_KEY = "farisa-student-token";
+// "Manter conectado": o token fica guardado neste aparelho (30 dias) e volta
+// para a sessão ao abrir o app de novo.
+const REMEMBER_KEY = "farisa-student-remember";
+const tokenExpiry = (token) => {
+  try {
+    const payload = JSON.parse(atob(String(token).split(".")[0].replace(/-/gu, "+").replace(/_/gu, "/")));
+    return Number(payload.exp || 0) * 1000;
+  } catch {
+    return 0;
+  }
+};
+export function forgetStudentLogin() {
+  try {
+    localStorage.removeItem(REMEMBER_KEY);
+  } catch {
+    /* sem armazenamento */
+  }
+}
+try {
+  const remembered = localStorage.getItem(REMEMBER_KEY);
+  if (remembered && !sessionStorage.getItem(TOKEN_KEY)) {
+    if (tokenExpiry(remembered) > Date.now() + 60_000) sessionStorage.setItem(TOKEN_KEY, remembered);
+    else localStorage.removeItem(REMEMBER_KEY);
+  }
+} catch {
+  /* sem armazenamento: entra com a senha */
+}
 const API_URL = import.meta.env.VITE_API_URL || "";
 // Página do personal em que o aluno está: o servidor responde com o
 // cadastro deste personal, mesmo que outra aba esteja na página de outro.
@@ -75,8 +102,16 @@ async function studentRequest(path, data) {
       "O serviço de contas está indisponível. Tente novamente mais tarde.",
     );
   }
-  if (!response.ok)
+  if (!response.ok) {
+    // Sessão guardada que não vale mais (senha trocada, saiu de todos…):
+    // esquece e volta para a tela de entrar.
+    if (response.status === 401 && !path.startsWith("auth/") && sessionStorage.getItem(TOKEN_KEY)) {
+      sessionStorage.removeItem(TOKEN_KEY);
+      forgetStudentLogin();
+      if (location.hash.split("?")[0] === "#painel-aluno") location.hash = "#entrar-aluno";
+    }
     throw new Error(result?.error || "Não foi possível acessar sua conta.");
+  }
   return result;
 }
 async function loadStudentExerciseVideo(id) {
@@ -1181,6 +1216,8 @@ export function initStudentAccess() {
         // Cadastro feito na página de um personal (/p/<slug>) cai para ele.
         // Na página de um personal: cadastro cai para ele e o login abre com ele.
         if (action === "register" || action === "login") data.site = currentSiteSlug();
+        // Cadastro novo também fica conectado neste aparelho.
+        if (action === "register") data.remember = "on";
         if (action === "reset")
           data.token = new URLSearchParams(
             location.hash.split("?")[1] || "",
@@ -1191,6 +1228,7 @@ export function initStudentAccess() {
           status.textContent = result.message;
           if (action === "reset") {
             sessionStorage.removeItem(TOKEN_KEY);
+            forgetStudentLogin();
             history.replaceState(null, "", "#nova-senha");
           }
           return;
@@ -1198,6 +1236,12 @@ export function initStudentAccess() {
         if (!result?.token)
           throw new Error("O servidor não retornou uma sessão válida.");
         sessionStorage.setItem(TOKEN_KEY, result.token);
+        try {
+          if (result.remember) localStorage.setItem(REMEMBER_KEY, result.token);
+          else localStorage.removeItem(REMEMBER_KEY);
+        } catch {
+          /* sem armazenamento */
+        }
         // Entrou com conta de verdade: deixa de ser sessão de demonstração.
         sessionStorage.removeItem("farisa-demo");
         if (action === "register") {
@@ -1228,6 +1272,7 @@ export function initStudentAccess() {
       // Encerra a sessão também no servidor (o token deixa de valer).
       void studentRequest("auth/logout", {}).catch(() => {});
       sessionStorage.removeItem(TOKEN_KEY);
+      forgetStudentLogin();
       hideStudentExtras();
       hasRendered = false;
       lastSignature = "";
