@@ -264,6 +264,9 @@ export async function studentPortal(db, accountId, version, studentId = null) {
     }
   }
   if (features.includes("assessments")) {
+    const sexColumn = (await db.query("SELECT sex FROM assessments LIMIT 1").then(() => true).catch(() => false))
+      ? ", sex"
+      : "";
     response.assessments = (
       await db.query(
         `SELECT id, protocol, weight_kg AS "weightKg", height_cm AS "heightCm", bmi,
@@ -271,7 +274,7 @@ export async function studentPortal(db, accountId, version, studentId = null) {
           blood_pressure AS "bloodPressure", resting_hr AS "restingHr", notes,
           chest_cm AS "chestCm", arm_cm AS "armCm", thigh_cm AS "thighCm", calf_cm AS "calfCm",
           push_ups AS "pushUps", plank_seconds AS "plankSeconds", sit_and_reach_cm AS "sitAndReachCm",
-          assessed_at AS "assessedAt"
+          assessed_at AS "assessedAt"${sexColumn}
          FROM assessments WHERE student_id=$1 AND published_at IS NOT NULL ORDER BY assessed_at DESC`,
         [account.studentId],
       )

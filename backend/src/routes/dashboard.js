@@ -97,6 +97,10 @@ export async function dashboard(db, trainerId) {
   const gifJson =
     (withGifs ? "'gifId',e.gif_id," : "") +
     (withVideoLink ? "'videoId',e.video_id," : "");
+  // Sexo na avaliação (migração 050).
+  const sexColumn = (await db.query("SELECT sex FROM assessments LIMIT 1").then(() => true).catch(() => false))
+    ? ', a.sex'
+    : '';
   const [
     students,
     exercises,
@@ -160,7 +164,7 @@ export async function dashboard(db, trainerId) {
        a.sit_and_reach_cm AS "sitAndReach", a.notes, a.published_at AS "publishedAt",
        a.height_cm AS "heightCm", a.hip_cm AS "hipCm", a.resting_hr AS "restingHr",
        a.chest_cm AS "chestCm", a.arm_cm AS "armCm", a.thigh_cm AS "thighCm", a.calf_cm AS "calfCm",
-       a.plank_seconds AS "plankSeconds", a.sit_and_reach_cm AS "sitAndReachCm"
+       a.plank_seconds AS "plankSeconds", a.sit_and_reach_cm AS "sitAndReachCm"${sexColumn}
        FROM assessments a JOIN students s ON s.id=a.student_id WHERE a.trainer_id=$1 ORDER BY a.assessed_at DESC`,
       [trainerId],
     ),

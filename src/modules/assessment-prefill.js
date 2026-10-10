@@ -21,6 +21,7 @@ const FIELDS = [
   { name: 'plank', key: 'plankSeconds', unit: 's' },
   { name: 'sitAndReach', key: 'sitAndReachCm', unit: 'cm' },
   { name: 'restriction', key: 'restriction', unit: '' },
+  { name: 'sex', key: 'sex', unit: '', keep: true, silent: true },
 ]
 
 const shown = (value) => (value === null || value === undefined ? '' : String(value).trim())
@@ -30,7 +31,9 @@ function lastAssessment(studentId) {
   if (!studentId) return null
   const list = (getData().assessments || []).filter((item) => item.studentId === studentId)
   list.sort((a, b) => String(b.assessedAt || '').localeCompare(String(a.assessedAt || '')))
-  return list[0] || null
+  if (!list[0]) return null
+  // O sexo vem da avaliação mais recente que o tenha.
+  return { ...list[0], sex: list.find((item) => item.sex)?.sex || '' }
 }
 
 export function initAssessmentPrefill() {
@@ -64,7 +67,7 @@ export function initAssessmentPrefill() {
       delete input.dataset.example
     })
     form.querySelectorAll('[data-prefilled]').forEach((input) => {
-      if (input.value === input.dataset.prefilled) input.value = input.tagName === 'SELECT' ? 'Inicial' : ''
+      if (input.value === input.dataset.prefilled) input.value = input.name === 'protocol' ? 'Inicial' : ''
       delete input.dataset.prefilled
     })
   }
@@ -79,7 +82,7 @@ export function initAssessmentPrefill() {
       const previous = shown(last[field.key])
       if (!input || !previous) return
       const text = field.unit ? `${number(previous)} ${field.unit}` : previous
-      const hint = hintFor(input)
+      const hint = field.silent ? null : hintFor(input)
       if (hint) hint.textContent = `anterior: ${text}`
       // Sem o exemplo cinza ("70,4"), que parecia um valor já preenchido.
       if (input.placeholder && input.dataset.example === undefined) {

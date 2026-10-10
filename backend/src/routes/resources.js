@@ -373,10 +373,12 @@ export async function createResource(db, resource, trainerId, body) {
     }
     return student;
   }
-  return config
-    ? (await db.query(config.insert, [trainerId, ...config.values(body)]))
-        .rows[0]
-    : null;
+  if (!config) return null;
+  const row = (await db.query(config.insert, [trainerId, ...config.values(body)])).rows[0];
+  // Avaliação: sexo do aluno (migração 050), para classificar o % de gordura.
+  if (resource === "assessments" && row?.id && ["M", "F"].includes(body?.sex))
+    await db.query("UPDATE assessments SET sex=$2 WHERE id=$1 AND trainer_id=$3", [row.id, body.sex, trainerId]).catch(() => {});
+  return row;
 }
 
 export async function updateResource(db, resource, trainerId, id, body) {

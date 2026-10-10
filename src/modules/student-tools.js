@@ -2,6 +2,7 @@
 // calendário de treinos concluídos (com recado ao personal), água e o
 // resultado da avaliação física em formato visual.
 import "../styles/student-tools.css";
+import { FAT_BANDS, FAT_SCALE, bmiNote, fatClass } from "./body-composition.js";
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -867,6 +868,39 @@ function bmiGauge(bmi) {
   return box;
 }
 
+// % de gordura com a faixa certa para o sexo (classificação principal).
+function fatGauge(composition) {
+  const box = el("div", "student-bmi student-fat");
+  const head = el("div", "student-bmi-head");
+  head.append(
+    el("span", "", "Composição corporal"),
+    el("strong", "", `${numberBr(composition.value)}%`),
+    el("em", `student-bmi-tag is-${composition.tone}`, composition.label),
+  );
+  const [from, to] = FAT_SCALE[composition.sex];
+  const bands = FAT_BANDS[composition.sex];
+  const scale = el("div", "student-bmi-scale");
+  let start = from;
+  bands.forEach(([limit, , tone]) => {
+    const end = Math.min(limit, to);
+    const part = el("i", `is-${tone}`);
+    part.style.flex = String(Math.max(0.5, end - start));
+    scale.append(part);
+    start = end;
+  });
+  const marker = el("b");
+  marker.style.left = `${((Math.min(to, Math.max(from, composition.value)) - from) / (to - from)) * 100}%`;
+  scale.append(marker);
+  const ticks = el("div", "student-bmi-ticks");
+  bands.slice(0, -1).forEach(([limit]) => {
+    const tick = el("span", "", `${numberBr(limit)}%`);
+    tick.style.left = `${((limit - from) / (to - from)) * 100}%`;
+    ticks.append(tick);
+  });
+  box.append(head, scale, ticks);
+  return box;
+}
+
 function metricTile(icon, label, value, unit, delta) {
   const tile = el("div", "student-metric");
   tile.append(el("span", "student-metric-icon", icon), el("span", "student-metric-label", label));
@@ -956,7 +990,15 @@ export function assessmentCard(assessments, onDownload, loadPhoto) {
   const meta = el("p", "student-assessment-meta");
   meta.textContent = `${latest.protocol || "Avaliação"} · ${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(asDate(latest.assessedAt))}`;
   card.append(meta);
-  if (has(latest.bmi) && Number(latest.bmi) > 0) card.append(bmiGauge(Number(latest.bmi)));
+  // Com % de gordura e sexo, a gordura é a classificação principal e o IMC
+  // vira referência (o IMC não diferencia músculo de gordura).
+  const composition = fatClass(latest.sex, latest.bodyFatPercent);
+  if (composition) card.append(fatGauge(composition));
+  if (has(latest.bmi) && Number(latest.bmi) > 0) {
+    const gauge = bmiGauge(Number(latest.bmi));
+    if (composition) gauge.classList.add("is-secondary");
+    card.append(gauge, el("p", "student-bmi-note", bmiNote(latest.bmi, latest.sex, latest.bodyFatPercent)));
+  }
   const tiles = el("div", "student-metrics");
   const add = (icon, label, key, unit, digits = 1) => {
     if (!has(latest[key]) || Number(latest[key]) === 0) return;
@@ -1020,7 +1062,7 @@ export function assessmentCard(assessments, onDownload, loadPhoto) {
     download.addEventListener("click", () => onDownload());
     card.append(download);
   }
-  card.append(el("small", "student-tool-hint", "O IMC é uma referência geral para adultos e não considera a massa muscular. Vale a leitura do seu personal."));
+  card.append(el("small", "student-tool-hint", "Composição corporal pela tabela do ACE (homem/mulher). O IMC é uma referência geral para adultos. Vale a leitura do seu personal."));
   return card;
 }
 

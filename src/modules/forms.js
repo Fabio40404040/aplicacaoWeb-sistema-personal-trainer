@@ -380,6 +380,7 @@ function handleAssessment(form) {
     plank: value(form, 'plank'),
     sitAndReach: value(form, 'sitAndReach'),
     notes: value(form, 'notes'),
+    sex: value(form, 'sex'),
     published: checked(form, 'published'),
   }
   const h = Number(r.height) / 100,

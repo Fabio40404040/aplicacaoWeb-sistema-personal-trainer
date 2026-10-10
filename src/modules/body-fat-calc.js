@@ -191,6 +191,15 @@ export function initBodyFatCalc() {
     paintResult()
   }
 
+  // Sexo: o mesmo da avaliação (um preenche o outro).
+  const formSex = form.querySelector('[name="sex"]')
+  const sexField = select('Sexo', [['M', 'Masculino'], ['F', 'Feminino']], state.sex, (value) => {
+    state.sex = value
+    state.values = {}
+    if (formSex && !formSex.value) formSex.value = value
+    paintFields()
+  })
+  const sexInput = sexField.querySelector('select')
   const ageField = el('label', 'field')
   const ageInput = el('input')
   Object.assign(ageInput, { type: 'number', min: '10', max: '100', inputMode: 'numeric', placeholder: 'Ex.: 32' })
@@ -205,11 +214,7 @@ export function initBodyFatCalc() {
       state.values = {}
       paintFields()
     }),
-    select('Sexo', [['M', 'Masculino'], ['F', 'Feminino']], state.sex, (value) => {
-      state.sex = value
-      state.values = {}
-      paintFields()
-    }),
+    sexField,
     ageField,
   )
   panel.append(
@@ -220,7 +225,14 @@ export function initBodyFatCalc() {
   )
   toggle.addEventListener('click', () => {
     panel.hidden = !panel.hidden
-    if (!panel.hidden) paintFields()
+    if (!panel.hidden) {
+      if (formSex?.value && formSex.value !== state.sex) {
+        state.sex = formSex.value
+        sexInput.value = state.sex
+        state.values = {}
+      }
+      paintFields()
+    }
   })
   form.addEventListener('reset', () => {
     state.values = {}

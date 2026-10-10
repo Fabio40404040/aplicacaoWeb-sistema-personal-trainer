@@ -5372,3 +5372,26 @@ body.has-support-banner .main-content {
   font-size: 0.76rem;
   font-weight: 600;
 }
+
+/* Card da avaliação: classificação da gordura */
+.assessment-composition {
+  margin: 10px 0 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--blue-50, #eff6ff);
+  color: var(--ink-700, #334155);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.assessment-composition.is-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.assessment-composition.is-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+.assessment-composition.is-high {
+  background: #fee2e2;
+  color: #991b1b;
+}

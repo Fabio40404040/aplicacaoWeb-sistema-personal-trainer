@@ -2,6 +2,7 @@
 // base de arquivo da ficha de treino (workout-pdf.js), com a marca e a cor
 // do personal.
 import { drawWatermark, pdfDocument } from "./workout-pdf.js";
+import { FAT_BANDS, FAT_SCALE, bmiNote, fatClass } from "./body-composition.js";
 
 const H = 842;
 const LEFT = 25;
@@ -126,7 +127,37 @@ function sectionTitle(page, theme, label, top) {
   return top + 22;
 }
 
-function bmiBlock(page, theme, bmi, top) {
+const TONE_HEX = { low: "#3b82f6", ok: "#10b981", warn: "#f59e0b", high: "#ef4444" };
+
+// % de gordura pela faixa do sexo (classificação principal quando existe).
+function fatBlock(page, theme, composition, top) {
+  const tone = hexRgb(TONE_HEX[composition.tone]);
+  rect(page, LEFT, top, RIGHT - LEFT, 84, PANEL, LINE);
+  text(page, "COMPOSIÇÃO CORPORAL (% DE GORDURA)", LEFT + 16, top + 12, 7.5, { bold: true, color: MUTED });
+  text(page, `${num(composition.value)}%`, LEFT + 16, top + 27, 30, { bold: true });
+  const pillWidth = textWidth(composition.label, 9, true) + 20;
+  rect(page, LEFT + 16, top + 62, pillWidth, 15, pdfColor(mix(tone, WHITE, 0.82)));
+  text(page, composition.label, LEFT + 26, top + 65, 9, { bold: true, color: pdfColor(mix(tone, [0, 0, 0], 0.35)) });
+  const [from, to] = FAT_SCALE[composition.sex];
+  const bands = FAT_BANDS[composition.sex];
+  const x0 = 215;
+  const x1 = RIGHT - 20;
+  const at = (value) => x0 + ((Math.min(to, Math.max(from, value)) - from) / (to - from)) * (x1 - x0);
+  let start = from;
+  bands.forEach(([limit, name, bandTone]) => {
+    const end = Math.min(limit, to);
+    rect(page, at(start) + 1, top + 34, at(end) - at(start) - 2, 11, pdfColor(hexRgb(TONE_HEX[bandTone])));
+    text(page, name === "Acima do ideal" ? "Acima" : name, (at(start) + at(end)) / 2, top + 20, 7, { color: MUTED, align: "center" });
+    start = end;
+  });
+  bands.slice(0, -1).forEach(([limit]) => text(page, `${num(limit)}%`, at(limit), top + 50, 7.5, { color: MUTED, align: "center" }));
+  const x = at(composition.value);
+  rect(page, x - 2.5, top + 30, 5, 19, INK, "1 1 1");
+  text(page, `Faixas do ACE para ${composition.sex === "F" ? "mulheres" : "homens"}.`, x0, top + 66, 7, { color: MUTED });
+  return top + 98;
+}
+
+function bmiBlock(page, theme, bmi, top, note = "") {
   const [, label, hex] = BANDS.find(([limit]) => bmi < limit);
   const tone = hexRgb(hex);
   rect(page, LEFT, top, RIGHT - LEFT, 84, PANEL, LINE);
@@ -154,7 +185,8 @@ function bmiBlock(page, theme, bmi, top) {
   });
   const x = at(bmi);
   rect(page, x - 2.5, top + 30, 5, 19, INK, "1 1 1");
-  text(page, "Referência geral para adultos; não considera a massa muscular.", x0, top + 66, 7, { color: MUTED });
+  const noteLines = wrap(note || "Referência geral para adultos; não considera a massa muscular.", 72).slice(0, 3);
+  noteLines.forEach((line, index) => text(page, line, x0, top + 58 + index * 8.5, 7, { color: MUTED }));
   return top + 98;
 }
 
@@ -259,7 +291,11 @@ export function buildAssessmentPdfBytes(assessments, student, options = {}) {
   });
 
   let top = 146;
-  if (has(latest.bmi)) top = bmiBlock(page, theme, Number(latest.bmi), top);
+  // Com % de gordura e sexo, a gordura vem primeiro e o IMC vira referência.
+  const composition = fatClass(latest.sex, latest.bodyFatPercent);
+  if (composition) top = fatBlock(page, theme, composition, top);
+  if (has(latest.bmi))
+    top = bmiBlock(page, theme, Number(latest.bmi), top, composition ? bmiNote(latest.bmi, latest.sex, latest.bodyFatPercent) : "");
   top = sectionTitle(page, theme, "Medidas e testes", top);
   top = table(page, theme, latest, previous, top);
 

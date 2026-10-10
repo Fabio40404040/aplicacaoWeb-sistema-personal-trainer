@@ -1,3 +1,4 @@
+import { SEX_LABELS, fatClass } from './body-composition.js'
 import { exercisesForWorkouts } from './farisa-library-tab.js'
 import { folderSorter } from './folder-order.js'
 import { showPaidDialog } from './paid-dialog.js'
@@ -762,6 +763,21 @@ function assessmentCard(a) {
   card.querySelector('[data-value="restingHR"]').textContent = a.restingHR || '—'
   card.querySelector('[data-value="date"]').textContent = a.date
   card.querySelector('[data-value="protocol"]').textContent = a.protocol || 'Avaliação física'
+  // Gordura pela faixa do sexo; IMC "sobrepeso" por músculo ganha o aviso.
+  const composition = fatClass(a.sex, a.bodyFatPercent)
+  const compositionText = composition
+    ? `Gordura: ${composition.label} (${SEX_LABELS[a.sex].toLowerCase()})${
+        Number(a.bmi) >= 25 && composition.tone === 'ok' ? ' · IMC alto por massa muscular' : ''
+      }`
+    : Number(a.bodyFatPercent) > 0
+      ? 'Informe o sexo na avaliação para classificar a gordura.'
+      : ''
+  if (compositionText) {
+    const line = document.createElement('p')
+    line.className = `assessment-composition${composition ? ` is-${composition.tone}` : ''}`
+    line.textContent = compositionText
+    card.querySelector('.assessment-values')?.after(line)
+  }
   // Fotos de evolução (frente, lado, costas) desta avaliação.
   if (a.photosReady) {
     const count = (a.photos || []).length
