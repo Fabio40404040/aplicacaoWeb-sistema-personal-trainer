@@ -8,7 +8,7 @@ import { resendVerification, verifyEmailPage } from "./routes/account-emails.js"
 import { deleteOwnAccount,
   changeOwnEmail, exportAccount, onboarding } from "./routes/account-self.js";
 import { useEnv } from "./lib/notify.js";
-import { isRevoked, readSession, revokeSession, sessionSignature } from "./lib/session.js";
+import { createSession, isRevoked, readSession, revokeSession, sessionSignature } from "./lib/session.js";
 import { addAttempt, attemptKeys, clearAttempts, isBlocked } from "./lib/rate-limit.js";
 import {
   adminAuditLog,
@@ -446,6 +446,9 @@ async function handleRoutes(request, env) {
         )
       ).rows[0];
       if (!account) return { error: "Sessão inválida ou expirada.", status: 401 };
+      // "Ver como o aluno" (personal ou suporte): só leitura.
+      if (session.viewAs && !["GET", "HEAD"].includes(request.method))
+        return { error: "Você está vendo como o aluno: nada é salvo neste modo.", status: 403 };
       // Aluno com mais de um personal escolhe qual ver.
       if (request.method === "POST" && route === "student/switch-trainer")
         return switchTrainer(db, session.sub, await readJson(request));
@@ -670,6 +673,25 @@ async function handleRoutes(request, env) {
     }
     if (request.method === "PUT" && route === "profile")
       return updateTrainerProfile(db, session.sub, await readJson(request));
+    // "Ver como o aluno": sessão de aluno só leitura, por 1 hora.
+    if (request.method === "POST" && segments[0] === "students" && segments[1] && segments[2] === "view-as") {
+      const student = (
+        await db.query(
+          `SELECT s.name, a.id, a.email, a.auth_version FROM students s JOIN student_accounts a ON a.id=s.account_id
+           WHERE s.id=$1 AND s.trainer_id=$2`,
+          [segments[1], session.sub],
+        )
+      ).rows[0];
+      if (!student) return { error: "Este aluno ainda não tem conta de acesso.", status: 404 };
+      const slug = (await db.query("SELECT slug FROM trainer_site WHERE trainer_id=$1", [session.sub]).catch(() => ({ rows: [] }))).rows[0]?.slug;
+      return {
+        data: {
+          token: await createSession(student, env, "student", { viewAs: session.sub }, 3600),
+          slug: slug || null,
+          name: student.name,
+        },
+      };
+    }
     if (
       request.method === "PUT" &&
       segments[0] === "students" &&

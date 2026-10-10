@@ -335,6 +335,17 @@ function renderStudents() {
       manage.setAttribute('aria-label', `Gerenciar plano e acesso de ${student.name}`)
       manage.textContent = '⚙'
       row.querySelector('.row-actions').prepend(manage)
+      // Ver a Área do Aluno como ele vê (só leitura), numa aba nova.
+      if (student.accountId) {
+        const view = document.createElement('button')
+        view.className = 'icon-button'
+        view.type = 'button'
+        view.title = 'Ver como o aluno (só leitura)'
+        view.setAttribute('aria-label', `Ver a área de ${student.name} como o aluno`)
+        view.textContent = '👁'
+        view.addEventListener('click', () => void viewAsStudent(student))
+        row.querySelector('.row-actions').prepend(view)
+      }
       if (!hasAccess(student)) row.querySelector('.row-actions').prepend(releaseButton(student))
       return row
     }),
@@ -742,6 +753,21 @@ function renderExercises() {
         )
         folder.append(summary, body)
         return folder
+  }
+}
+
+// "Ver como o aluno": abre a Área do Aluno dele numa aba nova, só leitura.
+async function viewAsStudent(student) {
+  // A aba abre já no clique (senão o navegador bloqueia como pop-up).
+  const tab = window.open('', '_blank')
+  try {
+    const result = await accountRequest(`/students/${student.id}/view-as`, { method: 'POST', body: '{}' })
+    const url = `${location.origin}${result.slug ? `/p/${result.slug}` : '/'}#ver-aluno?token=${encodeURIComponent(result.token)}&nome=${encodeURIComponent(result.name || student.name)}`
+    if (tab) tab.location.href = url
+    else location.href = url
+  } catch (error) {
+    tab?.close()
+    showToast(error.message)
   }
 }
 

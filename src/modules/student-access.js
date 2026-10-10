@@ -41,6 +41,57 @@ const signatureOf = (data) =>
 let reloadStudentPanel = async () => {};
 
 const TOKEN_KEY = "farisa-student-token";
+// "Ver como o aluno" (aberto pelo personal ou pelo suporte numa aba nova):
+// sessão de aluno só leitura, guardada só nesta aba.
+const VIEW_KEY = "farisa-student-view";
+try {
+  if (location.hash.startsWith("#ver-aluno?")) {
+    const params = new URLSearchParams(location.hash.split("?")[1] || "");
+    const viewToken = params.get("token");
+    if (viewToken) {
+      sessionStorage.setItem("farisa-student-token", viewToken);
+      sessionStorage.setItem(VIEW_KEY, params.get("nome") || "aluno");
+    }
+    history.replaceState(null, "", `${location.pathname}${location.search}#painel-aluno`);
+  }
+} catch {
+  /* sem armazenamento */
+}
+const viewingAs = () => {
+  try {
+    return sessionStorage.getItem(VIEW_KEY) || "";
+  } catch {
+    return "";
+  }
+};
+function paintViewBanner() {
+  const name = viewingAs();
+  let bar = document.querySelector("[data-student-view-banner]");
+  if (!name) return bar?.remove();
+  if (bar) return;
+  bar = document.createElement("div");
+  bar.className = "student-view-banner";
+  bar.dataset.studentViewBanner = "";
+  const text = document.createElement("span");
+  text.textContent = `👁 Você está vendo como ${name}. Só visualização: nada é salvo.`;
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "Fechar";
+  close.addEventListener("click", () => {
+    try {
+      sessionStorage.removeItem("farisa-student-token");
+      sessionStorage.removeItem(VIEW_KEY);
+    } catch {
+      /* ignora */
+    }
+    window.close();
+    location.hash = "#entrar-aluno";
+    location.reload();
+  });
+  bar.append(text, close);
+  document.body.prepend(bar);
+}
+
 // "Manter conectado": o token fica guardado neste aparelho (30 dias) e volta
 // para a sessão ao abrir o app de novo.
 const REMEMBER_KEY = "farisa-student-remember";
@@ -1123,6 +1174,7 @@ export function initStudentAccess() {
   }
   async function loadPanel() {
     applyPlanFromHash();
+    paintViewBanner();
     const current = ++generation;
     if (location.hash.split("?")[0] !== "#painel-aluno") return;
     const status = document.querySelector("[data-student-panel-status]"),

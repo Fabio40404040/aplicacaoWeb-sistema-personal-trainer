@@ -1708,3 +1708,31 @@
   accent-color: var(--site-blue, #3d8bfd);
   flex: none;
 }
+
+/* "Ver como o aluno": faixa fixa no topo */
+.student-view-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  padding: 10px 16px;
+  background: #f59e0b;
+  color: #1f1300;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+.student-view-banner button {
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #1f1300;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
