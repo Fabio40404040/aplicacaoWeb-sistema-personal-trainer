@@ -173,3 +173,28 @@
   object-fit: contain;
   background: #0f172a;
 }
+
+/* Quem enviou a foto e baixar */
+.assessment-photo-frame {
+  position: relative;
+}
+.assessment-photo-origin {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #fff;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+}
+.assessment-photo-origin.is-student {
+  background: rgba(37, 99, 235, 0.92);
+}
+.assessment-photo-download {
+  color: var(--blue-600, #2563eb);
+  font-size: 0.82rem;
+  font-weight: 700;
+}

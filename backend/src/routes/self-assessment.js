@@ -59,9 +59,10 @@ export async function pendingSelfAssessment(db, studentId) {
   if (!row) return null;
   const photos = (
     await db
-      .query('SELECT pose, created_at AS "createdAt" FROM assessment_photos WHERE assessment_id=$1', [row.id])
+      .query('SELECT pose, created_at AS "createdAt", uploaded_by AS "by" FROM assessment_photos WHERE assessment_id=$1', [row.id])
+      .catch(() => db.query('SELECT pose, created_at AS "createdAt" FROM assessment_photos WHERE assessment_id=$1', [row.id]))
       .catch(() => ({ rows: [] }))
-  ).rows.map((item) => ({ pose: item.pose, v: stamp(item.createdAt) }));
+  ).rows.map((item) => ({ pose: item.pose, v: stamp(item.createdAt), by: item.by || "student" }));
   return { ...row, photos };
 }
 
@@ -132,7 +133,10 @@ export async function saveSelfPhoto(db, accountId, assessmentId, pose, body) {
      ON CONFLICT (assessment_id, pose) DO UPDATE SET image=excluded.image, created_at=excluded.created_at`,
     [assessmentId, owned.trainerId, pose, image, now],
   );
-  return { data: { pose, v: stamp(now) } };
+  await db
+    .query("UPDATE assessment_photos SET uploaded_by='student' WHERE assessment_id=$1 AND pose=$2", [assessmentId, pose])
+    .catch(() => {});
+  return { data: { pose, v: stamp(now), by: "student" } };
 }
 
 export async function deleteSelfPhoto(db, accountId, assessmentId, pose) {

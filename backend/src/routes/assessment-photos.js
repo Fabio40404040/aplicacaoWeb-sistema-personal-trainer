@@ -65,10 +65,30 @@ const MAX_CHARS = 700_000;
 
 const stamp = (value) => String(value || "").replace(/\D/gu, "").slice(0, 17);
 
+// Quem enviou (053). Sem a coluna: foto de autoavaliação = aluno.
+async function byColumn(db) {
+  try {
+    await db.query("SELECT uploaded_by FROM assessment_photos LIMIT 1");
+    try {
+      await db.query("SELECT source FROM assessments LIMIT 1");
+      return `, COALESCE(p.uploaded_by, CASE WHEN a.source='student' THEN 'student' ELSE 'trainer' END) AS "by"`;
+    } catch {
+      return ', COALESCE(p.uploaded_by, \'trainer\') AS "by"';
+    }
+  } catch {
+    try {
+      await db.query("SELECT source FROM assessments LIMIT 1");
+      return `, CASE WHEN a.source='student' THEN 'student' ELSE 'trainer' END AS "by"`;
+    } catch {
+      return "";
+    }
+  }
+}
+
 function group(rows) {
   const index = {};
   rows.forEach((row) => {
-    (index[row.assessmentId] ||= []).push({ pose: row.pose, v: stamp(row.createdAt) });
+    (index[row.assessmentId] ||= []).push({ pose: row.pose, v: stamp(row.createdAt), by: row.by || "trainer" });
   });
   return index;
 }
@@ -81,7 +101,8 @@ export async function trainerPhotoIndex(db, trainerId) {
       index: group(
         (
           await db.query(
-            `SELECT assessment_id AS "assessmentId", pose, created_at AS "createdAt" FROM assessment_photos WHERE trainer_id=$1`,
+            `SELECT p.assessment_id AS "assessmentId", p.pose, p.created_at AS "createdAt"${await byColumn(db)}
+             FROM assessment_photos p JOIN assessments a ON a.id=p.assessment_id WHERE p.trainer_id=$1`,
             [trainerId],
           )
         ).rows,
@@ -98,7 +119,7 @@ export async function studentPhotoIndex(db, studentId) {
     return group(
       (
         await db.query(
-          `SELECT p.assessment_id AS "assessmentId", p.pose, p.created_at AS "createdAt"
+          `SELECT p.assessment_id AS "assessmentId", p.pose, p.created_at AS "createdAt"${await byColumn(db)}
            FROM assessment_photos p JOIN assessments a ON a.id=p.assessment_id
            WHERE a.student_id=$1 AND a.published_at IS NOT NULL`,
           [studentId],
@@ -126,10 +147,13 @@ export async function savePhoto(db, trainerId, assessmentId, pose, body) {
        ON CONFLICT (assessment_id, pose) DO UPDATE SET image=excluded.image, created_at=excluded.created_at`,
       [assessmentId, trainerId, pose, image, now],
     );
+    await db
+      .query("UPDATE assessment_photos SET uploaded_by='trainer' WHERE assessment_id=$1 AND pose=$2", [assessmentId, pose])
+      .catch(() => {});
   } catch {
     return { error: "As fotos de evolução ainda não estão disponíveis.", status: 503 };
   }
-  return { data: { pose, v: stamp(now) } };
+  return { data: { pose, v: stamp(now), by: "trainer" } };
 }
 
 export async function deletePhoto(db, trainerId, assessmentId, pose) {

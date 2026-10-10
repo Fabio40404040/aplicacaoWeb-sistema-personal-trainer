@@ -37,6 +37,7 @@ export function openAssessmentPhotos(assessment) {
     })
   }
   const photos = new Map((assessment.photos || []).map((item) => [item.pose, item.v]))
+  const byPose = new Map((assessment.photos || []).map((item) => [item.pose, item.by || 'trainer']))
   let changed = false
   const head = el('header')
   const title = el('div')
@@ -64,7 +65,10 @@ export function openAssessmentPhotos(assessment) {
     pick.type = 'button'
     const remove = el('button', 'assessment-photo-remove', 'Remover')
     remove.type = 'button'
+    const download = el('a', 'assessment-photo-download', '⬇ Baixar')
+    download.hidden = true
     const paint = async () => {
+      download.hidden = true
       frame.replaceChildren()
       const has = photos.has(pose)
       pick.textContent = has ? 'Trocar foto' : 'Enviar foto'
@@ -84,6 +88,12 @@ export function openAssessmentPhotos(assessment) {
       image.src = url
       image.alt = `Foto de ${label.toLowerCase()} de ${assessment.student}`
       frame.append(image)
+      // Quem enviou e baixar a foto.
+      const by = byPose.get(pose)
+      frame.append(el('em', `assessment-photo-origin${by === 'student' ? ' is-student' : ''}`, by === 'student' ? '📤 Aluno enviou' : '📷 Você enviou'))
+      download.href = url
+      download.download = `${String(assessment.student || 'aluno').replace(/\s+/gu, '-').toLowerCase()}-${pose}-${String(assessment.date || '').replace(/\//gu, '-')}.jpg`
+      download.hidden = false
     }
     pick.addEventListener('click', () => input.click())
     input.addEventListener('change', async () => {
@@ -95,6 +105,7 @@ export function openAssessmentPhotos(assessment) {
       try {
         const saved = await saveAssessmentPhoto(assessment.id, pose, await shrinkPhoto(file))
         photos.set(pose, saved.v)
+        byPose.set(pose, 'trainer')
         changed = true
         status.textContent = 'Foto salva.'
         await paint()
@@ -119,7 +130,7 @@ export function openAssessmentPhotos(assessment) {
       }
     })
     const actions = el('div', 'assessment-photo-actions')
-    actions.append(pick, remove)
+    actions.append(pick, remove, download)
     const title = el('div', 'assessment-photo-title')
     title.append(poseModel(model, label), el('strong', '', label))
     title.title = tip

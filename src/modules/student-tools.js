@@ -1206,11 +1206,12 @@ export function poseGuideButton(poses) {
 function photoCompare(assessments, loadPhoto, poseList) {
   const withPhotos = assessments.filter((item) => item.photos?.length);
   if (!withPhotos.length || !loadPhoto) return null;
-  const latest = withPhotos[0];
-  const first = withPhotos.at(-1);
+  // Por pose: "Antes" = a primeira avaliação com essa foto e "Depois" = a
+  // mais recente. Assim nenhuma foto some (do personal ou do aluno).
+  const withPose = (pose) => withPhotos.filter((item) => item.photos.some((photo) => photo.pose === pose));
   const poses = posesFor(poseList)
     .map((item) => [item.pose, item.label])
-    .filter(([pose]) => [latest, first].some((item) => item.photos.some((photo) => photo.pose === pose)));
+    .filter(([pose]) => withPose(pose).length);
   if (!poses.length) return null;
   const box = el("div", "student-photos");
   box.append(el("span", "student-tool-subtitle", "Fotos de evolução"));
@@ -1221,32 +1222,57 @@ function photoCompare(assessments, loadPhoto, poseList) {
     const wrap = el("figure", "student-photo");
     const frame = el("div", "student-photo-frame");
     const photo = item.photos.find((entry) => entry.pose === pose);
+    const label = el("figcaption");
+    label.append(el("strong", "", caption), el("span", "", dateOf(item)));
     if (!photo) frame.append(el("small", "", "Sem foto nesta posição"));
     else {
-      frame.append(el("small", "", "Carregando…"));
+      // Quem enviou a foto: o próprio aluno (autoavaliação) ou o personal.
+      const mine = photo.by === "student";
+      frame.append(el("em", `student-photo-origin${mine ? " is-mine" : ""}`, mine ? "📤 Você enviou" : "📷 Personal"));
+      const loading = el("small", "", "Carregando…");
+      frame.append(loading);
       loadPhoto(item.id, pose, photo.v)
         .then((url) => {
-          frame.replaceChildren();
+          loading.remove();
           if (!url) return frame.append(el("small", "", "Não foi possível carregar."));
           const image = el("img");
           image.src = url;
           image.alt = `${caption} · ${dateOf(item)}`;
           image.loading = "lazy";
-          frame.append(image);
+          frame.prepend(image);
+          // Baixar a foto (as do personal e as que o aluno enviou).
+          const download = el("a", "student-photo-download", "⬇ Baixar");
+          download.href = url;
+          download.download = `foto-${pose}-${dateOf(item).replace(/\//gu, "-")}.jpg`;
+          label.append(download);
         })
         .catch(() => frame.replaceChildren(el("small", "", "Não foi possível carregar.")));
     }
-    const label = el("figcaption");
-    label.append(el("strong", "", caption), el("span", "", dateOf(item)));
     wrap.append(frame, label);
     return wrap;
   };
+  const all = el("details", "student-photos-all");
   const show = (pose) => {
     [...tabs.children].forEach((tab) => tab.classList.toggle("is-active", tab.dataset.pose === pose));
     stage.replaceChildren();
+    const list = withPose(pose);
+    const latest = list[0];
+    const first = list.at(-1);
     stage.classList.toggle("is-single", first === latest);
     if (first === latest) stage.append(figure(latest, pose, "Avaliação"));
     else stage.append(figure(first, pose, "Antes"), figure(latest, pose, "Depois"));
+    // Todas as fotos desta pose, por data (abre só quando tocar).
+    all.hidden = list.length < 3;
+    all.open = false;
+    all.replaceChildren(el("summary", "", `Ver todas as fotos desta pose (${list.length})`));
+    all.ontoggle = () => {
+      if (!all.open || all.dataset.pose === pose) return;
+      all.dataset.pose = pose;
+      const grid = el("div", "student-photos-grid");
+      list.forEach((item) => grid.append(figure(item, pose, item.protocol || "Avaliação")));
+      all.append(grid);
+    };
+    delete all.dataset.pose;
   };
   poses.forEach(([pose, label]) => {
     const tab = el("button", "", label);
@@ -1255,7 +1281,7 @@ function photoCompare(assessments, loadPhoto, poseList) {
     tab.addEventListener("click", () => show(pose));
     tabs.append(tab);
   });
-  box.append(tabs, stage, el("small", "student-tool-hint", "🔒 Só você e o seu personal veem estas fotos."));
+  box.append(tabs, stage, all, el("small", "student-tool-hint", "🔒 Só você e o seu personal veem estas fotos."));
   show(poses[0][0]);
   return box;
 }

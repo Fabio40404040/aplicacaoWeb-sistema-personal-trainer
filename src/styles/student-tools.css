@@ -1329,3 +1329,57 @@
   text-align: center;
   line-height: 1.25;
 }
+
+/* Fotos: quem enviou (selo no canto) e baixar */
+.student-photo-frame {
+  position: relative;
+}
+.student-photo-origin {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #dce9f8;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+}
+.student-photo-origin.is-mine {
+  background: rgba(22, 101, 52, 0.9);
+  color: #dcfce7;
+}
+.student-photo-download {
+  margin-left: auto;
+  color: var(--site-blue-light, #77b5ff);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.student-photo figcaption {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+/* Todas as fotos de uma pose */
+.student-photos-all summary {
+  color: var(--site-blue-light, #77b5ff);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.student-photos,
+.student-photos-all {
+  min-width: 0;
+  max-width: 100%;
+}
+.student-photos-grid .student-photo {
+  min-width: 0;
+}
