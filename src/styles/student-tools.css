@@ -1052,3 +1052,97 @@
   font-size: 0.84rem;
   line-height: 1.45;
 }
+
+/* Fotos: muitas poses → as abas quebram a linha */
+.student-photos-tabs {
+  flex-wrap: wrap;
+}
+.student-pose-button {
+  justify-self: start;
+  align-self: flex-start;
+}
+/* Guia das poses (modelos desenhados) */
+.student-pose-guide {
+  width: min(760px, 94vw);
+  max-height: 90vh;
+  padding: 18px 20px 20px;
+  border: 1px solid #3b4f6b;
+  border-radius: 18px;
+  background: #16202f;
+  color: #dce9f8;
+}
+.student-pose-guide::backdrop {
+  background: rgba(5, 10, 20, 0.7);
+}
+.student-pose-guide header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.student-pose-guide h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.student-pose-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #3b4f6b;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.student-pose-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+.student-pose-card {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #2c3d55;
+  border-radius: 14px;
+  background: #1b2a40;
+}
+.student-pose-card .pose-model {
+  width: 54px;
+  height: 108px;
+  color: var(--site-blue, #3d8bfd);
+  --pose-detail: #1b2a40;
+}
+.student-pose-card .pose-model svg {
+  width: 100%;
+  height: 100%;
+}
+.student-pose-card figcaption {
+  display: grid;
+  gap: 4px;
+}
+.student-pose-card strong {
+  color: #fff;
+  font-size: 0.92rem;
+}
+.student-pose-card span {
+  color: #9fb3cc;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.student-pose-subtitle {
+  display: block;
+  margin: 16px 0 6px;
+  color: #fff;
+}
+.student-pose-tips {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  color: #c9d6e6;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}

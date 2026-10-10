@@ -2,7 +2,7 @@ import { isDemoEmail } from "../lib/demo.js";
 import { loadReady, loadText } from "./resources.js";
 import { recordLoad, studentTools } from "./student-tools.js";
 import { trainerLocked } from "./plan-access.js";
-import { studentPhotoIndex } from "./assessment-photos.js";
+import { photoPoses, studentPhotoIndex } from "./assessment-photos.js";
 import { linkedTrainers } from "./student-links.js";
 import { trainerPlans, trainerReferrals } from "./site.js";
 import { studentProfileFields } from "./profile.js";
@@ -295,6 +295,8 @@ export async function studentPortal(db, accountId, version, studentId = null) {
     response.assessments.forEach((item) => {
       item.photos = photos[item.id] || [];
     });
+    // Nomes das poses que o personal usa.
+    response.photoPoses = await photoPoses(db, account.trainerId || account.accountTrainerId);
   }
   // Personal no Grátis básico: sem check-in, agendamento e relatório em PDF.
   response.trainerLocked = await trainerLocked(db, account.trainerId || account.accountTrainerId);

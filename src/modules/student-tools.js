@@ -3,6 +3,7 @@
 // resultado da avaliação física em formato visual.
 import "../styles/student-tools.css";
 import { FAT_BANDS, FAT_SCALE, bmiNote, fatClass } from "./body-composition.js";
+import { PHOTO_TIPS, poseModel, posesFor } from "./photo-poses.js";
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -918,19 +919,54 @@ const deltaText = (current, previous, unit) => {
   return `${diff > 0 ? "▲ +" : "▼ −"}${numberBr(Math.abs(diff))} ${unit} vs. anterior`;
 };
 
-const POSE_LABELS = [
-  ["front", "Frente"],
-  ["side", "Lado"],
-  ["back", "Costas"],
-];
+// Guia das poses: modelo desenhado + explicação de cada uma, para o aluno
+// tirar as fotos sozinho (à distância) do mesmo jeito que o personal pede.
+let poseGuide = null;
+function openPoseGuide(poses) {
+  if (!poseGuide) {
+    poseGuide = el("dialog", "student-pose-guide");
+    document.body.append(poseGuide);
+    poseGuide.addEventListener("click", (event) => {
+      if (event.target === poseGuide) poseGuide.close();
+    });
+  }
+  const head = el("header");
+  head.append(el("h2", "", "📸 Como tirar as fotos de evolução"));
+  const close = el("button", "student-pose-close", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Fechar");
+  close.addEventListener("click", () => poseGuide.close());
+  head.append(close);
+  const grid = el("div", "student-pose-grid");
+  poses.forEach((item) => {
+    const card = el("figure", "student-pose-card");
+    const caption = el("figcaption");
+    caption.append(el("strong", "", item.label), el("span", "", item.tip));
+    card.append(poseModel(item.model, item.label), caption);
+    grid.append(card);
+  });
+  const tips = el("ul", "student-pose-tips");
+  PHOTO_TIPS.forEach((tip) => tips.append(el("li", "", tip)));
+  poseGuide.replaceChildren(head, grid, el("strong", "student-pose-subtitle", "Para comparar bem"), tips, el("small", "student-tool-hint", "Envie as fotos para o seu personal pelo canal que vocês combinaram. 🔒 Só você e ele veem as fotos aqui."));
+  poseGuide.showModal();
+}
+export function poseGuideButton(poses) {
+  const button = el("button", "button button--secondary student-pose-button", "📸 Como tirar as fotos (poses)");
+  button.type = "button";
+  button.addEventListener("click", () => openPoseGuide(posesFor(poses)));
+  return button;
+}
 
 // Antes e depois: a primeira avaliação com foto ao lado da mais recente.
-function photoCompare(assessments, loadPhoto) {
+function photoCompare(assessments, loadPhoto, poseList) {
   const withPhotos = assessments.filter((item) => item.photos?.length);
   if (!withPhotos.length || !loadPhoto) return null;
   const latest = withPhotos[0];
   const first = withPhotos.at(-1);
-  const poses = POSE_LABELS.filter(([pose]) => [latest, first].some((item) => item.photos.some((photo) => photo.pose === pose)));
+  const poses = posesFor(poseList)
+    .map((item) => [item.pose, item.label])
+    .filter(([pose]) => [latest, first].some((item) => item.photos.some((photo) => photo.pose === pose)));
+  if (!poses.length) return null;
   const box = el("div", "student-photos");
   box.append(el("span", "student-tool-subtitle", "Fotos de evolução"));
   const tabs = el("div", "student-photos-tabs");
@@ -979,11 +1015,11 @@ function photoCompare(assessments, loadPhoto) {
   return box;
 }
 
-export function assessmentCard(assessments, onDownload, loadPhoto) {
+export function assessmentCard(assessments, onDownload, loadPhoto, poseList = null) {
   const card = el("article", "student-tool student-assessment student-card--wide");
   card.append(el("h2", "", "Avaliação física"));
   if (!assessments.length) {
-    card.append(el("p", "student-tool-empty", "Nenhuma avaliação foi publicada ainda. Quando o personal publicar, o resultado aparece aqui."));
+    card.append(el("p", "student-tool-empty", "Nenhuma avaliação foi publicada ainda. Quando o personal publicar, o resultado aparece aqui."), poseGuideButton(poseList));
     return card;
   }
   const [latest, previous] = assessments;
@@ -1037,8 +1073,9 @@ export function assessmentCard(assessments, onDownload, loadPhoto) {
     notes.append(el("span", "", "💬 Observações do personal"), el("p", "", latest.notes));
     card.append(notes);
   }
-  const compare = photoCompare(assessments, loadPhoto);
+  const compare = photoCompare(assessments, loadPhoto, poseList);
   if (compare) card.append(compare);
+  card.append(poseGuideButton(poseList));
   if (assessments.length > 1) {
     const older = el("details", "student-assessment-older");
     older.append(el("summary", "", `Avaliações anteriores (${assessments.length - 1})`));

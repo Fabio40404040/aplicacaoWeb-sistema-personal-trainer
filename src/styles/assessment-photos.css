@@ -72,3 +72,98 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Modelo desenhado de cada pose (silhueta) */
+.pose-model {
+  display: inline-grid;
+  place-items: center;
+  color: var(--blue-500, #3b82f6);
+  --pose-detail: #f4f7fc;
+}
+.pose-model svg {
+  width: 100%;
+  height: 100%;
+}
+.pose-model.is-free {
+  opacity: 0.55;
+}
+.assessment-photo-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+.assessment-photo-title .pose-model {
+  flex: none;
+  width: 20px;
+  height: 40px;
+}
+.assessment-photo-title strong {
+  color: var(--ink-900);
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+.assessment-photo-frame .pose-model {
+  width: 46%;
+  height: 72%;
+  opacity: 0.35;
+}
+.assessment-photo-tip {
+  color: var(--ink-500);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+.assessment-photo-tips {
+  margin: 4px 0 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 0.86rem;
+}
+.assessment-photo-tips summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+.assessment-photo-tips ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--ink-700);
+}
+.assessment-poses-toggle {
+  margin-bottom: 10px;
+}
+.assessment-poses-edit {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+.assessment-poses-rows {
+  display: grid;
+  gap: 8px;
+}
+.assessment-poses-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.assessment-poses-row .pose-model {
+  width: 22px;
+  height: 40px;
+}
+.assessment-poses-row input {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+}
+.assessment-poses-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

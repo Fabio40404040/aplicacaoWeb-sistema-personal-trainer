@@ -1,5 +1,5 @@
 import { folderOrder } from "./muscle-groups.js";
-import { trainerPhotoIndex } from "./assessment-photos.js";
+import { photoPoses, trainerPhotoIndex } from "./assessment-photos.js";
 import { trainerToolsData } from "./student-tools.js";
 import { trainerPrices } from './site.js'
 async function withTrainerPrices(db, trainerId, plans) {
@@ -245,6 +245,7 @@ export async function dashboard(db, trainerId) {
     item.photosReady = photos.ready;
   });
   return {
+    photoPoses: await photoPoses(db, trainerId),
     students: students.rows,
     exercises: exercises.rows,
     workouts: workouts.rows,

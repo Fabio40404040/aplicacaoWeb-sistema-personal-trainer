@@ -1,7 +1,65 @@
 // Fotos de evolução das avaliações (migração 042). São dados sensíveis: só o
 // personal dono da avaliação e o próprio aluno (com a avaliação publicada)
 // conseguem ver. Apagar a avaliação, o aluno ou a conta apaga as fotos.
-const POSES = ["front", "side", "back"];
+// Poses padrão (as 3 primeiras desde a migração 042) e as criadas pelo
+// personal (c_xxxx, migração 051).
+export const DEFAULT_POSES = [
+  ["front", "Frente"],
+  ["side", "Lado"],
+  ["back", "Costas"],
+  ["front_biceps", "Duplo bíceps de frente"],
+  ["back_biceps", "Duplo bíceps de costas"],
+  ["side_arms", "Lado com braços estendidos"],
+];
+const CUSTOM_POSE = /^c_[a-z0-9]{4,16}$/u;
+const validPose = (pose) => DEFAULT_POSES.some(([key]) => key === pose) || CUSTOM_POSE.test(String(pose || ""));
+
+// Lista de poses do personal (nomes dele). Vazia = as padrão.
+export async function photoPoses(db, trainerId) {
+  try {
+    const rows = (
+      await db.query(
+        "SELECT pose, label FROM trainer_photo_poses WHERE trainer_id=$1 ORDER BY position, pose",
+        [trainerId],
+      )
+    ).rows.filter((row) => validPose(row.pose));
+    if (rows.length) return rows;
+  } catch {
+    /* sem a migração 051 */
+  }
+  return DEFAULT_POSES.map(([pose, label]) => ({ pose, label }));
+}
+
+// Personal troca nomes, cria e tira poses criadas por ele.
+export async function savePhotoPoses(db, trainerId, body) {
+  const list = (Array.isArray(body?.poses) ? body.poses : []).slice(0, 40);
+  const seen = new Set();
+  const poses = [];
+  for (const item of list) {
+    const pose = String(item?.pose || "");
+    const label = String(item?.label || "").replace(/[\u0000-\u001f<>]/gu, "").trim().slice(0, 40);
+    if (!validPose(pose) || seen.has(pose)) continue;
+    if (!label) return { error: "Toda pose precisa de um nome.", status: 400 };
+    seen.add(pose);
+    poses.push({ pose, label });
+  }
+  // As padrão nunca somem (só trocam de nome).
+  DEFAULT_POSES.forEach(([pose, label]) => {
+    if (!seen.has(pose)) poses.push({ pose, label });
+  });
+  try {
+    await db.batch([
+      { sql: "DELETE FROM trainer_photo_poses WHERE trainer_id=$1", values: [trainerId] },
+      ...poses.map((item, index) => ({
+        sql: "INSERT INTO trainer_photo_poses (trainer_id, pose, label, position) VALUES ($1,$2,$3,$4)",
+        values: [trainerId, item.pose, item.label, index],
+      })),
+    ]);
+  } catch {
+    return { error: "Falta aplicar a migração 051 para salvar as poses.", status: 503 };
+  }
+  return { data: { poses } };
+}
 const IMAGE = /^data:(image\/(?:jpeg|webp));base64,([A-Za-z0-9+/=]+)$/u;
 const MAX_CHARS = 700_000;
 
@@ -53,7 +111,7 @@ export async function studentPhotoIndex(db, studentId) {
 }
 
 export async function savePhoto(db, trainerId, assessmentId, pose, body) {
-  if (!POSES.includes(pose)) return { error: "Posição inválida.", status: 400 };
+  if (!validPose(pose)) return { error: "Posição inválida.", status: 400 };
   const image = String(body?.image || "");
   if (!IMAGE.test(image) || image.length > MAX_CHARS)
     return { error: "Não foi possível usar esta foto. Tente outra imagem.", status: 400 };

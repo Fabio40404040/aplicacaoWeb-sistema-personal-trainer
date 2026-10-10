@@ -81,7 +81,7 @@ import {
   studentSetLoad,
 } from "./routes/student-portal.js";
 import { setTrainingDay, setWater } from "./routes/student-tools.js";
-import { deletePhoto, savePhoto, studentPhoto, trainerPhoto } from "./routes/assessment-photos.js";
+import { deletePhoto, photoPoses, savePhoto, savePhotoPoses, studentPhoto, trainerPhoto } from "./routes/assessment-photos.js";
 import { lockedForAccount, lockedMessage, STUDENT_LOCKED, trainerLocked } from "./routes/plan-access.js";
 import {
   cardPaymentConfig,
@@ -580,6 +580,10 @@ async function handleRoutes(request, env) {
     // Assinatura da plataforma (planos dos personais).
     if (request.method === "GET" && route === "billing")
       return billingInfo(env, db, session.sub);
+    // Poses das fotos de evolução (nomes do personal e poses criadas por ele).
+    if (route === "photo-poses" && request.method === "GET") return { data: await photoPoses(db, session.sub) };
+    if (route === "photo-poses" && request.method === "PUT")
+      return savePhotoPoses(db, session.sub, await readJson(request));
     // Fotos de evolução de uma avaliação: /assessments/<id>/photos/<pose>
     if (segments[0] === "assessments" && segments[1] && segments[2] === "photos" && segments[3]) {
       if (request.method === "GET") return trainerPhoto(db, session.sub, segments[1], segments[3]);

@@ -900,7 +900,7 @@ function renderPortal(container, data) {
   }
   if (data.access.features.includes("assessments"))
     container.append(
-      assessmentCard(data.assessments, data.trainerLocked ? null : downloadReport, loadStudentPhoto),
+      assessmentCard(data.assessments, data.trainerLocked ? null : downloadReport, loadStudentPhoto, data.photoPoses),
     );
   if (data.access.features.includes("progress"))
     container.append(progressCard(data.assessments));
