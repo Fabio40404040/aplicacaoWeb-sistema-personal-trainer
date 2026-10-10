@@ -191,7 +191,7 @@ export async function setWater(db, accountId, body) {
   return { data: result };
 }
 
-// Para o painel do personal: recados recentes e evolução das cargas.
+// Para o painel do personal: treinos marcados (com ou sem recado) e evolução das cargas.
 export async function trainerToolsData(db, trainerId) {
   if (!(await toolsReady(db))) return { trainingNotes: [], loadHistory: {} };
   try {
@@ -199,7 +199,7 @@ export async function trainerToolsData(db, trainerId) {
       await db.query(
         `SELECT t.student_id AS "studentId", s.name AS student, t.day, t.note, t.created_at AS "createdAt"
          FROM training_days t JOIN students s ON s.id=t.student_id
-         WHERE t.trainer_id=$1 AND t.note IS NOT NULL AND t.created_at >= $2 ORDER BY t.created_at DESC LIMIT 100`,
+         WHERE t.trainer_id=$1 AND t.created_at >= $2 ORDER BY t.created_at DESC LIMIT 200`,
         [trainerId, new Date(Date.now() - 14 * 86_400_000).toISOString()],
       )
     ).rows;

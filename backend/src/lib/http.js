@@ -18,7 +18,7 @@ export function corsHeaders(request, env) {
   const allowed = env.ALLOWED_ORIGIN === '*' || origin === env.ALLOWED_ORIGIN
   return {
     'Access-Control-Allow-Origin': allowed ? origin || env.ALLOWED_ORIGIN : env.ALLOWED_ORIGIN,
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Farisa-Site',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',

@@ -41,16 +41,23 @@ export async function linkedTrainers(db, accountId) {
   }
 }
 
-// Deixa ativo o cadastro do aluno com este personal (se existir).
+// Deixa ativo o cadastro do aluno com este personal (se existir). Devolve o
+// id desse cadastro (ou false). Só grava quando muda.
 export async function activateTrainer(db, accountId, trainerId) {
   if (!accountId || !trainerId) return false
   const row = (
-    await db.query('SELECT id FROM students WHERE account_id=$1 AND trainer_id=$2 LIMIT 1', [accountId, trainerId])
+    await db.query(
+      `SELECT s.id, (a.student_id = s.id) AS active FROM students s JOIN student_accounts a ON a.id=s.account_id
+       WHERE s.account_id=$1 AND s.trainer_id=$2 LIMIT 1`,
+      [accountId, trainerId],
+    )
   ).rows[0]
   if (!row) return false
-  await db.query('UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1', [accountId, row.id, trainerId])
-  await db.query('UPDATE students SET account_seen=1 WHERE id=$1', [row.id]).catch(() => {})
-  return true
+  if (!Number(row.active)) {
+    await db.query('UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1', [accountId, row.id, trainerId])
+    await db.query('UPDATE students SET account_seen=1 WHERE id=$1', [row.id]).catch(() => {})
+  }
+  return row.id
 }
 
 // Aluno escolhe outro personal na área dele.

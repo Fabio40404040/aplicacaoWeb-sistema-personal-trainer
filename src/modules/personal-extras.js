@@ -202,21 +202,48 @@ function trainerNotifications() {
     })
   })
 
-  // Recados que os alunos deixaram ao concluir o treino (últimos 7 dias).
-  ;(data.trainingNotes || [])
-    .filter((item) => item.note && now - new Date(item.createdAt) < 7 * 86_400_000)
+  // Treinos que os alunos marcaram (últimos 7 dias): com recado, um aviso
+  // por recado; sem recado, um aviso por aluno com os dias marcados.
+  const recent = (data.trainingNotes || []).filter((item) => now - new Date(item.createdAt) < 7 * 86_400_000)
+  const dayLabel = (value) => {
+    const [, month, day] = String(value || '').split('-')
+    return day ? `${day}/${month}` : ''
+  }
+  recent
+    .filter((item) => item.note)
     .slice(0, 10)
     .forEach((item) => {
-      const [, month, day] = String(item.day || '').split('-')
       items.push({
         id: `recado:${item.studentId}:${item.day}:${item.createdAt}`,
         tone: 'info',
         icon: '💬',
-        title: `${item.student || 'Aluno'} concluiu o treino${day ? ` de ${day}/${month}` : ''} e deixou um recado`,
+        title: `${item.student || 'Aluno'} concluiu o treino${dayLabel(item.day) ? ` de ${dayLabel(item.day)}` : ''} e deixou um recado`,
         detail: item.note,
         href: '#alunos',
       })
     })
+  const marks = new Map()
+  recent
+    .filter((item) => !item.note)
+    .forEach((item) => {
+      const entry = marks.get(item.studentId) || { student: item.student, days: [] }
+      entry.days.push(item.day)
+      marks.set(item.studentId, entry)
+    })
+  ;[...marks.entries()].slice(0, 10).forEach(([studentId, entry]) => {
+    const days = [...entry.days].sort()
+    items.push({
+      id: `treino:${studentId}:${days.join(',')}`,
+      tone: 'info',
+      icon: '✅',
+      title:
+        days.length === 1
+          ? `${entry.student || 'Aluno'} marcou o treino de ${dayLabel(days[0])} como feito`
+          : `${entry.student || 'Aluno'} marcou ${days.length} treinos como feitos`,
+      detail: days.length > 1 ? `Dias: ${days.map(dayLabel).join(', ')}` : '',
+      href: '#alunos',
+    })
+  })
 
   // Teste completo de 30 dias: avisa perto do fim e quando termina.
   const plan = window.farisaBilling?.state

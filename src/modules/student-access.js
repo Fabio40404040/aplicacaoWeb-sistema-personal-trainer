@@ -24,6 +24,7 @@ import {
 let studentTools = null;
 // Pagamento feito nesta tela: ao confirmar, mostra a janela "PAGO".
 const PAID_FLAG = "farisa-student-paid-pending";
+const PAID_SHOWN = "farisa-student-paid-shown";
 // Situação do plano na última atualização (pagamento, plano, vencimento e
 // mudança pendente). O "PAGO" só aparece quando ela muda depois de pagar —
 // assim a mudança de plano de quem já estava pago também funciona.
@@ -41,6 +42,12 @@ let reloadStudentPanel = async () => {};
 
 const TOKEN_KEY = "farisa-student-token";
 const API_URL = import.meta.env.VITE_API_URL || "";
+// Página do personal em que o aluno está: o servidor responde com o
+// cadastro deste personal, mesmo que outra aba esteja na página de outro.
+const siteHeader = () => {
+  const site = currentSiteSlug();
+  return site ? { "X-Farisa-Site": site } : {};
+};
 async function studentRequest(path, data) {
   const token = sessionStorage.getItem(TOKEN_KEY);
   let response;
@@ -50,6 +57,7 @@ async function studentRequest(path, data) {
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...siteHeader(),
       },
       ...(data ? { body: JSON.stringify(data) } : {}),
     });
@@ -76,7 +84,7 @@ async function loadStudentExerciseVideo(id) {
   const response = await fetch(
     `${API_URL}/api/student/exercise-videos/${id}/file`,
     {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...siteHeader() },
     },
   );
   if (!response.ok) {
@@ -92,7 +100,7 @@ function loadStudentPhoto(assessmentId, pose, version) {
   const key = `${assessmentId}:${pose}:${version}`;
   if (!studentPhotoUrls.has(key)) {
     const pending = fetch(`${API_URL}/api/student/assessment-photos/${assessmentId}/${pose}?v=${version}`, {
-      headers: { Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY)}` },
+      headers: { Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY)}`, ...siteHeader() },
     }).then(async (response) => (response.ok ? URL.createObjectURL(await response.blob()) : null));
     studentPhotoUrls.set(key, pending);
     pending.then((url) => !url && studentPhotoUrls.delete(key)).catch(() => studentPhotoUrls.delete(key));
@@ -121,7 +129,7 @@ async function fetchStudentGif(id, kind) {
   const response = await fetch(
     `${API_URL}/api/student/exercise-gifs/${id}/${kind}`,
     {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...siteHeader() },
     },
   );
   if (!response.ok) return null;
@@ -1011,6 +1019,7 @@ export function initStudentAccess() {
   let generation = 0;
   let hasLoadedOnce = false;
   let lastPaymentStatus = "";
+  let lastStudentId = "";
   let hasRendered = false;
   let lastSignature = "";
   // Pastas abertas/fechadas, pelo título ("Treino A — Peitoral").
@@ -1081,13 +1090,30 @@ export function initStudentAccess() {
       const paidNow = data.access.paymentStatus === "paid" && data.access.active;
       const waiting = sessionStorage.getItem(PAID_FLAG);
       const accessNow = signatureOf(data);
+      // Outro cadastro (outro personal) não conta como "acabou de pagar".
+      if (lastStudentId && lastStudentId !== data.studentId) lastPaymentStatus = "";
+      lastStudentId = data.studentId || "";
+      // O "PAGO" aparece uma vez só por pagamento, mesmo reabrindo o app.
+      const paidKey = `${data.studentId}|${accessNow}`;
+      let alreadyShown = false;
+      try {
+        alreadyShown = localStorage.getItem(PAID_SHOWN) === paidKey;
+      } catch {
+        alreadyShown = false;
+      }
       if (
         paidNow &&
         !data.pendingChange &&
+        !alreadyShown &&
         ((lastPaymentStatus && lastPaymentStatus !== "paid") ||
           (waiting && waiting !== accessNow))
       ) {
         sessionStorage.removeItem(PAID_FLAG);
+        try {
+          localStorage.setItem(PAID_SHOWN, paidKey);
+        } catch {
+          /* sem armazenamento */
+        }
         showStudentPaid(data.access);
       }
       lastPaymentStatus = data.access.paymentStatus || "";

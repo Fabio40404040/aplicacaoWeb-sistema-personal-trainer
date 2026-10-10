@@ -448,19 +448,25 @@ async function handleRoutes(request, env) {
       // Aluno com mais de um personal escolhe qual ver.
       if (request.method === "POST" && route === "student/switch-trainer")
         return switchTrainer(db, session.sub, await readJson(request));
+      // Cada pedido diz de qual página de personal veio (cabeçalho
+      // X-Farisa-Site; em student/me também ?site=). Assim, com o aluno aberto
+      // em duas páginas (ex.: celular num personal e computador no outro),
+      // cada uma vê e grava no personal certo, sem um trocar o do outro.
+      const site = String(
+        (route === "student/me" && url.searchParams.get("site")) || request.headers.get("X-Farisa-Site") || "",
+      ).toLowerCase();
+      let siteStudentId = null;
+      if (/^[a-z0-9-]{3,30}$/u.test(site)) {
+        const siteTrainer = await trainerIdForSlug(db, site).catch(() => null);
+        if (siteTrainer) siteStudentId = (await activateTrainer(db, session.sub, siteTrainer).catch(() => false)) || null;
+      }
       if (request.method === "GET" && route === "student/me") {
-        // Aberto na página de um dos personais dele: esse fica ativo.
-        const site = String(url.searchParams.get("site") || "").toLowerCase();
-        if (/^[a-z0-9-]{3,30}$/u.test(site)) {
-          const siteTrainer = await trainerIdForSlug(db, site).catch(() => null);
-          if (siteTrainer) await activateTrainer(db, session.sub, siteTrainer).catch(() => false);
-        }
         await reconcileStudentPayments(
           db,
           session.sub,
           env,
         );
-        const data = await studentPortal(db, session.sub, session.version);
+        const data = await studentPortal(db, session.sub, session.version, siteStudentId);
         return data
           ? { data }
           : { error: "Conta não encontrada.", status: 401 };

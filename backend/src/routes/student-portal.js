@@ -95,7 +95,7 @@ export async function studentSetLoad(db, accountId, workoutId, body) {
   return row ? { data: row } : { error: "Exercício não encontrado na sua ficha.", status: 404 };
 }
 
-export async function studentPortal(db, accountId, version) {
+export async function studentPortal(db, accountId, version, studentId = null) {
   const withGifs = await gifSchemaReady(db);
   let withVideoLink = true;
   try {
@@ -118,10 +118,10 @@ export async function studentPortal(db, accountId, version) {
         s.payment_status AS "paymentStatus", s.payment_method AS "paymentMethod",
         p.name AS "planName", p.price_cents AS "priceCents", p.features_json AS "featuresJson"
       FROM student_accounts a
-      LEFT JOIN students s ON s.id=a.student_id AND s.account_id=a.id
+      LEFT JOIN students s ON s.id=COALESCE($3, a.student_id) AND s.account_id=a.id
       LEFT JOIN plans p ON p.code=s.plan_code
       WHERE a.id=$1 AND a.auth_version=$2 LIMIT 1`,
-      [accountId, version || 0],
+      [accountId, version || 0, studentId],
     )
   ).rows[0];
   if (!account) return null;
