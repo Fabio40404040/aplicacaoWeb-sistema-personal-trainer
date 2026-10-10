@@ -5344,3 +5344,31 @@ body.has-support-banner .main-content {
   color: #166534 !important;
   font-weight: 700;
 }
+
+/* Nova avaliação: dados da última avaliação do aluno */
+.assessment-previous {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin: 4px 0 12px;
+  padding: 10px 14px;
+  border: 1px dashed var(--blue-200, #bfdbfe);
+  border-radius: 12px;
+  background: var(--blue-50, #eff6ff);
+  color: var(--ink-700, #334155);
+  font-size: 0.86rem;
+}
+.assessment-previous .button {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.84rem;
+}
+.field-previous {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-500, #64748b);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
