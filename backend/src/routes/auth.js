@@ -2,7 +2,7 @@ import { createSession, verifyPassword } from '../lib/session.js'
 import { readJson } from '../lib/http.js'
 
 export async function login(request, env, db) {
-  const { email, password } = await readJson(request)
+  const { email, password, remember } = await readJson(request)
   if (typeof email !== 'string' || typeof password !== 'string')
     return { error: 'Credenciais inválidas.', status: 400 }
   const result = await db.query(
@@ -28,9 +28,12 @@ export async function login(request, env, db) {
   } catch {
     /* coluna ainda não existe */
   }
+  // "Lembrar de mim": sessão de 30 dias neste aparelho (Sair encerra antes).
+  const keep = remember === true || remember === 'on' || remember === 'true'
   return {
     data: {
-      token: await createSession(trainer, env),
+      token: await createSession(trainer, env, 'coach', {}, keep ? 30 * 86_400 : 0),
+      remember: keep,
       user: { id: trainer.id, name: trainer.name, email: trainer.email },
     },
   }

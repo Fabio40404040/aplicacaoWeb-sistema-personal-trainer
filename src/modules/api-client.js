@@ -3,6 +3,33 @@ import { clearStoredData, getData, replaceData } from "./state.js";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const TOKEN_KEY = "farisa-coach-api-token";
+// "Lembrar de mim": o login fica guardado neste aparelho (30 dias) e volta
+// para a sessão ao abrir o painel de novo.
+const REMEMBER_KEY = "farisa-coach-remember";
+function forgetLogin() {
+  try {
+    localStorage.removeItem(REMEMBER_KEY);
+  } catch {
+    /* sem armazenamento */
+  }
+}
+try {
+  const remembered = localStorage.getItem(REMEMBER_KEY);
+  if (remembered && !sessionStorage.getItem(TOKEN_KEY)) {
+    let exp = 0;
+    try {
+      exp = Number(JSON.parse(atob(remembered.split(".")[0].replace(/-/gu, "+").replace(/_/gu, "/"))).exp || 0) * 1000;
+    } catch {
+      exp = 0;
+    }
+    if (exp > Date.now() + 60_000) {
+      sessionStorage.setItem(TOKEN_KEY, remembered);
+      sessionStorage.setItem("farisa-coach-session-v2", "active");
+    } else localStorage.removeItem(REMEMBER_KEY);
+  }
+} catch {
+  /* sem armazenamento: entra com a senha */
+}
 
 // Login vencido: a API responde 401 para tudo. Em vez de continuar pedindo
 // centenas de GIFs (e encher o terminal de "401 Unauthorized"), apagamos o
@@ -10,6 +37,7 @@ const TOKEN_KEY = "farisa-coach-api-token";
 function handleUnauthorized(status) {
   if (status !== 401 || !sessionStorage.getItem(TOKEN_KEY)) return;
   sessionStorage.removeItem(TOKEN_KEY);
+  forgetLogin();
   clearStoredData();
   window.dispatchEvent(new CustomEvent("farisa:session-expired"));
 }
@@ -76,6 +104,12 @@ export async function login(credentials, signal) {
   if (!result?.token)
     throw new Error("O servidor não retornou uma sessão válida.");
   sessionStorage.setItem(TOKEN_KEY, result.token);
+  try {
+    if (result.remember) localStorage.setItem(REMEMBER_KEY, result.token);
+    else localStorage.removeItem(REMEMBER_KEY);
+  } catch {
+    /* sem armazenamento */
+  }
   // Entrou com a própria conta: sai do modo suporte / Biblioteca FARISA.
   sessionStorage.removeItem("farisa-support-mode");
   sessionStorage.removeItem("farisa-library-mode");
@@ -83,6 +117,7 @@ export async function login(credentials, signal) {
 }
 export function clearApiSession() {
   sessionStorage.removeItem(TOKEN_KEY);
+  forgetLogin();
   sessionStorage.removeItem("farisa-support-mode");
   sessionStorage.removeItem("farisa-library-mode");
   clearStoredData();

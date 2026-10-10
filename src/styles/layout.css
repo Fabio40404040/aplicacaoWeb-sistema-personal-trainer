@@ -385,3 +385,8 @@
     transform: translateY(5px);
   }
 }
+
+/* Entrou: some o formulário (o iPhone/Chrome oferece "Salvar senha") */
+.login-form.is-signing-in > :not([data-personal-login-status]):not(.mobile-login-brand) {
+  display: none;
+}
