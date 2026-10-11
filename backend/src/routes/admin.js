@@ -7,6 +7,7 @@ import { saasAmount, saasPlans } from './saas.js'
 import { createSession, hashPassword, verifyPassword } from '../lib/session.js'
 import { sendNoticeEmail } from '../lib/recovery-email.js'
 import { readJson } from '../lib/http.js'
+import { sendTrainerWelcome } from './account-emails.js'
 
 // Segunda etapa do login: código de 6 dígitos enviado ao e-mail do administrador.
 const CODE_MINUTES = 10
@@ -291,7 +292,9 @@ export async function adminCreateTrainer(db, admin, body) {
     .query('UPDATE trainers SET saas_trial_ends_at=$2 WHERE id=$1', [row.id, new Date(Date.now() + 30 * 86_400_000).toISOString()])
     .catch(() => {})
   await audit(db, admin, 'trainer_created', { type: 'trainer', id: row.id, label: email })
-  return { data: { ...row, temporaryPassword: password }, status: 201 }
+  // Boas-vindas com o link de confirmação (antes só chegava ao usar "Reenviar").
+  const emailSent = await sendTrainerWelcome(db, row).catch(() => false)
+  return { data: { ...row, temporaryPassword: password, emailSent: Boolean(emailSent) }, status: 201 }
 }
 
 // Teste completo de 30 dias: encerrar agora (para testar o Grátis básico) ou

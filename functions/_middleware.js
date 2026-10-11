@@ -7,7 +7,7 @@ const OLD_HOSTS = new Set(['www.farisafit.com.br', 'aplicacaoweb-sistema-persona
 
 // Ícones com versão: o iPhone guarda o ícone da Tela de Início em cache e,
 // sem isto, repetia o ícone do outro app.
-const ICON_VERSION = '2'
+const ICON_VERSION = '3'
 
 // Cada app instalável precisa chegar com nome, ícone e manifesto próprios já
 // no HTML (o Safari do iPhone lê o HTML original ao "Adicionar à Tela de
@@ -19,8 +19,8 @@ function appHead(pathname) {
       title: 'FARISA Painel',
       manifest: '/painel.webmanifest',
       touch: `/icons/painel-apple-touch-icon.png?v=${ICON_VERSION}`,
-      icon: '/icons/painel-192.png',
-      theme: '#047857',
+      icon: `/icons/painel-192.png?v=${ICON_VERSION}`,
+      theme: '#1c67db',
     }
   const page = path.match(/^\/p\/([a-z0-9-]{3,30})$/iu)
   if (page) {
