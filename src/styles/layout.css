@@ -306,7 +306,11 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 18px;
   padding: 28px 18px 22px;
+  /* Tela baixa ou zoom: o menu rola e "Sair da conta" continua acessível. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--white);
   border-right: 1px solid var(--line);
 }
