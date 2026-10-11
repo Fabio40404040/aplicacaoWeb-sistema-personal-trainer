@@ -44,8 +44,11 @@ const phone = (value) => {
 
 // Indicações para o aluno: nutricionista e app de alimentação.
 const webLink = (value) => {
-  const text = clean(value, 200)
+  // Tira espaços e caracteres invisíveis que vêm ao copiar o link do celular.
+  let text = clean(String(value ?? '').replace(/[\s\u00a0\u200b-\u200f\u2060\ufeff]/gu, ''), 200)
   if (!text) return null
+  // "@perfil" vira o link do Instagram.
+  if (/^@[a-z0-9._]{1,30}$/iu.test(text)) text = `instagram.com/${text.slice(1)}`
   const url = /^https?:\/\//iu.test(text) ? text.replace(/^http:/iu, 'https:') : `https://${text}`
   return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s"'<>]*)?$/iu.test(url) ? url : undefined
 }
@@ -58,7 +61,14 @@ function cleanReferrals(body) {
   const appLink = webLink(app.link)
   const appLinkIos = webLink(app.linkIos)
   const appLinkWeb = webLink(app.linkWeb)
-  if (link === undefined || appLink === undefined || appLinkIos === undefined || appLinkWeb === undefined) return { error: 'Confira os links das indicações (ex.: instagram.com/perfil).' }
+  // Diz qual campo está com problema (antes a mensagem era genérica).
+  const wrong = [
+    [link, 'Instagram ou site do nutricionista'],
+    [appLink, 'Link para Android do app'],
+    [appLinkIos, 'Link para iPhone do app'],
+    [appLinkWeb, 'Site para computador do app'],
+  ].find(([value]) => value === undefined)
+  if (wrong) return { error: `Confira o campo "${wrong[1]}" em Indicações: use um link como instagram.com/perfil ou https://site.com.br.` }
   const value = {
     nutritionist: {
       name: clean(nutritionist.name, 80),
