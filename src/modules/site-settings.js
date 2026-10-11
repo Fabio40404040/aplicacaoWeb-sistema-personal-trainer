@@ -647,6 +647,8 @@ function render() {
           })),
         })),
       }
+      // Ícone do app FARISA Painel acompanha a cor nova.
+      window.dispatchEvent(new Event('farisa:site-saved'))
       syncDraft()
       render()
       showToast('Site atualizado. As mudanças já estão no ar.')

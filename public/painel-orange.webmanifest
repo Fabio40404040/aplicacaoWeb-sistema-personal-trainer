@@ -1,0 +1,26 @@
+{
+  "id": "/personal/",
+  "name": "FARISA Painel",
+  "short_name": "FARISA Painel",
+  "description": "Painel do personal trainer: alunos, fichas, avaliações e check-ins.",
+  "lang": "pt-BR",
+  "start_url": "/personal/",
+  "scope": "/personal/",
+  "display": "standalone",
+  "background_color": "#18212d",
+  "theme_color": "#1c67db",
+  "icons": [
+    {
+      "src": "/icons/painel-orange-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/painel-orange-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

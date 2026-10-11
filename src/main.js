@@ -29,6 +29,7 @@ import { initSiteSettings } from './modules/site-settings.js'
 import { initSaasHome } from './modules/saas-home.js'
 import { initSaasBilling } from './modules/saas-billing.js'
 import { initPanelRefresh } from './modules/panel-refresh.js'
+import { initPanelIcon } from './modules/panel-icon.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
@@ -79,6 +80,7 @@ initialize('escolha do aluno na evolução', initProgressPicker)
 initialize('suporte', initSupportPanel)
 initialize('assinatura', initSaasBilling)
 initialize('atualização automática', initPanelRefresh)
+initialize('ícone do painel', initPanelIcon)
 initialize('recebimentos', initPayoutPanel)
 initialize('vitrine da plataforma', initSaasHome)
 initialize('página do personal', initSiteBrand)
