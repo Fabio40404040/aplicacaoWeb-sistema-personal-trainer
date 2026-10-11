@@ -81,8 +81,12 @@ async function initSignup() {
       await registerTrainerAccount(Object.fromEntries(new FormData(form)))
       sessionStorage.setItem('farisa-coach-session-v2', 'active')
       status.textContent = 'Conta criada! Abrindo seu painel…'
+      // Cadastro feito no site principal: vai para o painel (/personal/).
+      // O reload só serve quando já está em /personal/ (troca só o #);
+      // fora dele, ele cancelava a ida ao painel e a tela ficava no cadastro.
+      const inPanel = location.pathname.replace(/\/+$/u, '') === '/personal'
       location.replace('/personal/#painel')
-      window.setTimeout(() => location.reload(), 50)
+      if (inPanel) window.setTimeout(() => location.reload(), 50)
     } catch (error) {
       status.textContent = error.message
       button.disabled = false
