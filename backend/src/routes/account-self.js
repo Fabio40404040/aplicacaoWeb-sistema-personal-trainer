@@ -65,7 +65,8 @@ export async function onboarding(db, trainerId) {
     data: {
       slug: site.slug || '',
       steps: {
-        profile: Boolean(profile.avatar || profile.bio || profile.phone),
+        // Telefone sozinho não conta: o Admin já preenche ao criar a conta.
+        profile: Boolean(profile.avatar || profile.bio),
         site: Boolean(site.slug && Number(site.edited)),
         payout: Boolean(payout.mode && payout.mode !== 'none'),
         student: Number(counts.students || 0) > 0,
