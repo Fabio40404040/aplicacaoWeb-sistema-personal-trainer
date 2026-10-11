@@ -5416,3 +5416,17 @@ body.has-support-banner .main-content {
 .saas-plan-paid {
   color: #15803d !important;
 }
+
+/* Minha assinatura no PC: cards do plano e do período lado a lado, à
+   esquerda e com largura de card (antes esticavam pela tela toda). */
+.saas-checkout .saas-plan-grid,
+.saas-checkout .saas-cycles {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 300px));
+  justify-content: start;
+}
+.saas-checkout .saas-plan,
+.saas-checkout .saas-cycle {
+  align-content: start;
+  justify-self: stretch;
+  text-align: left;
+}
