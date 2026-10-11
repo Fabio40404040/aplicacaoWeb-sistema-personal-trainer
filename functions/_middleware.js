@@ -51,6 +51,14 @@ export async function onRequest(context) {
     return Response.redirect(url.toString(), 301)
   }
   const response = await context.next()
+  // Arquivo de /assets/ que não existe (ex.: pedido no meio de um deploy):
+  // o Pages devolvia a página inicial (HTML) com cache de 1 ano e o site
+  // ficava sem estilo e sem JavaScript até limpar o cache. Agora é 404 sem cache.
+  if (url.pathname.startsWith('/assets/') && (response.headers.get('content-type') || '').includes('text/html'))
+    return new Response('Arquivo não encontrado.', {
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    })
   const head = context.request.method === 'GET' && !url.pathname.startsWith('/api/') ? appHead(url.pathname) : null
   if (!head || !(response.headers.get('content-type') || '').includes('text/html')) return response
   // Página de um personal: o app instalado é o "FARISA Aluno", na cor dele.

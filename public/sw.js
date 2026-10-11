@@ -1,4 +1,4 @@
-const CACHE_NAME = 'farisa-personal-static-v15'
+const CACHE_NAME = 'farisa-personal-static-v16'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE = [OFFLINE_URL, '/icons/icon-192.png', '/icons/icon-512.png']
 
@@ -44,7 +44,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        // Só guarda o arquivo de verdade (nunca uma página HTML no lugar dele).
+        if (response.ok && !(response.headers.get('content-type') || '').includes('text/html')) {
           const copy = response.clone()
           void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
         }
