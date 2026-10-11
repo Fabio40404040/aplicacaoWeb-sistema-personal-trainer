@@ -426,3 +426,8 @@
   max-width: 100%;
   white-space: normal;
 }
+
+/* Versão da publicação (força arquivos novos no navegador) */
+:root {
+  --farisa-build: '2026-10-11-2';
+}

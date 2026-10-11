@@ -1,5 +1,7 @@
 import { initClientErrors } from './modules/client-errors.js'
 initClientErrors()
+// Versão da publicação: mudar força o navegador a baixar arquivos novos.
+window.FARISA_BUILD = '2026-10-11-2'
 import { initAuth } from './modules/auth.js'
 import { initNavigation } from './modules/router.js'
 import { initDashboard } from './modules/dashboard.js'
