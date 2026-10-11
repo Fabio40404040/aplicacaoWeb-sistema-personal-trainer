@@ -386,11 +386,25 @@ export function initSaasBilling() {
   // Atualização automática do painel: e-mail confirmado, plano, primeiros passos.
   window.addEventListener('farisa:billing-refresh', () => void load(true))
   let loaded = false
+  // Primeiros passos se atualizam na hora: ao salvar algo (perfil, página,
+  // recebimento, aluno, treino) e ao voltar para o Painel, sem recarregar.
+  let onboardingTimer = 0
+  const repaintOnboarding = () => {
+    window.clearTimeout(onboardingTimer)
+    onboardingTimer = window.setTimeout(() => void paintOnboarding(), 400)
+  }
   window.addEventListener('farisa:data-changed', () => {
     if (!loaded) {
       loaded = true
       void load()
-    } else paintAlerts()
+    } else {
+      paintAlerts()
+      repaintOnboarding()
+    }
+  })
+  window.addEventListener('farisa:site-saved', repaintOnboarding)
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#painel') repaintOnboarding()
   })
   void load()
 }
