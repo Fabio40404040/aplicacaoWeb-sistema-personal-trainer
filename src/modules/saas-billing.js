@@ -352,7 +352,7 @@ function paintAlerts() {
   } else bar?.remove()
 }
 
-async function load() {
+async function load(quiet = false) {
   if (!sessionStorage.getItem('farisa-coach-api-token')) return
   try {
     billing = await fetchBilling()
@@ -368,7 +368,7 @@ async function load() {
   paintAlerts()
   paintEmailBanner(billing.email)
   void paintOnboarding()
-  if (location.hash === '#assinatura') render()
+  if (location.hash === '#assinatura' && !quiet) render()
 }
 
 export function initSaasBilling() {
@@ -379,6 +379,8 @@ export function initSaasBilling() {
       void load()
     }
   })
+  // Atualização automática do painel: e-mail confirmado, plano, primeiros passos.
+  window.addEventListener('farisa:billing-refresh', () => void load(true))
   let loaded = false
   window.addEventListener('farisa:data-changed', () => {
     if (!loaded) {

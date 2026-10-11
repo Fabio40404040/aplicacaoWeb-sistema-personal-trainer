@@ -26,6 +26,7 @@ import { initSiteBrand } from './modules/site-brand.js'
 import { initSiteSettings } from './modules/site-settings.js'
 import { initSaasHome } from './modules/saas-home.js'
 import { initSaasBilling } from './modules/saas-billing.js'
+import { initPanelRefresh } from './modules/panel-refresh.js'
 import { initPersonalExtras } from './modules/personal-extras.js'
 import { initCheckins } from './modules/checkins.js'
 import { initAgenda } from './modules/agenda.js'
@@ -75,6 +76,7 @@ initialize('atalho da logo', initLogoSecret)
 initialize('escolha do aluno na evolução', initProgressPicker)
 initialize('suporte', initSupportPanel)
 initialize('assinatura', initSaasBilling)
+initialize('atualização automática', initPanelRefresh)
 initialize('recebimentos', initPayoutPanel)
 initialize('vitrine da plataforma', initSaasHome)
 initialize('página do personal', initSiteBrand)
