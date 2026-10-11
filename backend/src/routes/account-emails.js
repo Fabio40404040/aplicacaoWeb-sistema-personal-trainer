@@ -121,7 +121,11 @@ export async function verifyEmailPage(db, token) {
           { sql: 'DELETE FROM email_verifications WHERE kind=$1 AND account_id=$2', values: [row.kind, row.accountId] },
         ])
         ok = true
-        if (row.kind === 'trainer') back = panel('painel')
+        if (row.kind === 'trainer') {
+          // Abre o painel desta conta (e não outra que esteja conectada no navegador).
+          const email = (await db.query('SELECT email FROM trainers WHERE id=$1', [row.accountId])).rows[0]?.email || ''
+          back = panel(`acesso-farisa?confirmado=${encodeURIComponent(email)}`)
+        }
         else {
           const trainerId = (await db.query('SELECT trainer_id AS id FROM student_accounts WHERE id=$1', [row.accountId])).rows[0]?.id
           back = studentPage(await trainerOf(db, trainerId))

@@ -101,6 +101,39 @@ export function initAuth() {
   const status = form.querySelector('[data-personal-login-status]')
   const button = form.querySelector('[type="submit"]')
 
+  // Veio do link "Confirmar meu e-mail": abre a conta que confirmou. Se este
+  // navegador estava com OUTRA conta de personal conectada, sai dela e pede
+  // para entrar com o e-mail confirmado (antes abria o painel da outra conta).
+  const confirmed = location.hash.match(/^#acesso-farisa\?confirmado=([^&]+)/u)
+  if (confirmed) {
+    let email = ''
+    try {
+      email = decodeURIComponent(confirmed[1]).trim().toLowerCase()
+    } catch {
+      email = ''
+    }
+    history.replaceState(null, '', `${location.pathname}${location.search}${loginHash()}`)
+    const token = sessionStorage.getItem('farisa-coach-api-token') || ''
+    let current = ''
+    try {
+      current = String(JSON.parse(atob(token.split('.')[0].replace(/-/gu, '+').replace(/_/gu, '/'))).email || '').toLowerCase()
+    } catch {
+      /* token ilegível: trata como sem conta conectada */
+    }
+    if (current && current !== email) {
+      logoutRemote()
+      sessionStorage.removeItem(SESSION_KEY)
+      clearApiSession()
+    }
+    if (!current || current !== email) {
+      const field = form.querySelector('[name="email"]')
+      window.setTimeout(() => {
+        if (field && email) field.value = email
+        status.textContent = `✅ E-mail confirmado! Entre com ${email || 'a sua conta'}.`
+      }, 300)
+    }
+  }
+
   handleLocation()
   window.addEventListener('hashchange', () => {
     if (!isLoginHash(location.hash) && pendingLogin) {
