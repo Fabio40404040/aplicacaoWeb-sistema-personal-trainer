@@ -1,5 +1,5 @@
 import { adminOpenLibrary, adminSyncLibrary, copyFromLibrary, libraryOverview } from "./routes/farisa-library.js";
-import { activateTrainer, switchTrainer } from "./routes/student-links.js";
+import { activateTrainer, linkedTrainers, switchTrainer } from "./routes/student-links.js";
 import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
@@ -494,9 +494,41 @@ async function handleRoutes(request, env) {
         (route === "student/me" && url.searchParams.get("site")) || request.headers.get("X-Farisa-Site") || "",
       ).toLowerCase();
       let siteStudentId = null;
+      let siteTrainer = null;
       if (/^[a-z0-9-]{3,30}$/u.test(site)) {
-        const siteTrainer = await trainerIdForSlug(db, site).catch(() => null);
+        siteTrainer = await trainerIdForSlug(db, site).catch(() => null);
         if (siteTrainer) siteStudentId = (await activateTrainer(db, session.sub, siteTrainer).catch(() => false)) || null;
+      }
+      // Página de um personal com quem este aluno NÃO tem cadastro: não mostra
+      // nem grava nada de outro personal aqui (antes a página pulava para o
+      // personal do aluno e os dados pareciam misturados).
+      if (siteTrainer && !siteStudentId) {
+        if (request.method === "GET" && route === "student/me") {
+          const who = (
+            await db.query("SELECT name, email FROM student_accounts WHERE id=$1", [session.sub])
+          ).rows[0] || {};
+          const here = (
+            await db
+              .query(
+                `SELECT t.name, ts.brand_name AS "brandName" FROM trainers t LEFT JOIN trainer_site ts ON ts.trainer_id=t.id WHERE t.id=$1`,
+                [siteTrainer],
+              )
+              .catch(() => ({ rows: [] }))
+          ).rows[0] || {};
+          return {
+            data: {
+              notLinked: true,
+              name: who.name || "",
+              email: who.email || "",
+              trainerName: here.brandName || here.name || "este personal",
+              trainers: (await linkedTrainers(db, session.sub)).map((item) => ({
+                name: [item.brandMark, item.brandName].filter(Boolean).join(" ") || item.trainerName,
+                slug: item.slug,
+              })),
+            },
+          };
+        }
+        return { error: "Você não tem cadastro com este personal. Entre pela página do seu personal.", status: 409 };
       }
       if (request.method === "GET" && route === "student/me") {
         await reconcileStudentPayments(

@@ -800,6 +800,55 @@ function renderReadyWorkoutLibrary(container, data) {
   container.append(card);
 }
 
+// Aluno conectado na página de um personal com quem ele não treina.
+function renderNotLinked(container, data) {
+  const card = element("article", "student-card--wide student-not-linked");
+  card.append(
+    element("h2", "", `Você ainda não treina com ${data.trainerName}`),
+    element(
+      "p",
+      "",
+      `Este aparelho está conectado como ${data.name} (${data.email}). Esta conta não tem cadastro com ${data.trainerName}, então nada dela aparece aqui.`,
+    ),
+  );
+  const actions = element("div", "student-not-linked-actions");
+  const join = element("button", "button button--primary", `Quero treinar com ${data.trainerName}`);
+  join.type = "button";
+  join.addEventListener("click", () => {
+    document.querySelector("[data-student-logout]")?.click();
+    window.setTimeout(() => {
+      location.hash = "#cadastro-aluno";
+      const email = document.querySelector('[data-student-form="register"] [name="email"]');
+      if (email) email.value = data.email || "";
+    }, 50);
+  });
+  const other = element("button", "button button--secondary", "Entrar com outra conta");
+  other.type = "button";
+  other.addEventListener("click", () => document.querySelector("[data-student-logout]")?.click());
+  actions.append(join, other);
+  card.append(actions);
+  if ((data.trainers || []).length) {
+    const list = element("p", "student-not-linked-links");
+    list.append("Seus personais: ");
+    data.trainers.forEach((trainer, index) => {
+      if (index) list.append(" · ");
+      if (!trainer.slug) return list.append(trainer.name);
+      const link = element("a", "", trainer.name);
+      link.href = `/p/${trainer.slug}#painel-aluno`;
+      list.append(link);
+    });
+    card.append(list);
+  }
+  card.append(
+    element(
+      "small",
+      "",
+      "Para treinar com este personal, use o mesmo e-mail e a sua senha no cadastro: a conta é a mesma, com um cadastro para cada personal.",
+    ),
+  );
+  container.replaceChildren(card);
+}
+
 function renderPortal(container, data) {
   studentTools = data.tools?.ready ? data.tools : null;
   // Faixa "Meu plano" em uma linha, ocupando a largura toda.
@@ -1189,6 +1238,16 @@ export function initStudentAccess() {
       const site = currentSiteSlug();
       const data = await studentRequest(site ? `me?site=${encodeURIComponent(site)}` : "me");
       if (current !== generation) return;
+      // Conectado numa página de personal com quem o aluno não tem cadastro:
+      // não mostra nada de outro personal aqui; o aluno escolhe o que fazer.
+      if (data.notLinked) {
+        clearStudentPanel();
+        hasLoadedOnce = true;
+        document.querySelector("[data-student-name]").textContent = `Olá, ${data.name || "aluno"}`;
+        status.textContent = "";
+        renderNotLinked(container, data);
+        return;
+      }
       // Aluno que entrou pela página principal ou pela de outro personal:
       // vai para a página do personal dele (marca, cor e contato certos).
       if (data.siteSlug && data.siteSlug !== currentSiteSlug()) {
