@@ -117,6 +117,23 @@ function checkoutBox(root) {
   const state = billing.state
   const section = el('section', 'panel saas-checkout')
   section.append(el('h2', '', state?.status === 'free' ? 'Passar para o Ilimitado' : 'Renovar o plano'))
+  // Plano pago com mais de 30 dias pela frente: não precisa pagar agora.
+  // Os cards ficam escondidos atrás de "Renovar antes do vencimento".
+  if (state?.status !== 'free' && state?.expiresAt && Number(state.daysLeft) > 30 && !choice.renewEarly) {
+    const open = el('button', 'button button--secondary', 'Renovar antes do vencimento')
+    open.type = 'button'
+    open.style.justifySelf = 'start'
+    open.addEventListener('click', () => {
+      choice.renewEarly = true
+      render()
+    })
+    section.append(
+      el('p', 'support-muted', `Seu plano está pago até ${day(state.expiresAt)}. Não é preciso pagar agora: perto do vencimento as opções de renovação aparecem aqui.`),
+      open,
+    )
+    root.append(section)
+    return
+  }
   const grid = el('div', 'saas-plan-grid')
   plans.forEach((plan) => {
     const card = planCard(plan, { selectable: true })
@@ -271,7 +288,11 @@ function render() {
   const summary = el('section', `panel saas-summary saas-summary--${state?.status || 'active'}`)
   const [label, detail] = statusLine(state)
   const head = el('div', 'saas-summary-head')
-  head.append(el('span', `saas-badge saas-badge--${state?.status || 'active'}`, label), el('strong', '', state?.planName || 'Plano'))
+  head.append(
+    el('span', `saas-badge saas-badge--${state?.status || 'active'}`, label),
+    // Nome do plano pago (Ilimitado) em verde.
+    el('strong', state?.status && state.status !== 'free' ? 'saas-plan-paid' : '', state?.planName || 'Plano'),
+  )
   summary.append(head, el('p', '', detail))
   if (state) {
     const usage = el('div', 'saas-usage')

@@ -5411,3 +5411,8 @@ body.has-support-banner .main-content {
 .student-not-linked h2 { margin: 0; }
 .student-not-linked p, .student-not-linked small { margin: 0; color: var(--muted, #64748b); }
 .student-not-linked-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Nome do plano Ilimitado em verde (Minha assinatura e menu) */
+.saas-plan-paid {
+  color: #15803d !important;
+}

@@ -54,6 +54,8 @@ function paintCapacity() {
   const total = countedStudents().length
   if (!Number.isFinite(limit)) {
     card.querySelector('span').textContent = profile?.planName || 'Plano'
+    // Plano sem limite (Ilimitado): nome em verde.
+    card.querySelector('span').classList.add('saas-plan-paid')
     card.querySelector('small').textContent = `${total} aluno(s) · sem limite`
     const meter = card.querySelector('progress, .meter span, .capacity-bar span')
     if (meter?.tagName === 'PROGRESS') meter.value = 0
@@ -64,6 +66,7 @@ function paintCapacity() {
   const free = Math.max(0, limit - total)
   const ratio = total / limit
   card.querySelector('span').textContent = profile?.planName || 'Plano profissional'
+  card.querySelector('span').classList.remove('saas-plan-paid')
   card.querySelector('small').textContent =
     total >= limit
       ? `${total} de ${limit} alunos · plano completo`
