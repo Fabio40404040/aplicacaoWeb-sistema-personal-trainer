@@ -41,7 +41,7 @@ export function paintEmailBanner(email) {
     again.disabled = true
     try {
       const result = await accountRequest('/auth/resend-verification', { method: 'POST', body: '{}' })
-      showToast(result.verified ? 'Seu e-mail já está confirmado.' : `E-mail de confirmação enviado para ${email.email}.`)
+      showToast(result.verified ? 'Seu e-mail já está confirmado.' : `E-mail de confirmação enviado para ${email.email}. Se não aparecer, confira a pasta de spam.`)
       if (result.verified) bar.remove()
     } catch (error) {
       showToast(error.message)
@@ -66,7 +66,7 @@ export function paintEmailBanner(email) {
     bar.remove()
   })
   bar.replaceChildren(
-    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para abrir sua página a novos alunos e receber pagamentos. Enviamos um link para você.`),
+    el('span', '', `✉️ Confirme seu e-mail (${email.email}) para abrir sua página a novos alunos e receber pagamentos. Enviamos um link para você — não chegou? Confira a pasta de spam ou lixo eletrônico.`),
     again,
     fix,
     close,
@@ -115,7 +115,7 @@ function openEmailChange(email) {
       paintEmailBanner({ email: result.email, verified: false })
       showToast(
         result.sent
-          ? `Pronto! Enviamos o link de confirmação para ${result.email}. Seu login agora é este e-mail.`
+          ? `Pronto! Enviamos o link de confirmação para ${result.email}. Seu login agora é este e-mail. Se não aparecer, confira a pasta de spam.`
           : `E-mail trocado para ${result.email}. Não conseguimos enviar o link agora: use “Reenviar e-mail” em alguns minutos.`,
       )
     } catch (error) {
