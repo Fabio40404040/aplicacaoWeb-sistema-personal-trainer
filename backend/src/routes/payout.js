@@ -8,6 +8,7 @@
 // Os tokens das contas conectadas ficam cifrados no banco (AES-GCM).
 import { safeEqual } from '../lib/session.js'
 import { EMAIL_PENDING, trainerEmailVerified } from './account-emails.js'
+import { escape, notify } from '../lib/notify.js'
 
 const encoder = new TextEncoder()
 const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
@@ -297,6 +298,27 @@ export async function payoutDisconnect(db, trainerId) {
   return { data: { ok: true } }
 }
 
+// Aviso de segurança: a chave Pix (para onde vai o dinheiro dos alunos) mudou.
+// Se alguém entrar na conta e trocar a chave, o personal fica sabendo na hora.
+const maskPix = (key) => {
+  const text = String(key || '')
+  return text.length <= 6 ? text : `${text.slice(0, 3)}•••${text.slice(-3)}`
+}
+async function notifyPixChange(db, trainerId, line) {
+  try {
+    const trainer = (await db.query('SELECT name, email FROM trainers WHERE id=$1', [trainerId])).rows[0]
+    if (!trainer?.email) return
+    await notify({
+      to: trainer.email,
+      name: trainer.name,
+      subject: 'A chave Pix da sua conta FARISA foi alterada',
+      lines: [line, 'Se não foi você, troque sua senha e fale com o suporte imediatamente.'],
+    })
+  } catch {
+    /* o aviso nunca impede salvar a chave */
+  }
+}
+
 export async function payoutSavePix(db, trainerId, body) {
   if (!(await trainerEmailVerified(db, trainerId))) return { error: EMAIL_PENDING, status: 403 }
   const type = String(body?.type || '')
@@ -306,6 +328,7 @@ export async function payoutSavePix(db, trainerId, body) {
   const city = String(body?.city || '').trim().slice(0, 40)
   if (holder.length < 3) return { error: 'Informe o nome do titular da conta, como aparece no banco.', status: 400 }
   if (city.length < 2) return { error: 'Informe a cidade do titular.', status: 400 }
+  const before = await payoutRow(db, trainerId).catch(() => null)
   await db.query(
     `INSERT INTO trainer_payout (trainer_id, mode, pix_key_type, pix_key, pix_holder, pix_city) VALUES ($1,'pix',$2,$3,$4,$5)
      ON CONFLICT(trainer_id) DO UPDATE SET pix_key_type=excluded.pix_key_type, pix_key=excluded.pix_key,
@@ -313,16 +336,27 @@ export async function payoutSavePix(db, trainerId, body) {
        mode=CASE WHEN trainer_payout.mode='none' THEN 'pix' ELSE trainer_payout.mode END`,
     [trainerId, type, key, holder, city],
   )
+  if (before?.pix_key !== key)
+    await notifyPixChange(
+      db,
+      trainerId,
+      before?.pix_key
+        ? `A chave Pix de recebimento foi trocada para <strong>${escape(maskPix(key))}</strong> (titular: ${escape(holder)}).`
+        : `Uma chave Pix de recebimento foi cadastrada: <strong>${escape(maskPix(key))}</strong> (titular: ${escape(holder)}).`,
+    )
   return { data: { ok: true } }
 }
 
 export async function payoutRemovePix(db, trainerId) {
+  const before = await payoutRow(db, trainerId).catch(() => null)
   await db.query(
     `UPDATE trainer_payout SET pix_key_type=NULL, pix_key=NULL, pix_holder=NULL, pix_city=NULL,
        mode=CASE WHEN mode='pix' THEN (CASE WHEN mp_access_token IS NOT NULL THEN 'mercadopago' ELSE 'none' END) ELSE mode END,
        updated_at=CURRENT_TIMESTAMP WHERE trainer_id=$1`,
     [trainerId],
   )
+  if (before?.pix_key)
+    await notifyPixChange(db, trainerId, `A chave Pix de recebimento <strong>${escape(maskPix(before.pix_key))}</strong> foi removida da sua conta.`)
   return { data: { ok: true } }
 }
 
