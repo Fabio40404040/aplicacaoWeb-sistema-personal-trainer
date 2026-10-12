@@ -259,6 +259,14 @@ function supportBanner() {
     bar.title = 'Você está abastecendo a Biblioteca FARISA: o que salvar aqui vai para todos os personais.'
     // Só a biblioteca interessa aqui: esconde o resto do menu.
     document.body.classList.add('is-library-mode')
+    // Qualquer outra tela (ex.: Alunos, por um atalho) volta para a biblioteca:
+    // sem o menu, não havia como voltar.
+    const stayInLibrary = () => {
+      const route = location.hash.slice(1).split('?')[0]
+      if (route && route !== 'exercicios' && !route.startsWith('suporte-acesso')) location.replace('#exercicios')
+    }
+    window.addEventListener('hashchange', stayInLibrary)
+    stayInLibrary()
   }
   const exit = el('button', 'button button--secondary', library ? 'Sair' : 'Encerrar acesso')
   exit.type = 'button'

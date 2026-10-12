@@ -5079,6 +5079,13 @@ body.has-support-banner .main-content {
 .is-library-mode .sidebar-footer {
   display: none;
 }
+/* Sem busca de alunos, sininho e perfil (são coisas de personal; a faixa
+   "📚 Biblioteca FARISA" no topo já diz onde você está). */
+.is-library-mode .topbar .global-search,
+.is-library-mode .topbar .notification-button,
+.is-library-mode .topbar .profile {
+  display: none !important;
+}
 
 /* Biblioteca FARISA dentro da biblioteca do personal. */
 .library-block-heading {
