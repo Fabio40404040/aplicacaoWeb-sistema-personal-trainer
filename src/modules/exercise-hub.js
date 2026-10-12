@@ -22,7 +22,8 @@ import {
   firstFrameBlob,
   groupFromFolder,
 } from './exercise-gifs.js'
-import { showToast } from './utils.js'
+import { exerciseGroups, showToast } from './utils.js'
+import { folderSorter } from './folder-order.js'
 import { initFarisaLibraryTab, renderFarisaLibrary } from './farisa-library-tab.js'
 
 const VIEW_KEY = 'farisa-library-view'
@@ -178,7 +179,10 @@ function createMediaFilter(page) {
 const escapeHtml = (value) =>
   String(value).replace(/[&<>"']/gu, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 function groupOptions(selected) {
-  return allGroupNames()
+  const names = allGroupNames()
+  // Pasta nova vinda do nome da pasta arrastada (ex.: Trapézio) entra na lista.
+  if (selected && !names.includes(selected)) names.push(selected)
+  return names
     .map(
       (name) =>
         `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`,
@@ -312,6 +316,9 @@ async function saveItem(item) {
       'exercises',
       {
         ...existing,
+        // Arrastado numa pasta (ex.: Trapézio) diferente da do exercício: o
+        // exercício passa para essa pasta, como o GIF.
+        group: exerciseGroups(existing).includes(item.group) ? existing.group : item.group,
         mediaType: existing.mediaType === '3d' && !gifId && !videoId ? '3d' : 'gif',
         gifId: gifId || existing.gifId || '',
         videoId: videoId || existing.videoId || '',
@@ -339,13 +346,29 @@ const folderNameOfGroup = (group) => (legGroupNames.includes(group) ? 'Pernas' :
 async function rememberFolderOrder(items) {
   const dropped = [...new Set(items.map((item) => folderNameOfGroup(item.group)).filter(Boolean))]
   if (!dropped.length) return
-  const current = getData().folderOrder || []
+  const data = getData()
+  const current = data.folderOrder || []
+  // Pastas que já existiam, na ordem em que aparecem hoje na tela.
+  const existing = [
+    ...new Set(
+      [
+        ...(data.exercises || []).filter((item) => !item.library).flatMap((item) => exerciseGroups(item)),
+        ...(data.exerciseGifs || []).map((item) => item.group),
+        ...(data.exerciseVideos || []).map((item) => item.group),
+        ...(data.customGroups || []).map((item) => item.name),
+      ]
+        .filter(Boolean)
+        .map(folderNameOfGroup),
+    ),
+  ].sort(folderSorter())
+  // Uma pasta nova sozinha vai para o FIM de todas (antes, se nenhuma ordem
+  // tinha sido salva, ela ia para o topo). Pasta que já existia fica onde está.
   const next =
     dropped.length > 1
       ? [...dropped, ...current.filter((name) => !dropped.includes(name))]
-      : current.includes(dropped[0])
+      : existing.includes(dropped[0])
         ? current
-        : [...current, dropped[0]]
+        : [...existing, dropped[0]]
   if (next.join('|') === current.join('|')) return
   await saveFolderOrder(next)
 }

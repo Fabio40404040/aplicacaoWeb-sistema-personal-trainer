@@ -20,7 +20,10 @@ const LEG_GROUPS = [...legGroupNames, 'Pernas']
 // Ex.: "1-Peitoral" -> Peitoral, "3-Menbros-inferiores-e-Gluteos" -> Pernas.
 const FOLDER_GROUPS = [
   [/peitoral|chest|peito/i, 'Peitoral'],
-  [/costas|trapezio|dorsal|back/i, 'Costas'],
+  // Pasta "Trapézio" vira a própria pasta (antes caía em Costas e o envio
+  // dizia "já estava na biblioteca", sem a pasta Trapézio aparecer).
+  [/trapezio/i, 'Trapézio'],
+  [/costas|dorsal|back/i, 'Costas'],
   [/panturrilha|calf/i, 'Panturrilhas'],
   [/inferior|gluteo|perna|quadriceps|posterior|leg/i, 'Pernas'],
   [/ombro|deltoide|deltode|shoulder/i, 'Ombros'],
