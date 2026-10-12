@@ -30,6 +30,13 @@ function paintTopbar() {
   const box = document.querySelector('.topbar .profile')
   if (!box) return
   const profile = profileOf()
+  // Biblioteca FARISA (aberta pelo Admin): é o dono da plataforma, não um personal.
+  if (sessionStorage.getItem('farisa-library-mode') === '1') {
+    paintAvatar(box.querySelector('.avatar'), { name: 'FARISA', avatar: '' })
+    box.querySelector('strong').textContent = 'Biblioteca FARISA'
+    box.querySelector('small').textContent = 'Administrador · dono da plataforma'
+    return
+  }
   const name = profile?.name || box.querySelector('strong')?.textContent || 'Personal'
   paintAvatar(box.querySelector('.avatar'), { name, avatar: profile?.avatar })
   box.querySelector('strong').textContent = name
