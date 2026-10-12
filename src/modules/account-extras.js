@@ -246,6 +246,32 @@ export function accountCard() {
 // ---------- primeiros passos (aparece no Painel até concluir ou ocultar)
 const HIDE_KEY = 'farisa-primeiros-passos-oculto'
 const DONE_KEY = 'farisa-primeiros-passos-concluido'
+// "Ocultar" e "Tudo pronto" valem só para a conta que fez (antes valiam para
+// todas as contas do navegador). Conta = id do personal no token.
+const accountId = () => {
+  try {
+    const token = sessionStorage.getItem('farisa-coach-api-token') || ''
+    return String(JSON.parse(atob(token.split('.')[0].replace(/-/gu, '+').replace(/_/gu, '/'))).sub || '')
+  } catch {
+    return ''
+  }
+}
+const flagKey = (base) => `${base}:${accountId()}`
+function readFlag(base) {
+  try {
+    const key = flagKey(base)
+    let value = localStorage.getItem(key)
+    // Marcação antiga (sem conta): passa para a conta que entrar primeiro.
+    if (value === null && localStorage.getItem(base) !== null) {
+      value = localStorage.getItem(base)
+      localStorage.setItem(key, value)
+      localStorage.removeItem(base)
+    }
+    return value === '1'
+  } catch {
+    return false
+  }
+}
 const STEPS = [
   ['profile', 'Complete o seu perfil', 'Foto, telefone e uma frase sobre você.', '#painel', 'profile'],
   ['site', 'Monte a sua página', 'Marca, cor, foto e os preços dos seus planos.', '#meu-site'],
@@ -259,11 +285,17 @@ export async function paintOnboarding() {
   if (!host || !sessionStorage.getItem('farisa-coach-api-token')) return
   let hidden = false
   try {
-    hidden = localStorage.getItem(HIDE_KEY) === '1'
+    hidden = readFlag(HIDE_KEY)
   } catch {
     hidden = false
   }
   let card = host.querySelector('[data-onboarding]')
+  // Cartão que ficou de outra conta (saiu e entrou com outra): some na hora,
+  // sem aparecer por um instante antes de carregar os dados da conta nova.
+  if (card && card.dataset.account !== accountId()) {
+    card.remove()
+    card = null
+  }
   if (hidden) {
     card?.remove()
     return
@@ -277,7 +309,7 @@ export async function paintOnboarding() {
   const done = STEPS.filter(([key]) => data.steps?.[key]).length
   let celebrated = false
   try {
-    celebrated = localStorage.getItem(DONE_KEY) === '1'
+    celebrated = readFlag(DONE_KEY)
   } catch {
     celebrated = false
   }
@@ -288,6 +320,7 @@ export async function paintOnboarding() {
   if (!card) {
     card = el('section', 'panel onboarding')
     card.dataset.onboarding = ''
+    card.dataset.account = accountId()
     host.querySelector('.page-heading')?.after(card)
   }
   // Tudo concluído: parabéns uma vez, até a pessoa fechar.
@@ -297,7 +330,7 @@ export async function paintOnboarding() {
     close.type = 'button'
     close.addEventListener('click', () => {
       try {
-        localStorage.setItem(DONE_KEY, '1')
+        localStorage.setItem(flagKey(DONE_KEY), '1')
       } catch {
         /* sem armazenamento: some só nesta visita */
       }
@@ -329,7 +362,7 @@ export async function paintOnboarding() {
   hide.type = 'button'
   hide.addEventListener('click', () => {
     try {
-      localStorage.setItem(HIDE_KEY, '1')
+      localStorage.setItem(flagKey(HIDE_KEY), '1')
     } catch {
       /* sem armazenamento: some só nesta visita */
     }
@@ -373,3 +406,9 @@ export async function paintOnboarding() {
     card.append(share)
   }
 }
+
+// Ao sair da conta, o cartão de primeiros passos sai junto (não aparece na
+// próxima conta que entrar neste navegador).
+document.addEventListener('click', (event) => {
+  if (event.target.closest?.('[data-logout]')) document.querySelectorAll('[data-onboarding]').forEach((card) => card.remove())
+})
