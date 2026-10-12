@@ -283,6 +283,11 @@ const STEPS = [
 export async function paintOnboarding() {
   const host = document.querySelector('[data-route="painel"]')
   if (!host || !sessionStorage.getItem('farisa-coach-api-token')) return
+  // Biblioteca FARISA não tem "primeiros passos" de personal.
+  if (sessionStorage.getItem('farisa-library-mode') === '1') {
+    host.querySelector('[data-onboarding]')?.remove()
+    return
+  }
   let hidden = false
   try {
     hidden = readFlag(HIDE_KEY)

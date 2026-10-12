@@ -35,6 +35,11 @@ function paintTopbar() {
     paintAvatar(box.querySelector('.avatar'), { name: 'FARISA', avatar: '' })
     box.querySelector('strong').textContent = 'Biblioteca FARISA'
     box.querySelector('small').textContent = 'Administrador · dono da plataforma'
+    // Não abre o perfil de personal ao clicar.
+    box.classList.remove('profile--clickable')
+    box.removeAttribute('role')
+    box.removeAttribute('title')
+    box.tabIndex = -1
     return
   }
   const name = profile?.name || box.querySelector('strong')?.textContent || 'Personal'
@@ -93,6 +98,8 @@ function paintCapacity() {
 let profileDialog = null
 
 function openProfileDialog(focusField) {
+  // Biblioteca FARISA: não é perfil de personal (sem foto, CREF, bio…).
+  if (sessionStorage.getItem('farisa-library-mode') === '1') return
   const profile = profileOf()
   if (!profile) {
     showToast('Perfil indisponível: rode a migração 018 do banco (npm run dev faz isso sozinho).')
