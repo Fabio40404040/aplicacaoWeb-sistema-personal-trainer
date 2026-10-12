@@ -209,7 +209,10 @@ export function accountCard() {
   const download = el('button', 'button button--secondary', 'Baixar meus dados')
   download.type = 'button'
   download.addEventListener('click', async () => {
+    if (download.disabled) return
     download.disabled = true
+    // Mostra que está trabalhando (antes parecia que nada acontecia).
+    download.textContent = 'Preparando o arquivo…'
     try {
       const data = await accountRequest('/account/export', { timeoutMs: 60000 })
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -220,11 +223,12 @@ export function accountCard() {
       link.click()
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(link.href), 2000)
-      showToast('Arquivo com os seus dados baixado.')
+      showToast('Pronto! O arquivo meus-dados-farisa foi salvo na pasta Downloads.')
     } catch (error) {
       showToast(error.message)
     } finally {
       download.disabled = false
+      download.textContent = 'Baixar meus dados'
     }
   })
   const remove = el('button', 'button button--secondary account-delete-open', 'Excluir minha conta')
