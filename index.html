@@ -91,7 +91,14 @@
           var node = document.querySelector(selector)
           if (node) node.setAttribute(attr, value)
         }
-        set('link[rel="manifest"]', 'href', '/painel.webmanifest')
+        // Manifesto na cor do último personal que entrou neste aparelho
+        // (sempre o mesmo a cada abertura: o app não fica pedindo atualização).
+        var painelCor = 'blue'
+        try {
+          painelCor = localStorage.getItem('farisa-painel-cor') || 'blue'
+        } catch (e) {}
+        if (!/^(blue|green|teal|purple|pink|red|orange|gold)$/.test(painelCor)) painelCor = 'blue'
+        set('link[rel="manifest"]', 'href', '/painel-' + painelCor + '.webmanifest')
         set('link[rel="icon"]', 'href', '/icons/painel-192.png')
         set('link[rel="icon"]', 'type', 'image/png')
         set('link[rel="apple-touch-icon"]', 'href', '/icons/painel-apple-touch-icon.png?v=3')

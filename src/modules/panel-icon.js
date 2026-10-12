@@ -6,11 +6,26 @@ import { fetchSiteSettings } from './api-client.js'
 const COLORS = ['blue', 'green', 'teal', 'purple', 'pink', 'red', 'orange', 'gold']
 const EVERY_MS = 5 * 60_000
 let lastCheck = 0
-let current = ''
+const COLOR_KEY = 'farisa-painel-cor'
+// Começa com a cor que o <head> já usou (não troca o manifesto à toa: trocar
+// a cada abertura fazia o app instalado mostrar "Atualização disponível").
+let current = (() => {
+  try {
+    const saved = localStorage.getItem(COLOR_KEY) || 'blue'
+    return COLORS.includes(saved) ? saved : 'blue'
+  } catch {
+    return 'blue'
+  }
+})()
 
 function setIcon(color) {
   if (color === current) return
   current = color
+  try {
+    localStorage.setItem(COLOR_KEY, color)
+  } catch {
+    /* sem armazenamento */
+  }
   const set = (selector, attr, value) => document.querySelector(selector)?.setAttribute(attr, value)
   set('link[rel="apple-touch-icon"]', 'href', `/icons/painel-${color}-apple-touch-icon.png?v=3`)
   set('link[rel="icon"]', 'href', `/icons/painel-${color}-192.png?v=3`)
@@ -19,7 +34,8 @@ function setIcon(color) {
 
 async function refresh(force = false) {
   if (document.documentElement.dataset.surface !== 'painel') return
-  if (!sessionStorage.getItem('farisa-coach-api-token')) return setIcon('blue')
+  // Sem ninguém conectado: mantém a cor atual (não volta para azul e depois troca de novo).
+  if (!sessionStorage.getItem('farisa-coach-api-token')) return
   if (!force && Date.now() - lastCheck < EVERY_MS) return
   lastCheck = Date.now()
   try {
@@ -32,6 +48,9 @@ async function refresh(force = false) {
 
 export function initPanelIcon() {
   if (document.documentElement.dataset.surface !== 'painel') return
+  // Ícones da cor salva desde o início (o manifesto o <head> já pôs).
+  document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', `/icons/painel-${current}-apple-touch-icon.png?v=3`)
+  document.querySelector('link[rel="icon"]')?.setAttribute('href', `/icons/painel-${current}-192.png?v=3`)
   void refresh(true)
   let first = true
   window.addEventListener('farisa:data-changed', () => {
