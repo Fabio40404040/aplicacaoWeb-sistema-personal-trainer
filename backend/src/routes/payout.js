@@ -15,8 +15,8 @@ const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
 const unb64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0))
 const hex = (buffer) => [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 
-async function cipherKey(env) {
-  const secret = String(env.PAYOUT_ENCRYPTION_KEY || env.SESSION_SECRET || '')
+async function cipherKey(env, secretText = env.PAYOUT_ENCRYPTION_KEY || env.SESSION_SECRET) {
+  const secret = String(secretText || '')
   if (secret.length < 16) throw new Error('Chave de segurança da plataforma não configurada.')
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(`farisa-payout:${secret}`))
   return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt'])
@@ -28,7 +28,15 @@ async function seal(env, text) {
 }
 async function unseal(env, sealed) {
   const [iv, data] = String(sealed || '').split('.')
-  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await cipherKey(env), unb64(data))
+  let plain
+  try {
+    plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await cipherKey(env), unb64(data))
+  } catch (error) {
+    // Guardado antes de existir PAYOUT_ENCRYPTION_KEY (com a chave da sessão):
+    // ainda abre, para nenhum personal precisar conectar o Mercado Pago de novo.
+    if (!env.PAYOUT_ENCRYPTION_KEY || !env.SESSION_SECRET) throw error
+    plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await cipherKey(env, env.SESSION_SECRET), unb64(data))
+  }
   return new TextDecoder().decode(plain)
 }
 async function hmac(env, text) {
