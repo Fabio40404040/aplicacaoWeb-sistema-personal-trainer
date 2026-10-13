@@ -278,6 +278,7 @@ export async function startSaasCheckout(env, db, trainerId, body) {
             ? { email: 'test_user_br@testuser.com', first_name: 'APRO' }
             : { email: trainer.email, first_name: trainer.name },
           external_reference: intentId,
+          ...saasNotificationUrl(env),
           metadata: { intent_id: intentId, trainer_id: trainerId, kind: 'saas' },
         }),
       })
@@ -378,6 +379,7 @@ export async function saasCardPayment(env, db, trainerId, body) {
           identification: { type: identificationType, number: identificationNumber },
         },
         external_reference: intentId,
+        ...saasNotificationUrl(env),
         statement_descriptor: 'FARISA',
         metadata: { intent_id: intentId, trainer_id: trainerId, kind: 'saas' },
       }),
@@ -402,6 +404,16 @@ export async function saasCardPayment(env, db, trainerId, body) {
     // 422 (e não 502): o Cloudflare troca respostas 502 pela página de erro dele.
     return { error: error.message, status: 422 }
   }
+}
+
+// Endereço de aviso do Mercado Pago na própria cobrança (igual às cobranças de
+// alunos): aprovação, estorno e contestação chegam mesmo sem o aviso configurado
+// no painel do Mercado Pago.
+function saasNotificationUrl(env) {
+  const api = String(env.PUBLIC_API_URL || '').replace(/\/$/u, '')
+  return env.MERCADO_PAGO_WEBHOOK_SECRET && /^https:\/\//u.test(api)
+    ? { notification_url: `${api}/api/payments/mercadopago/webhook` }
+    : {}
 }
 
 // Pagamento aprovado: ativa/renova o plano. Renovar antes de vencer soma o
