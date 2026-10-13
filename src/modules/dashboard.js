@@ -289,6 +289,9 @@ function announcePayments(students) {
     return
   }
   if (!paidNow.length) return
+  // Só no painel do personal (/personal). Na página do personal ou na área do
+  // aluno aberta na mesma aba (ex.: "Ver minha página"), não aparece.
+  if (document.documentElement.dataset.surface !== 'painel') return
   const names = paidNow.map((s) => s.name).join(', ')
   showPaidDialog({
     title: paidNow.length > 1 ? 'Pagamentos confirmados!' : 'Pagamento confirmado!',
