@@ -924,6 +924,7 @@ const ACTIONS = {
   trainer_password_reset: 'Nova senha gerada',
   trainer_deleted: 'Personal excluído',
   trainer_impersonated: 'Acesso de suporte ao painel',
+  student_viewed: 'Viu como o aluno',
   library_opened: 'Biblioteca FARISA aberta para edição',
   library_synced: 'Biblioteca FARISA: arquivos viraram exercícios',
   trainer_plan_set: 'Plano definido',
@@ -934,7 +935,7 @@ const ACTIONS = {
 }
 const AUDIT_GROUPS = {
   personais: ['trainer_created', 'trainer_updated', 'trainer_blocked', 'trainer_unblocked', 'trainer_password_reset', 'trainer_deleted'],
-  acessos: ['trainer_impersonated'],
+  acessos: ['trainer_impersonated', 'student_viewed'],
   planos: ['trainer_plan_set', 'saas_plans_updated'],
   suporte: ['support_replied', 'support_closed', 'support_open'],
 }

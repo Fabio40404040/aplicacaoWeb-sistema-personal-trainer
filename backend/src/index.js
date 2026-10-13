@@ -761,6 +761,9 @@ async function handleRoutes(request, env) {
       ).rows[0];
       if (!student) return { error: "Este aluno ainda não tem conta de acesso.", status: 404 };
       const slug = (await db.query("SELECT slug FROM trainer_site WHERE trainer_id=$1", [session.sub]).catch(() => ({ rows: [] }))).rows[0]?.slug;
+      // Fica em Admin → Registro de ações → Acessos de suporte.
+      await audit(db, { email: session.support }, "student_viewed", { type: "student", id: segments[1], label: student.name },
+        `Aluno: ${student.email} · Personal: ${session.email || session.sub}`);
       return {
         data: {
           token: await createSession(student, env, "student", { viewAs: session.sub }, 3600),
