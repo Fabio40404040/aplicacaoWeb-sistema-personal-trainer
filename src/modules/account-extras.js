@@ -131,14 +131,14 @@ function openEmailChange(email) {
   address.focus()
 }
 
-// ---------- uso do espaço (vídeos e PDFs)
+// ---------- uso do espaço (GIFs, vídeos e PDFs)
 export function storageLine(storage) {
   if (!storage?.limit) return null
   const box = el('div', 'saas-usage')
   const bar = el('progress')
   bar.max = storage.limit
   bar.value = Math.min(storage.used, storage.limit)
-  box.append(el('small', '', `${mb(storage.used)} de ${mb(storage.limit)} em vídeos e PDFs (GIFs não contam)`), bar)
+  box.append(el('small', '', `${mb(storage.used)} de ${mb(storage.limit)} em GIFs, vídeos e PDFs`), bar)
   return box
 }
 

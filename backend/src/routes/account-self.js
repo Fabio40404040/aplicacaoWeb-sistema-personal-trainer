@@ -7,7 +7,7 @@ import { saasState } from './saas.js'
 import { sendTrainerWelcome } from './account-emails.js'
 import { notify } from '../lib/notify.js'
 
-// ---------- armazenamento (vídeos e PDFs; GIFs não contam)
+// ---------- armazenamento (GIFs, vídeos e PDFs)
 export const FREE_MEDIA_BYTES = 300 * 1024 * 1024
 const mb = (bytes) => `${Math.round(Number(bytes || 0) / (1024 * 1024))} MB`
 
@@ -19,7 +19,7 @@ export async function mediaUsage(db, trainerId) {
       return 0
     }
   }
-  const used = (await sum('exercise_videos')) + (await sum('ready_workout_pdfs'))
+  const used = (await sum('exercise_gifs')) + (await sum('exercise_videos')) + (await sum('ready_workout_pdfs'))
   // A Biblioteca FARISA não tem limite de espaço.
   if (trainerId === 'farisa-library') return { used, limit: 0 }
   const state = await saasState(db, trainerId)
@@ -31,7 +31,7 @@ export async function mediaQuotaProblem(db, trainerId, newBytes) {
   try {
     const { used, limit } = await mediaUsage(db, trainerId)
     if (!limit || used + Number(newBytes || 0) <= limit) return ''
-    return `O plano Grátis permite até ${mb(limit)} de vídeos e PDFs, e você já usa ${mb(used)}. Apague arquivos antigos ou assine o Ilimitado em "Minha assinatura". GIFs não contam nesse limite.`
+    return `O plano Grátis permite até ${mb(limit)} de GIFs, vídeos e PDFs, e você já usa ${mb(used)}. Apague arquivos antigos ou assine o Ilimitado em "Minha assinatura".`
   } catch {
     return ''
   }

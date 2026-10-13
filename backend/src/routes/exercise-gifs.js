@@ -1,5 +1,6 @@
-// Sem limite próprio de tamanho: o único teto é o do Cloudflare, que
-// recusa envios acima de 100 MB por requisição.
+import { mediaQuotaProblem } from "./account-self.js";
+// Sem limite próprio de tamanho por arquivo: o teto é o do Cloudflare (100 MB
+// por envio). No plano Grátis o total entra na cota de espaço (account-self.js).
 const MAX_GIF_BYTES = 100 * 1024 * 1024;
 const MAX_FRAME_BYTES = 1024 * 1024;
 
@@ -82,6 +83,9 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
     return { ...existing, alreadyStored: true };
   }
 
+  // Plano Grátis: o GIF entra na cota de espaço, junto com vídeos e PDFs.
+  const noSpace = await mediaQuotaProblem(db, trainerId, file.size);
+  if (noSpace) return { error: noSpace, status: 400 };
   const bytes = await file.arrayBuffer();
   if (!isGif(bytes))
     return { error: "O arquivo enviado não é um GIF válido.", status: 400 };
