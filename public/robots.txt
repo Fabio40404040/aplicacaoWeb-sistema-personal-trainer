@@ -5,3 +5,4 @@ Disallow: /admin/
 Disallow: /api/
 
 Sitemap: https://farisafit.com.br/sitemap.xml
+Sitemap: https://farisafit.com.br/sitemap-personais.xml
