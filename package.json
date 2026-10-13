@@ -21,7 +21,7 @@
     "demo:remover": "npm --prefix backend run demo:remover:local && npm --prefix backend run demo:remover:remote",
     "wrangler:login": "npm --prefix backend exec -- wrangler login",
     "agendador:publicar": "npm --prefix backend run agendador:deploy",
-    "backup": "npm --prefix backend run db:backup",
+    "backup": "node scripts/backup.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
