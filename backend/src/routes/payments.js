@@ -308,14 +308,25 @@ async function manualPix(db, row, pix, amountCents, intentId) {
 
 // Aluno avisa que pagou o Pix direto: vai para a conferência do personal.
 export async function manualPixPaid(db, accountId, body) {
+  const intentId = String(body?.intentId || '')
+  const owner = `AND student_id=(SELECT student_id FROM student_accounts WHERE id=$2)`
   const result = await db.query(
     `UPDATE payment_intents SET status='in_review', updated_at=CURRENT_TIMESTAMP
-     WHERE id=$1 AND provider='manual' AND status IN ('pending','in_review')
-       AND student_id=(SELECT student_id FROM student_accounts WHERE id=$2) RETURNING id`,
-    [String(body?.intentId || ''), accountId],
+     WHERE id=$1 AND provider='manual' AND status='pending' ${owner} RETURNING id`,
+    [intentId, accountId],
   )
-  if (!result.rows[0]) return { error: 'Cobrança não encontrada. Gere o Pix de novo.', status: 404 }
-  await notifyPixToCheck(db, result.rows[0].id)
+  // Só o primeiro aviso manda e-mail ao personal; clicar de novo não repete.
+  if (result.rows[0]) {
+    await notifyPixToCheck(db, result.rows[0].id)
+    return { data: { status: 'in_review' } }
+  }
+  const already = (
+    await db.query(`SELECT id FROM payment_intents WHERE id=$1 AND provider='manual' AND status='in_review' ${owner}`, [
+      intentId,
+      accountId,
+    ])
+  ).rows[0]
+  if (!already) return { error: 'Cobrança não encontrada. Gere o Pix de novo.', status: 404 }
   return { data: { status: 'in_review' } }
 }
 
