@@ -5,7 +5,7 @@ import { saasAmount, saasPlans } from './saas.js'
 // contas de personal. As rotas /api/admin/* só aceitam sessão com papel
 // "admin" (criada por adminLogin) — sessão de personal ou aluno é recusada.
 import { createSession, hashPassword, verifyPassword } from '../lib/session.js'
-import { sendNoticeEmail } from '../lib/recovery-email.js'
+import { hasRecoveryEmailProvider, sendNoticeEmail } from '../lib/recovery-email.js'
 import { readJson } from '../lib/http.js'
 import { sendTrainerWelcome } from './account-emails.js'
 
@@ -17,7 +17,8 @@ async function codeHash(env, adminId, code) {
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
 }
-// Devolve 'ok', 'sent' (código enviado agora), 'wrong' ou 'skip' (sem e-mail
+// Devolve 'ok', 'sent' (código enviado agora), 'wrong', 'unavailable' (o envio
+// falhou) ou 'skip' (sem e-mail
 // configurado ou sem a migração 034: entra só com a senha, como antes).
 async function secondStep(env, db, admin, code) {
   const now = Math.floor(Date.now() / 1000)
@@ -50,7 +51,12 @@ async function secondStep(env, db, admin, code) {
     response = null
   }
   if (!response?.ok) {
-    console.error('[admin] não foi possível enviar o código de acesso; entrando só com a senha')
+    // Com e-mail configurado (produção), falha no envio não libera a entrada
+    // só com a senha. Sem e-mail configurado (teste local), entra como antes.
+    if (hasRecoveryEmailProvider(env)) {
+      console.error('[admin] não foi possível enviar o código de acesso; entrada recusada')
+      return 'unavailable'
+    }
     return 'skip'
   }
   await db.query(
@@ -86,6 +92,8 @@ export async function adminLogin(request, env, db) {
     return {
       data: { needCode: true, message: `Enviamos um código de 6 dígitos para o seu e-mail. Ele vale por ${CODE_MINUTES} minutos.` },
     }
+  if (step === 'unavailable')
+    return { error: 'Não foi possível enviar o código de acesso agora. Tente de novo em alguns minutos.', status: 503 }
   if (step === 'wrong')
     return { error: 'Código incorreto ou vencido. Entre de novo com a senha para receber outro.', status: 401 }
   await db.query('UPDATE platform_admins SET last_login_at=CURRENT_TIMESTAMP WHERE id=$1', [
