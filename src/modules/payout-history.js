@@ -266,10 +266,11 @@ export function historyBox(history, options = {}) {
     )
     const biggest = Math.max(...ordered.map(([, group]) => group.total), 1)
     list.replaceChildren(
-      ...ordered.map(([key, group], index) => {
+      ...ordered.map(([key, group]) => {
         const id = `${state.group}:${key}`
         const details = el('details', 'support-folder payhist-group')
-        details.open = state.open[id] ?? (ordered.length === 1 || (index === 0 && ['month', 'year'].includes(state.group)))
+        // Pastas começam fechadas; abrem só quando você clica.
+        details.open = state.open[id] ?? false
         details.addEventListener('toggle', () => {
           use()
           state.open[id] = details.open
