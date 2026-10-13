@@ -413,6 +413,23 @@ export async function updateResource(db, resource, trainerId, id, body) {
         error: "A senha deve ter no mínimo 8 caracteres, com maiúscula, minúscula, número e caractere especial.",
         status: 400,
       };
+    // Conta usada com mais de um personal: a senha é do aluno. Sem isto, um
+    // personal poderia trocar a senha e entrar como o aluno de outro personal.
+    if (password) {
+      const shared = (
+        await db.query(
+          `SELECT COUNT(*) AS n FROM students o
+           WHERE o.account_id=(SELECT account_id FROM students WHERE id=$2 AND trainer_id=$1)`,
+          [trainerId, id],
+        )
+      ).rows[0];
+      if (Number(shared?.n) > 1)
+        return {
+          error:
+            "Este aluno também treina com outro personal, então a senha é dele. Para trocar, ele usa “Esqueci minha senha” na página de entrada.",
+          status: 409,
+        };
+    }
     const values = [trainerId, id, ...config.values(body)];
     const [studentResult] = await db.batch([
       { sql: config.update, values },
