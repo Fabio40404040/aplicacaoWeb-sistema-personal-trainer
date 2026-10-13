@@ -662,6 +662,16 @@ async function handleRoutes(request, env) {
     );
     if (!trainer.rows.length)
       return { error: "Sessão inválida ou expirada.", status: 401 };
+    // Acesso de suporte: só vale enquanto o admin que abriu existe e não trocou a senha.
+    if (session.support && session.supportId) {
+      const admin = (
+        await db.query("SELECT 1 AS x FROM platform_admins WHERE id=$1 AND auth_version=$2 LIMIT 1", [
+          session.supportId,
+          session.supportVersion || 0,
+        ])
+      ).rows[0];
+      if (!admin) return { error: "Sessão inválida ou expirada.", status: 401 };
+    }
     // Conta bloqueada pelo dono da plataforma (o acesso de suporte continua).
     if (!session.support) {
       const status = await db

@@ -485,6 +485,13 @@ export async function adminDeleteTrainer(env, db, admin, id, body) {
   return { data: { deleted: true, removedFiles, removedAccounts } }
 }
 
+// Quem abriu o suporte e a versão da senha dele: trocar a senha do admin (ou
+// removê-lo) encerra na hora os acessos de suporte abertos por ele.
+export async function supportStamp(db, admin) {
+  const row = (await db.query('SELECT auth_version FROM platform_admins WHERE id=$1', [admin.id]).catch(() => ({ rows: [] }))).rows[0]
+  return row ? { supportId: admin.id, supportVersion: Number(row.auth_version) || 0 } : {}
+}
+
 // Entrar no painel do personal para dar suporte. Exige motivo e fica no registro.
 export async function adminImpersonate(env, db, admin, id, body) {
   const reason = text(body?.reason, 300)
@@ -498,7 +505,7 @@ export async function adminImpersonate(env, db, admin, id, body) {
         { ...trainer, auth_version: trainer.auth_version || 0 },
         { ...env, SESSION_TTL_SECONDS: 3600 },
         'coach',
-        { support: admin.email || admin.id },
+        { support: admin.email || admin.id, ...(await supportStamp(db, admin)) },
       ),
       trainer: { id: trainer.id, name: trainer.name, email: trainer.email },
     },

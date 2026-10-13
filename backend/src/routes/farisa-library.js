@@ -5,7 +5,7 @@
 // biblioteca (arrastar pastas, conferir, editar). Essa conta fica fora das
 // listas, do faturamento e dos limites de plano.
 import { createSession } from '../lib/session.js'
-import { audit } from './admin.js'
+import { audit, supportStamp } from './admin.js'
 
 export const LIBRARY_ID = 'farisa-library'
 export const LIBRARY_NAME = 'Biblioteca FARISA'
@@ -100,7 +100,7 @@ export async function adminOpenLibrary(env, db, admin) {
         { ...trainer, auth_version: trainer.auth_version || 0 },
         { ...env, SESSION_TTL_SECONDS: 4 * 3600 },
         'coach',
-        { support: admin.email || admin.id, library: true },
+        { support: admin.email || admin.id, library: true, ...(await supportStamp(db, admin)) },
       ),
       name: LIBRARY_NAME,
     },
