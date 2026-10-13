@@ -1266,6 +1266,10 @@ export function initStudentAccess() {
       let alreadyShown = false;
       try {
         alreadyShown = localStorage.getItem(PAID_SHOWN) === paidKey;
+        // Mesmo aluno com o "PAGO" mostrado há menos de 2 minutos (duas
+        // atualizações seguidas, ou o app e o navegador abertos): não repete.
+        const [shownId, shownAt] = String(localStorage.getItem(`${PAID_SHOWN}-at`) || "").split("|");
+        if (shownId === String(data.studentId) && Date.now() - Number(shownAt) < 120000) alreadyShown = true;
       } catch {
         alreadyShown = false;
       }
@@ -1279,6 +1283,7 @@ export function initStudentAccess() {
         sessionStorage.removeItem(PAID_FLAG);
         try {
           localStorage.setItem(PAID_SHOWN, paidKey);
+          localStorage.setItem(`${PAID_SHOWN}-at`, `${data.studentId}|${Date.now()}`);
         } catch {
           /* sem armazenamento */
         }
