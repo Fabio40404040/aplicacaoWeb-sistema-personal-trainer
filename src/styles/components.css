@@ -3309,6 +3309,9 @@ video.gif-lightbox-image {
 }
 
 /* FARISA Painel (/personal/): azul FARISA e só o que é do personal */
+[data-panel-boot] [data-public-screen] {
+  display: none !important;
+}
 [data-surface='painel'] .login-home-button,
 [data-surface='painel'] a[href='#inicio'],
 [data-surface='painel'] a[href='#entrar-aluno'] {

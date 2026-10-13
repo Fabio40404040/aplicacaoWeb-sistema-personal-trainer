@@ -87,3 +87,5 @@ initialize('página do personal', initSiteBrand)
 initialize('meu site', initSiteSettings)
 initialize('WhatsApp flutuante', initWhatsappFloat)
 initialize('prévia dos treinos prontos', initPlanPreview)
+// Painel já montado: libera a tela (ver data-panel-boot no index.html).
+document.documentElement.removeAttribute('data-panel-boot')

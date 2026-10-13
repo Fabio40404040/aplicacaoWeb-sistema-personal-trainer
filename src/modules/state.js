@@ -65,11 +65,23 @@ export function clearStoredData() {
   data = structuredClone(initialData)
 }
 
+// Biblioteca FARISA: abre vazia até chegar a lista real (sem os exercícios de
+// exemplo, que pareciam a página de um personal por um instante).
+function startData() {
+  const start = structuredClone(initialData)
+  try {
+    if (store.getItem('farisa-library-mode') === '1') start.exercises = []
+  } catch {
+    // ignora
+  }
+  return start
+}
+
 function loadData() {
   try {
-    return JSON.parse(store.getItem(STORAGE_KEY)) || structuredClone(initialData)
+    return JSON.parse(store.getItem(STORAGE_KEY)) || startData()
   } catch {
-    return structuredClone(initialData)
+    return startData()
   }
 }
 
