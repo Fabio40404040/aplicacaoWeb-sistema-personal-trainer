@@ -4,6 +4,7 @@ import { sendNoticeEmail } from "./lib/recovery-email.js";
 import { withDb } from "./lib/db.js";
 import { corsHeaders, json, readJson } from "./lib/http.js";
 import { runBillingNotices } from "./routes/billing-notices.js";
+import { runErrorAlert } from "./routes/error-alert.js";
 import { resendVerification, verifyEmailPage } from "./routes/account-emails.js";
 import { deleteOwnAccount,
   changeOwnEmail, exportAccount, onboarding } from "./routes/account-self.js";
@@ -347,6 +348,7 @@ async function handleRoutes(request, env) {
   if (request.method === "POST" && route === "public/cron")
     return withDb(env, async (db) => {
       await runBillingNotices(env, db);
+      await runErrorAlert(env, db);
       return { data: { ok: true } };
     });
   if (request.method === "POST" && route === "auth/login")
@@ -1000,6 +1002,9 @@ export default {
       /\/api\/(public\/saas-plans|public\/site|billing)\/?$/u.test(new URL(request.url).pathname)
     )
       ctx.waitUntil(withDb(env, (db) => runBillingNotices(env, db)).catch(() => {}));
+    // Resumo de erros novos por e-mail ao admin (no máximo um por hora).
+    if (env.DB && request.method === "GET" && ctx?.waitUntil && /^\/api\/(public\/site|dashboard|student\/me)/u.test(new URL(request.url).pathname))
+      ctx.waitUntil(withDb(env, (db) => runErrorAlert(env, db)).catch(() => {}));
     if (request.method === "OPTIONS")
       return new Response(null, { status: 204, headers: cors });
     try {
