@@ -40,9 +40,16 @@ export function createGeneralWhatsappUrl() {
   return `${destination}?text=${encodeURIComponent(message)}`
 }
 
+// WhatsApp da plataforma FARISA (site principal). As páginas dos personais
+// usam o número de cada um (setWhatsappContact).
+export const PLATFORM_WHATSAPP = '5588988421103'
+export const platformWhatsappUrl = () =>
+  `https://wa.me/${PLATFORM_WHATSAPP}?text=${encodeURIComponent('Olá! Sou personal e quero saber mais sobre a FARISA.')}`
+
 // Botão flutuante do WhatsApp no site público.
 export function initWhatsappFloat() {
+  const platform = document.documentElement.dataset.home === 'saas'
   document.querySelectorAll('[data-whatsapp-float]').forEach((link) => {
-    link.href = createGeneralWhatsappUrl()
+    link.href = platform ? platformWhatsappUrl() : createGeneralWhatsappUrl()
   })
 }

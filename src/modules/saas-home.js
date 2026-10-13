@@ -2,6 +2,7 @@
 // html[data-home="saas"] antes de pintar; aqui a página do personal sai do
 // DOM, o menu vira o da plataforma e os botões de demonstração funcionam.
 import { leaveDemoToHome, leaveDemoToSignup } from './demo-invite.js'
+import { platformWhatsappUrl } from './whatsapp.js'
 
 const API_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/u, '')
 const DEMO_KEY = 'farisa-demo'
@@ -75,8 +76,10 @@ function buildHome() {
   const footer = document.querySelector('.public-footer p')
   if (footer?.firstChild?.nodeType === Node.TEXT_NODE)
     footer.firstChild.textContent = `© ${new Date().getFullYear()} FARISA · `
+  // Botão "Dúvidas?" com o WhatsApp da plataforma.
   document.querySelectorAll('[data-whatsapp-float]').forEach((link) => {
-    link.hidden = true
+    link.href = platformWhatsappUrl()
+    link.hidden = false
   })
   document.title = 'FARISA — site e app para personal trainers'
   // Chegou com #planos etc. antes de as seções terem id: rola até lá.
@@ -111,8 +114,8 @@ async function fillContact() {
     const site = await (await fetch(`${API_URL}/api/public/site`)).json()
     const whatsapp = document.querySelector('[data-saas-whatsapp]')
     const email = document.querySelector('[data-saas-email]')
-    if (site.contact?.whatsapp && whatsapp) {
-      whatsapp.href = `https://wa.me/${site.contact.whatsapp}?text=${encodeURIComponent('Olá! Sou personal e quero saber mais sobre a FARISA.')}`
+    if (whatsapp) {
+      whatsapp.href = platformWhatsappUrl()
       whatsapp.hidden = false
     }
     if (site.contact?.email && email) {
