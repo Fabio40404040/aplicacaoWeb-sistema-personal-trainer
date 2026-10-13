@@ -500,11 +500,17 @@ async function approvePayment(db, intent, payment, paymentId, provider = 'mercad
     current.planCode === intent.plan_code &&
     current.billingCycle === intent.billing_cycle
   const expiresAt = expiryFor(intent, intent.billing_cycle, renewing ? current.expiresAt : null)
-  await db.batch([
-    {
-      sql: `UPDATE payment_intents SET status='approved',updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
-      values: [intent.id],
-    },
+  // Só uma execução aprova: o aviso do Mercado Pago e a atualização da tela
+  // podem chegar juntos, e sem isto o prazo seria somado duas vezes.
+  const claimed = (
+    await db.query(
+      `UPDATE payment_intents SET status='approved',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status<>'approved' RETURNING id`,
+      [intent.id],
+    )
+  ).rows[0]
+  if (!claimed) return
+  try {
+    await db.batch([
     {
       sql: `UPDATE students SET plan_code=$2,access_type=$3,billing_cycle=$4,access_status='active',access_expires_at=$5,
        payment_status='paid',payment_method=$6,authorized_at=CURRENT_TIMESTAMP,status='Ativo',updated_at=CURRENT_TIMESTAMP
@@ -538,7 +544,12 @@ async function approvePayment(db, intent, payment, paymentId, provider = 'mercad
        VALUES ($1,$2,'payment_confirmed',$3,$4)`,
       values: [intent.trainer_id, intent.student_id, intent.plan_code, `${provider}:${paymentId}`],
     },
-  ])
+    ])
+  } catch (error) {
+    // Não liberou o aluno: devolve a cobrança ao estado anterior para tentar de novo.
+    await db.query('UPDATE payment_intents SET status=$2 WHERE id=$1', [intent.id, intent.status]).catch(() => {})
+    throw error
+  }
   // Pagou: a mudança de plano foi concluída.
   try {
     await db.query(

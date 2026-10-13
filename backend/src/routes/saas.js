@@ -420,13 +420,26 @@ export async function approveSaasPayment(db, intent, payment, env = null) {
       ? new Date(current.exp)
       : new Date()
   base.setUTCMonth(base.getUTCMonth() + (SAAS_CYCLES[intent.cycle]?.months || 1))
-  await db.batch([
-    { sql: "UPDATE saas_payment_intents SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=$1", values: [intent.id] },
-    {
-      sql: `UPDATE trainers SET saas_plan_code=$2, saas_cycle=$3, saas_expires_at=$4 WHERE id=$1`,
-      values: [intent.trainer_id, intent.plan_code, intent.cycle, base.toISOString()],
-    },
-  ])
+  // Só uma execução aprova (aviso do Mercado Pago e conferência juntos não
+  // somam o período duas vezes).
+  const claimed = (
+    await db.query(
+      "UPDATE saas_payment_intents SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status<>'approved' RETURNING id",
+      [intent.id],
+    )
+  ).rows[0]
+  if (!claimed) return
+  try {
+    await db.query(`UPDATE trainers SET saas_plan_code=$2, saas_cycle=$3, saas_expires_at=$4 WHERE id=$1`, [
+      intent.trainer_id,
+      intent.plan_code,
+      intent.cycle,
+      base.toISOString(),
+    ])
+  } catch (error) {
+    await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, intent.status]).catch(() => {})
+    throw error
+  }
   // Recibo por e-mail (uma vez por pagamento).
   if (env) await sendSaasReceipt(env, db, intent.id)
 }
