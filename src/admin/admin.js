@@ -646,6 +646,8 @@ async function renderBilling() {
     (data.payments || []).map((item) => ({
       ...item,
       studentName: item.trainerName,
+      // Plano de hoje ao lado do nome (o pagamento mostra o plano comprado na época).
+      whoNote: item.currentPlan ? `hoje: ${item.currentPlan}` : '',
       refunded: Boolean(item.status) && item.status !== 'approved',
     })),
     {

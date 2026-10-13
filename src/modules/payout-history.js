@@ -83,7 +83,10 @@ function filtered(rows) {
 }
 
 function groupKey(item) {
-  if (state.group === 'student') return [item.studentName || words.removed, item.studentName || words.removed]
+  if (state.group === 'student') {
+    const name = item.studentName || words.removed
+    return [name, item.whoNote ? `${name} · ${item.whoNote}` : name]
+  }
   if (state.group === 'plan') return [item.planName || 'Sem plano', item.planName || 'Sem plano']
   if (!item.date) return ['sem-data', 'Sem data']
   if (state.group === 'year') return [String(item.date.getFullYear()), String(item.date.getFullYear())]
