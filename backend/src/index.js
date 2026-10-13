@@ -304,11 +304,16 @@ async function handleRoutes(request, env) {
         const seen = (
           await db.query("SELECT 1 AS x FROM error_log WHERE route='TELA' AND message=$1 AND created_at >= datetime('now','-6 hours') LIMIT 1", [text])
         ).rows[0];
-        if (!seen)
+        // Cada aparelho/rede grava no máximo 10 erros novos a cada 15 min:
+        // ninguém consegue lotar a lista e empurrar os erros reais para fora.
+        const ipKey = [attemptKeys(request, "errlog", "").ip];
+        if (!seen && !(await isBlocked(db, ipKey, 10))) {
+          await addAttempt(db, ipKey);
           await db.batch([
             { sql: "INSERT INTO error_log (route, message, detail) VALUES ('TELA',$1,$2)", values: [text, detail] },
             { sql: "DELETE FROM error_log WHERE id <= (SELECT MAX(id) FROM error_log) - 500", values: [] },
           ]);
+        }
       }).catch(() => {});
     }
     return new Response(null, { status: 204 });
@@ -325,7 +330,9 @@ async function handleRoutes(request, env) {
         const message = `CSP: ${directive} bloquearia ${blocked.replace(/[?#].*$/u, "")}`;
         // Um registro por combinação: não enche a lista com repetidos.
         const seen = (await db.query("SELECT 1 AS x FROM error_log WHERE route='CSP' AND message=$1 LIMIT 1", [message])).rows[0];
-        if (!seen)
+        const ipKey = [attemptKeys(request, "errlog", "").ip];
+        if (!seen && !(await isBlocked(db, ipKey, 10))) {
+          await addAttempt(db, ipKey);
           await db.batch([
             {
               sql: "INSERT INTO error_log (route, message, detail) VALUES ('CSP',$1,$2)",
@@ -333,6 +340,7 @@ async function handleRoutes(request, env) {
             },
             { sql: "DELETE FROM error_log WHERE id <= (SELECT MAX(id) FROM error_log) - 500", values: [] },
           ]);
+        }
       }).catch(() => {});
     return new Response(null, { status: 204 });
   }
