@@ -164,7 +164,8 @@ const LIMITED_ROUTES = {
 // [por conta, por aparelho/rede] a cada 15 minutos.
 const ATTEMPT_LIMITS = { login: [8, 40], forgot: [5, 20], signup: [3, 8], card: [5, 12] };
 async function handle(request, env) {
-  const route = new URL(request.url).pathname.replace(/^\/api\/?/u, "").replace(/\/+$/u, "");
+  // Mesma leitura do endereço que handleRoutes: "//" não escapa do limite.
+  const route = new URL(request.url).pathname.replace(/^\/api\/?/u, "").split("/").filter(Boolean).join("/");
   const kind = request.method === "POST" ? LIMITED_ROUTES[route] : null;
   if (!kind || !env.DB) return handleRoutes(request, env);
   let email = "";
