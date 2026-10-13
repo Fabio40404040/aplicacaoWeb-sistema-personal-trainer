@@ -5,7 +5,7 @@ import { trainerLocked } from "./plan-access.js";
 import { photoPoses, studentPhotoIndex } from "./assessment-photos.js";
 import { pendingSelfAssessment } from "./self-assessment.js";
 import { linkedTrainers } from "./student-links.js";
-import { trainerPlans, trainerReferrals } from "./site.js";
+import { trainerPlans, trainerReferrals, trainerSellsPlan } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
 
@@ -396,7 +396,8 @@ export async function changePlan(db, accountId, body) {
   const account = (
     await db.query(
       `SELECT s.id, s.plan_code AS "planCode", s.billing_cycle AS "billingCycle", s.access_status AS "accessStatus",
-         s.payment_status AS "paymentStatus", s.access_type AS "accessType", s.access_expires_at AS "accessExpiresAt"
+         s.payment_status AS "paymentStatus", s.access_type AS "accessType", s.access_expires_at AS "accessExpiresAt",
+         s.trainer_id AS "trainerId"
        FROM student_accounts a JOIN students s ON s.id=a.student_id WHERE a.id=$1 LIMIT 1`,
       [accountId],
     )
@@ -420,6 +421,9 @@ export async function changePlan(db, accountId, body) {
     )
   ).rows[0];
   if (!plan) return { error: "Plano inválido.", status: 400 };
+  // Só os planos que o personal vende hoje (o mesmo do cadastro pela página).
+  if (plan.code !== account.planCode && !(await trainerSellsPlan(db, account.trainerId, plan.code)))
+    return { error: "Este plano não está disponível com o seu personal.", status: 400 };
   const cycle =
     plan.accessType === "permanent"
       ? "permanent"
