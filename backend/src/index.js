@@ -345,12 +345,16 @@ async function handleRoutes(request, env) {
       }).catch(() => {});
     return new Response(null, { status: 204 });
   }
-  if (request.method === "POST" && route === "public/cron")
+  if (request.method === "POST" && route === "public/cron") {
+    // Com CRON_SECRET configurado, só o agendador (que manda a mesma senha) chama.
+    if (env.CRON_SECRET && request.headers.get("X-Cron-Secret") !== String(env.CRON_SECRET))
+      return { error: "Não autorizado.", status: 403 };
     return withDb(env, async (db) => {
       await runBillingNotices(env, db);
       await runErrorAlert(env, db);
       return { data: { ok: true } };
     });
+  }
   if (request.method === "POST" && route === "auth/login")
     return withDb(env, (db) => login(request, env, db));
   if (

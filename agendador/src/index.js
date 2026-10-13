@@ -5,7 +5,8 @@ async function ring(env) {
   const url = `${String(env.SITE_URL || '').replace(/\/$/u, '')}/api/public/cron`
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // Mesma senha guardada no site (CRON_SECRET), para só o agendador chamar.
+    headers: { 'Content-Type': 'application/json', ...(env.CRON_SECRET ? { 'X-Cron-Secret': String(env.CRON_SECRET) } : {}) },
     body: '{}',
   })
   console.log(`Avisos de assinatura: resposta ${response.status}`)
