@@ -100,16 +100,18 @@ function render() {
     const node = document.querySelector(`[data-admin-stat="${key}"]`)
     if (node) node.textContent = String(value)
   }
-  const blocked = trainers.filter((item) => item.status === 'blocked').length
-  stat('trainers', trainers.length)
+  // Números do topo sem a conta de demonstração (Marina e os alunos de exemplo).
+  const real = trainers.filter((item) => item.id !== 'demo-trainer')
+  const blocked = real.filter((item) => item.status === 'blocked').length
+  stat('trainers', real.length)
   stat('blocked', blocked ? `${blocked} bloqueado(s)` : 'Contas cadastradas')
-  stat('students', trainers.reduce((sum, item) => sum + item.students, 0))
-  stat('active', `${trainers.reduce((sum, item) => sum + item.activeStudents, 0)} com acesso`)
+  stat('students', real.reduce((sum, item) => sum + item.students, 0))
+  stat('active', `${real.reduce((sum, item) => sum + item.activeStudents, 0)} com acesso`)
   stat('revenue', money(overview.revenue30Cents))
   stat('payments', `${overview.payments30 || 0} pagamento(s) · 30 dias`)
   stat(
     'recent',
-    trainers.filter((item) => (toDate(item.lastLoginAt)?.getTime() || 0) >= recentLimit).length,
+    real.filter((item) => (toDate(item.lastLoginAt)?.getTime() || 0) >= recentLimit).length,
   )
   const query = ($('[data-admin-search]').value || '').trim().toLocaleLowerCase('pt-BR')
   const filter = $('[data-admin-filter]').value

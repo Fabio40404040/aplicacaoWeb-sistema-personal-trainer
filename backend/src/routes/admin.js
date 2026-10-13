@@ -242,7 +242,7 @@ export async function adminOverview(db) {
   const [revenue, tickets, blocked] = await Promise.all([
     one(
       `SELECT COALESCE(SUM(amount_cents),0) AS cents, COUNT(*) AS n FROM payments
-       WHERE status='paid' AND paid_at >= datetime('now','-30 day')`,
+       WHERE status='paid' AND paid_at >= datetime('now','-30 day') AND trainer_id<>'demo-trainer'`,
     ),
     one(`SELECT COUNT(*) AS n FROM support_tickets WHERE admin_unread=1 AND status<>'closed'`),
     one(`SELECT COUNT(*) AS n FROM trainers WHERE status='blocked'`),
