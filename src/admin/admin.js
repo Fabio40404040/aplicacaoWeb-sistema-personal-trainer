@@ -959,8 +959,13 @@ function paintAudit() {
           .toLocaleLowerCase('pt-BR')
           .includes(query)),
   )
-  $('[data-audit-count]').textContent = `${rows.length} de ${auditRows.length} ação(ões)`
-  const filtered = Boolean(query) || type !== 'all' || period !== 'all'
+  // Lista fechada até escolher um período (ou buscar/filtrar por tipo).
+  const closed = !period && !query && type === 'all'
+  $('[data-admin-audit]').closest('.table-wrap').hidden = closed
+  $('[data-audit-count]').textContent = closed
+    ? `${auditRows.length} ação(ões) registradas. Escolha o período para ver a lista.`
+    : `${rows.length} de ${auditRows.length} ação(ões)`
+  const filtered = Boolean(query) || type !== 'all' || Boolean(period)
   $('[data-audit-clear]').hidden = !filtered
   $('[data-admin-audit]').replaceChildren(
     ...(rows.length
@@ -1089,7 +1094,7 @@ function initAuditFilters() {
   $('[data-audit-period]').addEventListener('change', paintAudit)
   $('[data-audit-clear]').addEventListener('click', () => {
     $('[data-audit-search]').value = ''
-    $('[data-audit-period]').value = 'all'
+    $('[data-audit-period]').value = ''
     chips.querySelector('[data-type="all"]').click()
   })
 }
