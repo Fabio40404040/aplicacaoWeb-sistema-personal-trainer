@@ -615,9 +615,10 @@ async function renderBilling() {
   }
   const tiles = el('div', 'admin-billing-tiles')
   // Total já faturado com assinaturas (todos os pagamentos aprovados).
-  const billed = (data.payments || []).reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
+  const approved = (data.payments || []).filter((item) => !item.status || item.status === 'approved')
+  const billed = approved.reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
   tiles.append(
-    tile('Total faturado', money(billed), `${(data.payments || []).length} pagamento(s) de assinatura`),
+    tile('Total faturado', money(billed), `${approved.length} pagamento(s) de assinatura`),
     tile('Assinantes pagando', String(summary.paying || 0), `de ${summary.trainers || 0} personais`),
     tile('Receita mensal prevista', money(summary.monthlyCents), 'se todos renovarem'),
     tile('No plano Grátis', String(summary.free || 0), 'podem virar assinantes'),
@@ -642,7 +643,11 @@ async function renderBilling() {
   })
 
   const report = historyBox(
-    (data.payments || []).map((item) => ({ ...item, studentName: item.trainerName })),
+    (data.payments || []).map((item) => ({
+      ...item,
+      studentName: item.trainerName,
+      refunded: Boolean(item.status) && item.status !== 'approved',
+    })),
     {
       key: 'assinaturas',
       title: 'Pagamentos de assinatura',
@@ -653,7 +658,7 @@ async function renderBilling() {
       emptyAll: 'Ainda não há pagamentos de assinatura. Eles aparecem aqui assim que um personal assinar.',
       // Estornar pelo Mercado Pago da plataforma.
       action: (item) => {
-        if (!item.id) return null
+        if (!item.id || item.refunded) return null
         const button = el('button', 'button button--secondary payhist-refund', 'Estornar')
         button.type = 'button'
         button.addEventListener('click', () => refundSubscription(item))

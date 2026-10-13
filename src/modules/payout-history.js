@@ -123,14 +123,14 @@ function exportCsv(rows) {
         item.date ? item.date.toLocaleDateString('pt-BR') : '',
         item.studentName || words.removed,
         item.planName || '',
-        methodOf(item) + (item.provider === 'pix_manual' ? ' (confirmado por você)' : ''),
+        methodOf(item) + (item.provider === 'pix_manual' ? ' (confirmado por você)' : '') + (item.refunded ? ' (ESTORNADO)' : ''),
         (Number(item.amountCents || 0) / 100).toFixed(2).replace('.', ','),
       ]
         .map(cell)
         .join(';'),
     ),
     // Linha final com o total do período baixado.
-    ['', '', '', 'TOTAL', (rows.reduce((sum, item) => sum + Number(item.amountCents || 0), 0) / 100).toFixed(2).replace('.', ',')]
+    ['', '', '', 'TOTAL', (rows.filter((item) => !item.refunded).reduce((sum, item) => sum + Number(item.amountCents || 0), 0) / 100).toFixed(2).replace('.', ',')]
       .map(cell)
       .join(';'),
   ]
@@ -227,14 +227,16 @@ export function historyBox(history, options = {}) {
         paint()
       }, 'Forma de pagamento'),
     )
-    const total = current.reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
+    // Estornados aparecem na lista, mas não entram nos totais.
+    const counted = current.filter((item) => !item.refunded)
+    const total = counted.reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
     const sumOf = (method) =>
-      current.filter((item) => item.method === method).reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
-    const students = new Set(current.map((item) => item.studentName || '?')).size
+      counted.filter((item) => item.method === method).reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
+    const students = new Set(counted.map((item) => item.studentName || '?')).size
     tiles.replaceChildren(
       tile('Total recebido', money(total)),
-      tile('Pagamentos', String(current.length), current.length ? `${students} ${students === 1 ? config.who.toLowerCase() : config.plural || `${config.who.toLowerCase()}s`}` : ''),
-      tile('Valor médio', current.length ? money(total / current.length) : '—'),
+      tile('Pagamentos', String(counted.length), counted.length ? `${students} ${students === 1 ? config.who.toLowerCase() : config.plural || `${config.who.toLowerCase()}s`}` : ''),
+      tile('Valor médio', counted.length ? money(total / counted.length) : '—'),
       tile('Pix · Cartão', `${money(sumOf('pix'))} · ${money(sumOf('credit_card'))}`),
     )
     download.disabled = !current.length
@@ -258,7 +260,7 @@ export function historyBox(history, options = {}) {
       if (!groups.has(key)) groups.set(key, { label, items: [], total: 0 })
       const group = groups.get(key)
       group.items.push(item)
-      group.total += Number(item.amountCents || 0)
+      if (!item.refunded) group.total += Number(item.amountCents || 0)
     })
     // Por data: mais recente primeiro. Por aluno/plano: quem mais pagou primeiro.
     const ordered = [...groups.entries()].sort((a, b) =>
@@ -305,6 +307,10 @@ export function historyBox(history, options = {}) {
             ),
           )
           row.append(text, el('span', 'payhist-value', money(item.amountCents)))
+          if (item.refunded) {
+            row.classList.add('is-refunded')
+            row.append(el('span', 'payhist-refunded', 'Estornado'))
+          }
           // Ação extra por pagamento (só quem pede: ex. "Estornar" no Admin).
           if (config.action) {
             const extra = config.action(item)

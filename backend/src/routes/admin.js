@@ -508,11 +508,11 @@ export async function adminBilling(db) {
     }
   }
   const payments = await safe(
-    `SELECT i.id, i.amount_cents AS "amountCents", i.method, i.updated_at AS "paidAt",
+    `SELECT i.id, i.amount_cents AS "amountCents", i.method, i.updated_at AS "paidAt", i.status,
        t.name AS "trainerName", t.email AS "trainerEmail", p.name AS "planName"
      FROM saas_payment_intents i JOIN trainers t ON t.id=i.trainer_id
      LEFT JOIN saas_plans p ON p.code=i.plan_code
-     WHERE i.status='approved' AND t.id<>'demo-trainer' ORDER BY i.updated_at DESC LIMIT 5000`,
+     WHERE i.status IN ('approved','refunded','charged_back') AND t.id<>'demo-trainer' ORDER BY i.updated_at DESC LIMIT 5000`,
   )
   const subscribers = await safe(
     `SELECT t.id, t.name, t.email, t.saas_expires_at AS "expiresAt", t.saas_cycle AS "cycle", t.saas_plan_code AS "planCode",

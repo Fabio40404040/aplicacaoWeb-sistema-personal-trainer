@@ -184,3 +184,18 @@
   padding: 4px 10px;
   font-size: 0.8rem;
 }
+
+/* Pagamento estornado: continua na lista, riscado e fora do total */
+.payhist-row.is-refunded .payhist-value {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+.payhist-refunded {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
