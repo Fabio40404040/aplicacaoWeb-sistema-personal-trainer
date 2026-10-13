@@ -562,7 +562,7 @@ async function handleRoutes(request, env) {
           : { error: "Conta não encontrada.", status: 401 };
       }
       if (request.method === "POST" && route === "student/privacy-accept")
-        return acceptPrivacy(db, session.sub);
+        return acceptPrivacy(db, session.sub, await readJson(request));
       if (request.method === "POST" && route === "student/profile")
         return updateStudentProfile(db, session.sub, await readJson(request));
       if (request.method === "GET" && route === "student/booking")

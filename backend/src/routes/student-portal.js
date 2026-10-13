@@ -8,6 +8,7 @@ import { linkedTrainers } from "./student-links.js";
 import { trainerPlans, trainerReferrals, trainerSellsPlan } from "./site.js";
 import { studentProfileFields } from "./profile.js";
 import { amountFor, BILLING_CYCLES } from "./payments.js";
+import { PRIVACY_VERSION, acceptedHealth } from "../lib/privacy.js";
 
 const PLAN_FEATURES = {
   ready: ["workouts", "exercises"],
@@ -52,21 +53,27 @@ async function gifSchemaReady(db) {
 async function privacyPending(db, accountId) {
   try {
     const row = (
-      await db.query('SELECT privacy_accepted_at AS at, email FROM student_accounts WHERE id=$1', [accountId])
+      await db.query('SELECT privacy_accepted_at AS at, privacy_version AS version, email FROM student_accounts WHERE id=$1', [accountId])
     ).rows[0]
     // Conta de demonstração não salva nada: não pede o aceite.
     if (isDemoEmail(row?.email)) return false
-    return Boolean(row) && !row.at
+    if (!row) return false
+    // "new": nunca aceitou (conta criada pelo personal). "updated": aceitou uma
+    // versão antiga dos Termos/Política e precisa aceitar a atual.
+    if (!row.at) return "new"
+    return row.version && row.version !== PRIVACY_VERSION ? "updated" : false
   } catch {
     return false // sem a migração 026
   }
 }
 
-export async function acceptPrivacy(db, accountId) {
+export async function acceptPrivacy(db, accountId, body = {}) {
+  if (!acceptedHealth(body?.acceptHealth))
+    return { error: "Marque as duas caixas para continuar.", status: 400 };
   await db.query(
-    `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version='2026-10'
-     WHERE id=$1 AND privacy_accepted_at IS NULL`,
-    [accountId],
+    `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version=$2
+     WHERE id=$1 AND (privacy_accepted_at IS NULL OR privacy_version IS NULL OR privacy_version<>$2)`,
+    [accountId, PRIVACY_VERSION],
   )
   return { data: { accepted: true } }
 }

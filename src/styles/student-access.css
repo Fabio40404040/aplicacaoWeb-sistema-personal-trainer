@@ -1516,6 +1516,22 @@
 .consent-check a {
   color: #9cc2ff;
 }
+/* Mesmas caixas na janela branca de aceite (conta criada pelo personal). */
+.privacy-consent .consent-check {
+  margin-top: 10px;
+  color: #334155;
+  text-align: left;
+}
+.privacy-consent .consent-check b {
+  color: #0f172a;
+}
+.privacy-consent .consent-check a {
+  color: #1c67db;
+}
+.privacy-consent button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Perfil do aluno: privacidade e exclusão de conta */
 .privacy-zone {

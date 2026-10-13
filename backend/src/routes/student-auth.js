@@ -3,6 +3,7 @@ import { notifyNewStudent, sendStudentWelcome, trainerEmailVerified } from './ac
 import { seatProblem } from './saas.js'
 import { trainerIdForSlug, trainerSellsPlan } from './site.js'
 import { readJson } from '../lib/http.js'
+import { PRIVACY_VERSION, acceptedHealth } from '../lib/privacy.js'
 import { createSession, hashPassword, isStrongPassword, verifyPassword } from '../lib/session.js'
 
 const PLAN_CODES = new Set(['ready', 'basic', 'premium', 'athlete'])
@@ -37,6 +38,11 @@ export async function studentAuth(request, env, db, action) {
     if (body.acceptPrivacy !== true && body.acceptPrivacy !== 'on' && body.acceptPrivacy !== 'true')
       return {
         error: 'Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.',
+        status: 400,
+      }
+    if (!acceptedHealth(body.acceptHealth))
+      return {
+        error: 'Para criar a conta, autorize o uso dos dados de saúde no seu acompanhamento.',
         status: 400,
       }
     // Cadastro feito na página de um personal (/p/<slug>) cai para ele; pelo
@@ -110,9 +116,9 @@ export async function studentAuth(request, env, db, action) {
       // Só a conta criada agora recebe o aceite (nunca a de outra pessoa com o mesmo e-mail).
       if (account)
         await db.query(
-          `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version='2026-10'
+          `UPDATE student_accounts SET privacy_accepted_at=CURRENT_TIMESTAMP, privacy_version=$2
            WHERE id=$1`,
-          [account.id],
+          [account.id, PRIVACY_VERSION],
         )
     } catch {
       /* sem a migração 026 */
