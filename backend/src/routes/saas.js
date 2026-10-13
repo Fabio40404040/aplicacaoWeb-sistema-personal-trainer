@@ -543,3 +543,34 @@ export async function adminSetTrainerPlan(db, trainerId, body) {
   )
   return { data: { planCode: plan.code, expiresAt: expiresAt?.toISOString() || null, studentLimit: custom } }
 }
+
+// ---------- admin: estornar uma assinatura pelo Mercado Pago da plataforma
+// Devolve o dinheiro (reembolso total) e, como no aviso de estorno do
+// Mercado Pago, o personal volta para o Grátis.
+export async function adminRefundSaas(env, db, intentId) {
+  const intent = (await db.query('SELECT * FROM saas_payment_intents WHERE id=$1', [String(intentId || '')])).rows[0]
+  if (!intent) return { error: 'Pagamento não encontrado.', status: 404 }
+  if (intent.status !== 'approved') return { error: 'Este pagamento não está aprovado (já foi estornado ou não foi pago).', status: 400 }
+  if (!env.MERCADO_PAGO_ACCESS_TOKEN) return { error: 'O Mercado Pago da plataforma não está configurado.', status: 400 }
+  let payment
+  try {
+    payment = await officialPaymentForIntent(intent, env)
+  } catch {
+    payment = null
+  }
+  if (!payment?.id) return { error: 'Não encontrei este pagamento no Mercado Pago.', status: 422 }
+  try {
+    await mercadoPago(`/v1/payments/${payment.id}/refunds`, env, {
+      method: 'POST',
+      headers: { 'X-Idempotency-Key': `saas-refund-${intent.id}` },
+      body: '{}',
+    })
+  } catch (error) {
+    return {
+      error: `O Mercado Pago não aceitou o estorno${error?.detail ? ` (${error.detail})` : ''}. Pix só pode ser devolvido até 90 dias depois do pagamento.`,
+      status: 422,
+    }
+  }
+  await saasWebhook(db, { status: 'refunded', external_reference: intent.id })
+  return { data: { ok: true, trainerId: intent.trainer_id, amountCents: Number(intent.amount_cents) } }
+}

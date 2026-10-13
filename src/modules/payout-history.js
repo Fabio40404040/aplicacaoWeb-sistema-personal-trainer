@@ -305,6 +305,11 @@ export function historyBox(history, options = {}) {
             ),
           )
           row.append(text, el('span', 'payhist-value', money(item.amountCents)))
+          // Ação extra por pagamento (só quem pede: ex. "Estornar" no Admin).
+          if (config.action) {
+            const extra = config.action(item)
+            if (extra) row.append(extra)
+          }
           details.append(row)
         })
         return details

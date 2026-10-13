@@ -451,6 +451,27 @@ function setTrial(trainer) {
   box.showModal()
 }
 
+// Estorno de assinatura: devolve o dinheiro pelo Mercado Pago e o personal volta para o Grátis.
+function refundSubscription(item) {
+  const value = money(item.amountCents)
+  const { box, form, status, ok } = dialog({
+    title: `Estornar ${value}`,
+    body: [
+      el('p', '', `Devolve ${value} para ${item.trainerName || 'o personal'} pelo Mercado Pago da plataforma (${item.planName || 'assinatura'}).`),
+      el('p', '', 'O personal volta para o plano Grátis. Esta ação não pode ser desfeita.'),
+    ],
+    confirmLabel: 'Estornar',
+    danger: true,
+  })
+  run(form, ok, status, async () => {
+    status.textContent = 'Pedindo o estorno ao Mercado Pago…'
+    await api(`/admin/billing/${encodeURIComponent(item.id)}/refund`, { method: 'POST', body: '{}' })
+    box.close()
+    await renderBilling()
+  })
+  box.showModal()
+}
+
 function confirmEmail(trainer) {
   const { box, form, status, ok } = dialog({
     title: `Confirmar o e-mail de ${trainer.name}`,
@@ -630,6 +651,14 @@ async function renderBilling() {
       removed: 'Personal removido',
       file: 'faturamento-farisa',
       emptyAll: 'Ainda não há pagamentos de assinatura. Eles aparecem aqui assim que um personal assinar.',
+      // Estornar pelo Mercado Pago da plataforma.
+      action: (item) => {
+        if (!item.id) return null
+        const button = el('button', 'button button--secondary payhist-refund', 'Estornar')
+        button.type = 'button'
+        button.addEventListener('click', () => refundSubscription(item))
+        return button
+      },
     },
   )
   root.replaceChildren(tiles, due, report)

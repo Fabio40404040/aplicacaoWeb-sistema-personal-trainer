@@ -33,6 +33,7 @@ import {
 import { createTicket, replyTicket, supportAccess, trainerTicket, trainerTickets } from "./routes/support.js";
 import { deleteStudentAccount } from "./routes/student-account.js";
 import {
+  adminRefundSaas,
   adminSavePlans,
   adminSetTrainerPlan,
   billingInfo,
@@ -456,6 +457,14 @@ async function handleRoutes(request, env) {
         return adminSyncLibrary(db, admin);
       if (request.method === "GET" && route === "admin/billing")
         return { data: await adminBilling(db) };
+      // Estornar uma assinatura (devolve pelo Mercado Pago e volta o personal para o Grátis).
+      if (request.method === "POST" && segments[1] === "billing" && segments[2] && segments[3] === "refund") {
+        const result = await adminRefundSaas(env, db, segments[2]);
+        if (!result.error)
+          await audit(db, admin, "saas_refunded", { type: "trainer", id: result.data.trainerId, label: segments[2] },
+            `Estorno de assinatura: R$ ${(result.data.amountCents / 100).toFixed(2).replace(".", ",")}`);
+        return result;
+      }
       if (request.method === "GET" && route === "admin/audit")
         return { data: await adminAuditLog(db) };
       if (request.method === "GET" && route === "admin/support")
