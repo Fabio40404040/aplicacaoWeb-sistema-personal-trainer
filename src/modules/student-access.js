@@ -1266,10 +1266,10 @@ export function initStudentAccess() {
       let alreadyShown = false;
       try {
         alreadyShown = localStorage.getItem(PAID_SHOWN) === paidKey;
-        // Mesmo aluno com o "PAGO" mostrado há menos de 2 minutos (duas
-        // atualizações seguidas, ou o app e o navegador abertos): não repete.
-        const [shownId, shownAt] = String(localStorage.getItem(`${PAID_SHOWN}-at`) || "").split("|");
-        if (shownId === String(data.studentId) && Date.now() - Number(shownAt) < 120000) alreadyShown = true;
+        // "PAGO" já mostrado neste aparelho há menos de 2 minutos (atualizar a
+        // página, duas abas, o app e o navegador, outro cadastro): não repete.
+        const shownAt = String(localStorage.getItem(`${PAID_SHOWN}-at`) || "").split("|")[1];
+        if (Date.now() - Number(shownAt) < 120000) alreadyShown = true;
       } catch {
         alreadyShown = false;
       }
@@ -1277,6 +1277,9 @@ export function initStudentAccess() {
         paidNow &&
         !data.pendingChange &&
         !alreadyShown &&
+        // Só com a Área do Aluno na tela (não na página pública, se o aluno
+        // saiu antes de a resposta chegar).
+        location.hash.split("?")[0] === "#painel-aluno" &&
         ((lastPaymentStatus && lastPaymentStatus !== "paid") ||
           (waiting && waiting !== accessNow))
       ) {
