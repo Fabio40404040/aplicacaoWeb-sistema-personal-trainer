@@ -1,6 +1,7 @@
 // Suporte do personal: abre chamados e conversa com o dono da plataforma
 // (migração 026). O dono responde em /admin → Suporte.
 import { sendNoticeEmail } from '../lib/recovery-email.js'
+import { addAttempt, isBlocked } from '../lib/rate-limit.js'
 import { ticketMessages } from './admin.js'
 import { saasState } from './saas.js'
 
@@ -22,8 +23,15 @@ const text = (value, max) => String(value ?? '').trim().slice(0, max)
 const escape = (value) =>
   String(value).replace(/[&<>]/gu, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
 
-async function notifyAdmins(env, db, subject, lines) {
+async function notifyAdmins(env, db, subject, lines, trainerId) {
   try {
+    // O chamado sempre fica salvo; o e-mail ao admin sai no máximo 5 vezes a
+    // cada 15 minutos por personal (o resto aparece em Admin → Suporte).
+    if (trainerId) {
+      const keys = [`support-mail:${trainerId}`]
+      if (await isBlocked(db, keys, 5)) return
+      await addAttempt(db, keys)
+    }
     const admins = (await db.query('SELECT email FROM platform_admins')).rows
     for (const admin of admins)
       await sendNoticeEmail(env, {
@@ -93,7 +101,7 @@ export async function createTicket(env, db, trainerId, body) {
   await notifyAdmins(env, db, `Novo chamado de suporte: ${subject}`, [
     `<b>${escape(trainer?.name || '')}</b> (${escape(trainer?.email || '')}) · ${category}`,
     escape(message),
-  ])
+  ], trainerId)
   return { data: { id }, status: 201 }
 }
 
@@ -114,6 +122,6 @@ export async function replyTicket(env, db, trainerId, id, body) {
       values: [id],
     },
   ])
-  await notifyAdmins(env, db, `Nova mensagem no chamado: ${ticket.subject}`, [escape(message)])
+  await notifyAdmins(env, db, `Nova mensagem no chamado: ${ticket.subject}`, [escape(message)], trainerId)
   return { data: { id } }
 }

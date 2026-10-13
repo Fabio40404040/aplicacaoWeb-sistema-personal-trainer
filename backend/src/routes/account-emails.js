@@ -2,6 +2,7 @@
 // (novo aluno, Pix para conferir, pagamento recebido) e ao aluno (pagamento
 // confirmado, acesso vencendo). Migração 036.
 import { day, escape, money, notify, siteUrl } from '../lib/notify.js'
+import { addAttempt, isBlocked } from '../lib/rate-limit.js'
 
 const DAY = 86_400_000
 const hex = (buffer) => [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -177,6 +178,11 @@ export async function resendVerification(db, trainerId) {
   const trainer = (await db.query('SELECT id, name, email, email_verified_at AS at FROM trainers WHERE id=$1', [trainerId])).rows[0]
   if (!trainer) return { error: 'Conta não encontrada.', status: 404 }
   if (trainer.at) return { data: { verified: true } }
+  // No máximo 3 reenvios a cada 15 minutos por conta (não vira envio em massa).
+  const keys = [`resend:${trainer.id}`]
+  if (await isBlocked(db, keys, 3))
+    return { error: 'Você já pediu o e-mail há pouco. Confira a caixa de entrada e o spam, ou tente de novo em 15 minutos.', status: 429 }
+  await addAttempt(db, keys)
   const sent = await sendTrainerWelcome(db, trainer, { resend: true })
   return sent
     ? { data: { sent: true } }
