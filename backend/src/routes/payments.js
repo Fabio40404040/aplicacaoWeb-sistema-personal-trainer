@@ -423,7 +423,9 @@ export async function createCardPayment(db, accountId, platformEnv, body) {
     })
     await db.query(
       `UPDATE payment_intents SET provider_reference=$2,status=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
-      [intentId, String(payment.id || ''), String(payment.status || 'pending')],
+      // Aprovado na hora: fica "pending" até approvePayment liberar o aluno
+      // (é ele que marca "approved"; igual à assinatura em saas.js).
+      [intentId, String(payment.id || ''), payment.status === 'approved' ? 'pending' : String(payment.status || 'pending')],
     )
     const intent = {
       id: intentId,
