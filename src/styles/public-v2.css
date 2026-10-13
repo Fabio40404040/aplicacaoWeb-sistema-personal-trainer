@@ -1228,6 +1228,33 @@ html[data-home='saas'] .public-main {
 html[data-home='saas'] .saas-main {
   display: block;
 }
+/* Dados da FARISA (quem vende a plataforma): só no site principal. */
+.saas-legal-info {
+  display: none;
+}
+html[data-home='saas'] .saas-legal-info {
+  display: grid;
+  gap: 4px;
+  padding: 28px max(24px, calc((100vw - 1200px) / 2));
+  border-top: 1px solid var(--site-line);
+  color: var(--site-muted);
+  background: #151e29;
+  font-size: 0.84rem;
+}
+.saas-legal-info strong {
+  color: #e6edf6;
+  font-size: 0.92rem;
+}
+.saas-legal-info p {
+  margin: 0;
+}
+.saas-legal-info a {
+  color: var(--site-blue-light);
+}
+/* Menu do site principal numa linha só (com o item Contato). */
+html[data-home='saas'] .public-desktop-nav a {
+  white-space: nowrap;
+}
 .saas-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);

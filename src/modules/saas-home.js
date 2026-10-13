@@ -23,6 +23,7 @@ const NAV = [
   ['#planos', 'Planos'],
   // Abre a conta de aluno de exemplo (o aluno de verdade entra pela página do personal dele).
   ['#demonstracao', 'Ver como aluno', 'student'],
+  ['#contato', 'Contato'],
   ['/personal/#acesso-farisa', 'Entrar'],
 ]
 
