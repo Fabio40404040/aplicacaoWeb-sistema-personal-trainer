@@ -593,7 +593,10 @@ async function renderBilling() {
     return box
   }
   const tiles = el('div', 'admin-billing-tiles')
+  // Total já faturado com assinaturas (todos os pagamentos aprovados).
+  const billed = (data.payments || []).reduce((sum, item) => sum + Number(item.amountCents || 0), 0)
   tiles.append(
+    tile('Total faturado', money(billed), `${(data.payments || []).length} pagamento(s) de assinatura`),
     tile('Assinantes pagando', String(summary.paying || 0), `de ${summary.trainers || 0} personais`),
     tile('Receita mensal prevista', money(summary.monthlyCents), 'se todos renovarem'),
     tile('No plano Grátis', String(summary.free || 0), 'podem virar assinantes'),

@@ -129,6 +129,10 @@ function exportCsv(rows) {
         .map(cell)
         .join(';'),
     ),
+    // Linha final com o total do período baixado.
+    ['', '', '', 'TOTAL', (rows.reduce((sum, item) => sum + Number(item.amountCents || 0), 0) / 100).toFixed(2).replace('.', ',')]
+      .map(cell)
+      .join(';'),
   ]
   // BOM para o Excel abrir os acentos certos.
   const blob = new Blob([`\uFEFF${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
