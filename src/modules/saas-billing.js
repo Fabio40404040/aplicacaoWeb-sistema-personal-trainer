@@ -377,8 +377,25 @@ function paintAlerts() {
   } else bar?.remove()
 }
 
+// Aviso de vencimento é de uma conta só: ao sair ou trocar de conta neste
+// navegador, some na hora (não aparece por uns segundos na conta seguinte).
+let billingToken = ''
+function clearAlerts() {
+  billing = null
+  billingToken = ''
+  document.querySelector('[data-billing-banner]')?.remove()
+  const alert = document.querySelector('[data-billing-alert]')
+  if (alert) alert.hidden = true
+}
+document.addEventListener('click', (event) => {
+  if (event.target.closest?.('[data-logout]')) clearAlerts()
+})
+
 async function load(quiet = false) {
-  if (!sessionStorage.getItem('farisa-coach-api-token')) return
+  const token = sessionStorage.getItem('farisa-coach-api-token')
+  if (!token) return
+  if (billingToken && billingToken !== token) clearAlerts()
+  billingToken = token
   try {
     billing = await fetchBilling()
   } catch {
@@ -415,7 +432,10 @@ export function initSaasBilling() {
     onboardingTimer = window.setTimeout(() => void paintOnboarding(), 400)
   }
   window.addEventListener('farisa:data-changed', () => {
-    if (!loaded) {
+    // Primeira carga, ou entrou outra conta neste navegador: busca a assinatura
+    // da conta nova na hora (o aviso de vencimento aparece logo).
+    const token = sessionStorage.getItem('farisa-coach-api-token')
+    if (!loaded || (token && token !== billingToken)) {
       loaded = true
       void load()
     } else {
