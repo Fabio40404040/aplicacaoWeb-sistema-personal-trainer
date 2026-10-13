@@ -129,14 +129,12 @@
         try {
           logged = Boolean(sessionStorage.getItem('farisa-coach-session-v2'))
         } catch (error) {}
-        // Já entrou (ou acesso de suporte / Biblioteca): o site público não
-        // aparece por um instante antes do painel abrir.
-        if (logged) {
-          root.setAttribute('data-panel-boot', '')
-          setTimeout(function () {
-            root.removeAttribute('data-panel-boot')
-          }, 4000)
-        }
+        // Painel (/personal): o site público não aparece por um instante antes
+        // do painel ou da tela de entrada abrir.
+        root.setAttribute('data-panel-boot', '')
+        setTimeout(function () {
+          root.removeAttribute('data-panel-boot')
+        }, 4000)
         if (!location.hash)
           history.replaceState(
             null,
