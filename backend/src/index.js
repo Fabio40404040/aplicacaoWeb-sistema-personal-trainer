@@ -507,7 +507,9 @@ async function handleRoutes(request, env) {
       let siteTrainer = null;
       if (/^[a-z0-9-]{3,30}$/u.test(site)) {
         siteTrainer = await trainerIdForSlug(db, site).catch(() => null);
-        if (siteTrainer) siteStudentId = (await activateTrainer(db, session.sub, siteTrainer).catch(() => false)) || null;
+        if (siteTrainer)
+          siteStudentId =
+            (await activateTrainer(db, session.sub, siteTrainer, { quiet: Boolean(session.viewAs) }).catch(() => false)) || null;
       }
       // Página de um personal com quem este aluno NÃO tem cadastro: não mostra
       // nem grava nada de outro personal aqui (antes a página pulava para o

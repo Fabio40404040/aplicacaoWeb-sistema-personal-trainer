@@ -43,7 +43,8 @@ export async function linkedTrainers(db, accountId) {
 
 // Deixa ativo o cadastro do aluno com este personal (se existir). Devolve o
 // id desse cadastro (ou false). Só grava quando muda.
-export async function activateTrainer(db, accountId, trainerId) {
+// quiet: "Ver como o aluno" (suporte) não marca que o aluno viu a página.
+export async function activateTrainer(db, accountId, trainerId, { quiet = false } = {}) {
   if (!accountId || !trainerId) return false
   const row = (
     await db.query(
@@ -55,7 +56,7 @@ export async function activateTrainer(db, accountId, trainerId) {
   if (!row) return false
   if (!Number(row.active)) {
     await db.query('UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1', [accountId, row.id, trainerId])
-    await db.query('UPDATE students SET account_seen=1 WHERE id=$1', [row.id]).catch(() => {})
+    if (!quiet) await db.query('UPDATE students SET account_seen=1 WHERE id=$1', [row.id]).catch(() => {})
   }
   return row.id
 }
