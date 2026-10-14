@@ -491,7 +491,12 @@ function paymentControls(onRefresh) {
     }
   });
   actions.append(pix, card);
-  return [actions, paymentStatus, pixCheckout];
+  const guarantee = element(
+    "p",
+    "student-payment-guarantee",
+    "Garantia de 7 dias: fale com seu personal e receba o valor de volta.",
+  );
+  return [actions, guarantee, paymentStatus, pixCheckout];
 }
 function renderLocked(container, data, onRefresh) {
   const plan = article("Plano e acesso");

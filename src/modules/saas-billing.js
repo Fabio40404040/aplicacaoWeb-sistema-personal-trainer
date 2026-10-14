@@ -248,6 +248,7 @@ function checkoutBox(root) {
     section.append(
       el('p', 'support-muted', `Este pagamento libera ${period}. Renovar antes de vencer soma o período ao prazo atual.`),
       actions,
+      el('p', 'support-muted saas-guarantee', 'Garantia de 7 dias: cancele pelo suporte e receba o valor de volta.'),
       result,
     )
   }

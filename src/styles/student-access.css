@@ -403,6 +403,11 @@
   gap: 10px;
   margin-top: 14px;
 }
+.student-payment-guarantee {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  opacity: 0.8;
+}
 .student-payment-status:not(:empty) {
   margin-top: 12px;
 }

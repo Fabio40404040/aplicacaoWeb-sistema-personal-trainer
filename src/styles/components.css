@@ -4219,7 +4219,8 @@ button.saas-plan,
 .saas-pay-result img {
   max-width: 220px;
 }
-.saas-legal {
+.saas-legal,
+.saas-guarantee {
   font-size: 0.82rem;
 }
 .billing-banner {
