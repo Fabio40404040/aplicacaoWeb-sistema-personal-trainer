@@ -60,6 +60,18 @@ export function initPwa() {
     return
   }
 
+  // Vitrine da FARISA: o botão leva ao painel, onde se instala o FARISA Painel.
+  if (document.documentElement.dataset.home === 'saas') {
+    installButtons.forEach((button) => {
+      button.title = 'Instalar o FARISA Painel'
+      button.addEventListener('click', () => {
+        location.href = '/personal/#acesso-farisa'
+      })
+    })
+    showButtons(true)
+    return
+  }
+
   let installPrompt
   if (isIos) showButtons(true)
 

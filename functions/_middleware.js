@@ -31,8 +31,11 @@ function appHead(pathname) {
       touch: `/api/public/site-icon/${slug}/192`,
     }
   }
+  // Vitrine da FARISA: não é um app instalável. Sem manifesto e sem modo app
+  // do iPhone, ela não "abraça" o site inteiro (/), e o FARISA Painel e o
+  // FARISA Aluno instalam em qualquer ordem.
   if (path === '' || path === '/index.html')
-    return { touch: `/icons/apple-touch-icon.png?v=${ICON_VERSION}` }
+    return { touch: `/icons/apple-touch-icon.png?v=${ICON_VERSION}`, notApp: true }
   return null
 }
 
@@ -83,6 +86,10 @@ export async function onRequest(context) {
       .on('link[rel="icon"]', setAttr('href', head.icon))
       .on('meta[name="theme-color"]', setAttr('content', head.theme))
       .on('meta[name="apple-mobile-web-app-title"]', setAttr('content', head.title))
+    if (head.notApp)
+      rewriter
+        .on('link[rel="manifest"]', { element: (element) => element.remove() })
+        .on('meta[name="apple-mobile-web-app-capable"]', { element: (element) => element.remove() })
     const pageTitle = head.slug ? '' : head.title
     if (pageTitle)
       rewriter.on('title', {
