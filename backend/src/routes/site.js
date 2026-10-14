@@ -368,10 +368,30 @@ export async function publicSiteHero(db, slug, kind) {
 }
 
 // ---------- painel do personal ("Meu site")
+// "Meu site" não usa as imagens guardadas (foto do banner, foto sem fundo,
+// ícones): lê só se existem, sem trazer os dados pesados do banco.
+async function siteRowLight(db, trainerId) {
+  try {
+    const row = (
+      await db.query(
+        `SELECT trainer_id, slug, brand_mark, brand_name, accent, hero_kind, hero_preset, hero_version,
+           hero_cutout_version, whatsapp, contact_email, address, instagram, facebook, tiktok, referrals,
+           (hero_image IS NOT NULL) AS hero_image, (hero_cutout IS NOT NULL) AS hero_cutout
+         FROM trainer_site WHERE trainer_id=$1`,
+        [trainerId],
+      )
+    ).rows[0]
+    if (row) return row
+  } catch {
+    /* coluna faltando: lê do jeito completo */
+  }
+  return siteRow(db, trainerId)
+}
+
 export async function siteSettings(db, trainerId) {
   let row
   try {
-    row = await siteRow(db, trainerId)
+    row = await siteRowLight(db, trainerId)
   } catch {
     return { data: { ready: false } }
   }

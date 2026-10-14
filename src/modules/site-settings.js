@@ -23,22 +23,28 @@ const draft = { accent: 'blue', heroKind: 'default', heroPreset: null }
 
 const pageUrl = (slug = site?.slug) => `${location.origin}/p/${slug}`
 
-// Banners prontos: arquivos public/banners/banner-1 … banner-12 (.webp ou .jpg).
+// Banners prontos (public/banners). Lista fixa: antes a tela testava 24 nomes
+// a cada abertura. Banner novo na pasta → acrescentar aqui e criar a
+// miniatura em public/banners/mini/banner-N.webp (480×270).
+const PRESET_FILES = [
+  'banner-1.webp',
+  'banner-2.jpg',
+  'banner-3.jpg',
+  'banner-4.jpg',
+  'banner-5.jpg',
+  'banner-6.jpg',
+  'banner-7.jpg',
+  'banner-8.jpg',
+  'banner-9.jpg',
+  'banner-10.jpg',
+  'banner-11.jpg',
+  'banner-12.jpg',
+]
+// Miniatura leve só para os botões de escolha (o banner grande fica na prévia e na página).
+const presetThumb = (file) => `/banners/mini/${file.replace(/\.(?:jpg|webp)$/u, '.webp')}`
 function findPresets() {
-  if (presets) return Promise.resolve(presets)
-  const probe = (file) =>
-    new Promise((resolve) => {
-      const image = new Image()
-      image.onload = () => resolve(image.naturalWidth > 200 ? file : null)
-      image.onerror = () => resolve(null)
-      image.src = `/banners/${file}`
-    })
-  const files = []
-  for (let index = 1; index <= 12; index += 1) files.push(`banner-${index}.webp`, `banner-${index}.jpg`)
-  return Promise.all(files.map(probe)).then((found) => {
-    presets = found.filter(Boolean)
-    return presets
-  })
+  presets ||= PRESET_FILES
+  return Promise.resolve(presets)
 }
 
 // Ícone do app do aluno: quadrado na cor da marca, halter e o nome da logo.
@@ -403,7 +409,7 @@ function heroCard(form) {
             draft.heroKind = 'preset'
             draft.heroPreset = file
           },
-          `/banners/${file}`,
+          presetThumb(file),
         ),
       ),
     )
