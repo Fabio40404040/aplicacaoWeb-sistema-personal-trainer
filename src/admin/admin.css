@@ -92,6 +92,20 @@
   .admin-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /* Celular: ícone em cima e valor menor, para "R$ 1.234,56" caber no card. */
+  .admin-stats .stat-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .admin-stats .stat-card > div:last-child {
+    min-width: 0;
+    width: 100%;
+  }
+  .admin-stats .stat-card strong {
+    font-size: clamp(1.25rem, 6vw, 1.85rem);
+    overflow-wrap: anywhere;
+  }
   .admin-main .toolbar {
     display: block;
   }
