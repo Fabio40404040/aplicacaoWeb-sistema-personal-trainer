@@ -21,7 +21,8 @@ async function cipherKey(env, secretText = env.PAYOUT_ENCRYPTION_KEY || env.SESS
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(`farisa-payout:${secret}`))
   return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt'])
 }
-async function seal(env, text) {
+// Exportada também para os testes automáticos (tests/pagamentos.test.mjs).
+export async function seal(env, text) {
   const iv = crypto.getRandomValues(new Uint8Array(12))
   const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await cipherKey(env), encoder.encode(text))
   return `${b64(iv)}.${b64(data)}`

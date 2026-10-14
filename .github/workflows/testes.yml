@@ -1,0 +1,28 @@
+# Testes automáticos: rodam sozinhos no GitHub a cada "git push".
+# Não publicam nada e não usam dinheiro de verdade (Mercado Pago simulado).
+# Resultado: aba "Actions" do repositório (✓ verde = ok, ✗ vermelho = algo quebrou).
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar
+        run: npm ci
+      - name: Montar o site
+        run: npm run build
+      - name: Testes do site, servidor e pagamentos
+        run: npm test
+      - name: Teste do banco (migrações e cadastro)
+        run: node backend/scripts/test-d1.mjs
