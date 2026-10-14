@@ -658,51 +658,7 @@ export async function mercadoPagoWebhook(request, env, db) {
     return { error: 'Cobrança não encontrada.', status: 404 }
   }
   if (payment.status !== 'approved') {
-    // Dinheiro devolvido ou contestado depois de aprovado: o acesso sai junto.
-    let reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'
-    // Pagamento em dobro devolvido: se outro pagamento aprovado do aluno foi
-    // feito dentro do mesmo período do plano e o acesso ainda vale, o acesso
-    // continua; só esta cobrança vira devolvida.
-    if (reversed) {
-      const days = BILLING_CYCLES[intent.billing_cycle]?.days || 30
-      const other = (
-        await db
-          .query(
-            `SELECT 1 AS x FROM payment_intents i JOIN students s ON s.id=i.student_id
-             WHERE i.student_id=$1 AND i.id<>$2 AND i.status='approved'
-               AND s.access_status='active' AND (s.access_expires_at IS NULL OR s.access_expires_at > CURRENT_TIMESTAMP)
-               AND i.updated_at >= datetime('now', $3) LIMIT 1`,
-            [intent.student_id, intent.id, `-${days} days`],
-          )
-          .catch(() => ({ rows: [] }))
-      ).rows[0]
-      if (other) reversed = false
-    }
-    const queries = [
-      {
-        sql: `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
-        values: [intent.id, String(payment.status || 'pending')],
-      },
-    ]
-    if (reversed)
-      queries.push(
-        {
-          sql: `UPDATE students SET access_status='paused', payment_status='refunded', status='Pausado',
-                  access_expires_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND trainer_id=$2`,
-          values: [intent.student_id, intent.trainer_id],
-        },
-        {
-          sql: `INSERT INTO access_history (trainer_id,student_id,action,plan_code,details) VALUES ($1,$2,$3,$4,$5)`,
-          values: [
-            intent.trainer_id,
-            intent.student_id,
-            'payment_reversed',
-            intent.plan_code,
-            payment.status === 'charged_back' ? 'Pagamento contestado no cartão' : 'Pagamento estornado',
-          ],
-        },
-      )
-    await db.batch(queries)
+    await reverseStudentPayment(db, intent, String(payment.status || 'pending'), paymentId)
     return { data: { accepted: true } }
   }
   try {
@@ -711,4 +667,117 @@ export async function mercadoPagoWebhook(request, env, db) {
     return { error: error.message, status: 400 }
   }
   return { data: { accepted: true } }
+}
+
+// Dinheiro devolvido ou contestado depois de aprovado: o acesso sai junto.
+// Usado pelo aviso do Mercado Pago e pelo estorno feito pelo personal no painel.
+async function reverseStudentPayment(db, intent, status, paymentRef) {
+  if (!['refunded', 'charged_back'].includes(status) || intent.status !== 'approved') {
+    await db.query(`UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [intent.id, status])
+    return
+  }
+  // Só uma execução desfaz: o estorno do painel e o aviso do Mercado Pago podem chegar juntos.
+  const claimed = (
+    await db.query(
+      `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='approved' RETURNING id`,
+      [intent.id, status],
+    )
+  ).rows[0]
+  if (!claimed) return
+  // Pagamento em dobro devolvido: se outro pagamento aprovado do aluno foi
+  // feito dentro do mesmo período do plano e o acesso ainda vale, o acesso
+  // continua; só esta cobrança vira devolvida.
+  const days = BILLING_CYCLES[intent.billing_cycle]?.days || 30
+  const other = (
+    await db
+      .query(
+        `SELECT 1 AS x FROM payment_intents i JOIN students s ON s.id=i.student_id
+         WHERE i.student_id=$1 AND i.id<>$2 AND i.status='approved'
+           AND s.access_status='active' AND (s.access_expires_at IS NULL OR s.access_expires_at > CURRENT_TIMESTAMP)
+           AND i.updated_at >= datetime('now', $3) LIMIT 1`,
+        [intent.student_id, intent.id, `-${days} days`],
+      )
+      .catch(() => ({ rows: [] }))
+  ).rows[0]
+  // O valor sai dos "Pagamentos recebidos" do personal.
+  const queries = [
+    {
+      sql: `UPDATE payments SET status='refunded' WHERE trainer_id=$1 AND provider_reference=$2 AND status='paid'`,
+      values: [intent.trainer_id, String(paymentRef || '')],
+    },
+  ]
+  if (!other)
+    queries.push(
+      {
+        sql: `UPDATE students SET access_status='paused', payment_status='refunded', status='Pausado',
+                access_expires_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND trainer_id=$2`,
+        values: [intent.student_id, intent.trainer_id],
+      },
+      {
+        sql: `INSERT INTO access_history (trainer_id,student_id,action,plan_code,details) VALUES ($1,$2,$3,$4,$5)`,
+        values: [
+          intent.trainer_id,
+          intent.student_id,
+          'payment_reversed',
+          intent.plan_code,
+          status === 'charged_back' ? 'Pagamento contestado no cartão' : 'Pagamento estornado',
+        ],
+      },
+    )
+  try {
+    await db.batch(queries)
+  } catch (error) {
+    await db.query(`UPDATE payment_intents SET status='approved' WHERE id=$1`, [intent.id]).catch(() => {})
+    throw error
+  }
+}
+
+// Painel → Recebimentos: o personal devolve o pagamento de um aluno pela
+// conta Mercado Pago dele. Só vale para o que caiu na conta conectada dele.
+export async function trainerRefundStudent(db, platformEnv, trainerId, paymentRowId) {
+  const row = (
+    await db.query(
+      `SELECT id, provider, provider_reference AS ref, status FROM payments WHERE id=$1 AND trainer_id=$2`,
+      [String(paymentRowId || ''), trainerId],
+    )
+  ).rows[0]
+  if (!row) return { error: 'Pagamento não encontrado.', status: 404 }
+  if (row.status !== 'paid') return { error: 'Este pagamento já foi estornado.', status: 400 }
+  if (row.provider !== 'mercadopago' || !/^\d{1,30}$/u.test(String(row.ref || '')))
+    return { error: 'Este pagamento não foi pelo Mercado Pago. Para devolver, faça um Pix de volta para o aluno pelo seu banco.', status: 400 }
+  const pay = await resolvePay(db, platformEnv, trainerId)
+  if (pay.mode !== 'mercadopago' || !pay.env?.MERCADO_PAGO_ACCESS_TOKEN)
+    return { error: 'O estorno pelo painel funciona com o seu Mercado Pago conectado. Para outros pagamentos, fale com o Suporte.', status: 400 }
+  const payment = await mercadoPago(`/v1/payments/${row.ref}`, pay.env).catch(() => null)
+  const intent = payment
+    ? (
+        await db.query(
+          `SELECT i.*, p.access_type AS "accessType" FROM payment_intents i JOIN plans p ON p.code=i.plan_code
+           WHERE i.id=$1 AND i.trainer_id=$2 LIMIT 1`,
+          [String(payment.external_reference || ''), trainerId],
+        )
+      ).rows[0]
+    : null
+  if (!intent)
+    return { error: 'Não encontrei este pagamento na sua conta Mercado Pago. Se ele foi recebido antes de você conectar a sua conta, fale com o Suporte.', status: 422 }
+  if (payment.status === 'approved') {
+    try {
+      await mercadoPago(`/v1/payments/${row.ref}/refunds`, pay.env, {
+        method: 'POST',
+        headers: { 'X-Idempotency-Key': `student-refund-${intent.id}` },
+        body: '{}',
+      })
+    } catch (error) {
+      await logPaymentError(db, 'Estorno de aluno pelo personal', error)
+      return {
+        error: 'O Mercado Pago não aceitou o estorno. Pix pode ser devolvido até 90 dias depois do pagamento e cartão até 180 dias.',
+        status: 422,
+      }
+    }
+  } else if (!['refunded', 'charged_back'].includes(payment.status))
+    return { error: 'Este pagamento não está aprovado no Mercado Pago.', status: 422 }
+  await reverseStudentPayment(db, intent, payment.status === 'charged_back' ? 'charged_back' : 'refunded', row.ref)
+  // Garante que sai dos recebidos mesmo se a cobrança já estava marcada como devolvida.
+  await db.query(`UPDATE payments SET status='refunded' WHERE id=$1 AND status='paid'`, [row.id])
+  return { data: { ok: true } }
 }

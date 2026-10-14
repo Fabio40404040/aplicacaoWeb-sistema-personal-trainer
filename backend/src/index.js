@@ -95,6 +95,7 @@ import {
   manualPixDecision,
   manualPixPaid,
   paymentOptions,
+  trainerRefundStudent,
 } from "./routes/payments.js";
 import { demoSession } from "./routes/demo.js";
 import { demoReadOnly, isDemoEmail } from "./lib/demo.js";
@@ -740,6 +741,8 @@ async function handleRoutes(request, env) {
         return payoutSetMode(db, session.sub, await readJson(request));
       if (request.method === "POST" && segments[1] === "manual" && ["confirm", "reject"].includes(segments[3]))
         return manualPixDecision(db, session.sub, segments[2], segments[3]);
+      if (request.method === "POST" && segments[1] === "refund" && segments[2] && segments.length === 3)
+        return trainerRefundStudent(db, env, session.sub, segments[2]);
       return { error: "Rota não encontrada.", status: 404 };
     }
     const saas = await saasState(db, session.sub);

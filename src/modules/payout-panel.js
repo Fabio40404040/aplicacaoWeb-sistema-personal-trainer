@@ -291,8 +291,29 @@ function render() {
     grid.append(mercadoPagoCard(), pixCard())
     root.append(grid)
   }
-  const history = historyBox(info.history)
+  const history = historyBox(info.history, {
+    // Estornar pelo Mercado Pago conectado do personal (só o que caiu na conta dele).
+    action: (item) => {
+      if (info.mode !== 'mercadopago' || item.refunded || item.provider !== 'mercadopago') return null
+      const node = button('Estornar', 'secondary', () => refundStudent(item))
+      node.classList.add('payhist-refund')
+      return node
+    },
+  })
   if (history) root.append(history)
+}
+
+async function refundStudent(item) {
+  const who = item.studentName || 'o aluno'
+  const ok = await confirmCard(
+    `Estornar ${money(item.amountCents)}?`,
+    `O dinheiro volta para ${who} pelo seu Mercado Pago e o acesso dele é pausado. Esta ação não pode ser desfeita.`,
+    'Estornar',
+  )
+  if (!ok) return
+  await payoutAction(`refund/${encodeURIComponent(item.id)}`)
+  showToast(`Pagamento de ${who} estornado.`)
+  await load()
 }
 
 function paintBadge() {
