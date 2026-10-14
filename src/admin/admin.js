@@ -453,14 +453,14 @@ function setTrial(trainer) {
   box.showModal()
 }
 
-// Estorno de assinatura: devolve o dinheiro pelo Mercado Pago e o personal volta para o Grátis.
+// Estorno de assinatura: devolve o dinheiro pelo Mercado Pago e tira o período deste pagamento.
 function refundSubscription(item) {
   const value = money(item.amountCents)
   const { box, form, status, ok } = dialog({
     title: `Estornar ${value}`,
     body: [
       el('p', '', `Devolve ${value} para ${item.trainerName || 'o personal'} pelo Mercado Pago da plataforma (${item.planName || 'assinatura'}).`),
-      el('p', '', 'O personal volta para o plano Grátis. Esta ação não pode ser desfeita.'),
+      el('p', '', 'O período deste pagamento sai do plano do personal. Se não sobrar prazo pago, ele volta para o Grátis. Esta ação não pode ser desfeita.'),
     ],
     confirmLabel: 'Estornar',
     danger: true,

@@ -490,16 +490,40 @@ export async function saasWebhook(db, payment, env = null) {
   ).rows[0]
   if (!intent) return false
   if (payment.status === 'approved') await approveSaasPayment(db, intent, payment, env)
-  else {
-    // Estorno ou contestação de uma assinatura já aprovada: volta para o Grátis.
-    const reversed = ['refunded', 'charged_back'].includes(payment.status) && intent.status === 'approved'
-    await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, String(payment.status || 'pending')])
-    if (reversed)
+  else if (['refunded', 'charged_back'].includes(payment.status)) {
+    // Estorno ou contestação: só a primeira notícia desfaz o pagamento (o
+    // estorno pelo Admin e o aviso do Mercado Pago chegam os dois).
+    const reversed = (
+      await db.query(
+        "UPDATE saas_payment_intents SET status=$2 WHERE id=$1 AND status='approved' RETURNING id",
+        [intent.id, String(payment.status)],
+      )
+    ).rows[0]
+    if (!reversed) {
+      await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, String(payment.status)])
+      return true
+    }
+    // Tira só o período deste pagamento (1 mês ou 12). Se ainda sobrar prazo
+    // pago (renovação antecipada), o plano continua até a nova data; senão
+    // volta para o Grátis.
+    const current = (
+      await db.query('SELECT saas_plan_code AS code, saas_expires_at AS exp FROM trainers WHERE id=$1', [intent.trainer_id])
+    ).rows[0]
+    const exp = Date.parse(current?.exp || '')
+    const left = Number.isFinite(exp) ? new Date(exp) : null
+    if (left) left.setUTCMonth(left.getUTCMonth() - (SAAS_CYCLES[intent.cycle]?.months || 1))
+    if (current?.code === intent.plan_code && left && left.getTime() > Date.now())
+      await db.query(`UPDATE trainers SET saas_expires_at=$2 WHERE id=$1 AND saas_plan_code=$3`, [
+        intent.trainer_id,
+        left.toISOString(),
+        intent.plan_code,
+      ])
+    else
       await db.query(
         `UPDATE trainers SET saas_plan_code=$2, saas_cycle=NULL, saas_expires_at=NULL WHERE id=$1 AND saas_plan_code=$3`,
         [intent.trainer_id, FREE_PLAN, intent.plan_code],
       )
-  }
+  } else await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, String(payment.status || 'pending')])
   return true
 }
 
