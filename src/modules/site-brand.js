@@ -203,7 +203,11 @@ function applyBadge(site) {
   badge.target = '_blank'
   badge.rel = 'noopener'
   badge.textContent = 'Feito com FARISA · crie a sua página grátis'
-  document.querySelector('.public-footer')?.append(badge)
+  // Fica dentro da linha de direitos/termos, para o rodapé ter o mesmo
+  // desenho do rodapé da FARISA (marca · textos · "Voltar ao topo").
+  const line = document.querySelector('.public-footer p')
+  if (!line) return
+  line.append(document.createElement('br'), badge)
 }
 
 // Página de demonstração (/p/demo): mostra fotos de exemplo, uma feminina e

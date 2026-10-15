@@ -1437,12 +1437,17 @@ html[data-home='saas'] .public-desktop-nav a {
 
 /* Selo das páginas do plano Grátis. */
 .farisa-badge {
-  flex-basis: 100%;
-  margin-top: 6px;
-  color: var(--site-muted);
-  font-size: 0.82rem;
-  text-align: center;
+  display: inline-block;
+  margin-top: 4px;
+  color: inherit;
+  font-size: inherit;
   text-decoration: underline;
+}
+/* No celular a linha de termos fica escondida; com o selo, ela aparece. */
+@media (max-width: 620px) {
+  .public-footer p:has(.farisa-badge) {
+    display: block;
+  }
 }
 
 /* Carrossel do topo da vitrine (arrasta com o dedo; bolinhas para escolher). */
