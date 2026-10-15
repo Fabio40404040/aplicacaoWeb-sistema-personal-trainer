@@ -30,7 +30,9 @@ export async function studentRecovery(request, env, db, action) {
     const tokenHash = await digest(token)
     const [result] = await db.batch([
       {
-        sql: `UPDATE student_accounts SET password_hash = $2, auth_version = auth_version + 1
+        // O link chegou no e-mail do aluno: o e-mail fica confirmado.
+        sql: `UPDATE student_accounts SET password_hash = $2, auth_version = auth_version + 1,
+          email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP)
         WHERE id IN (SELECT account_id FROM student_password_resets WHERE token_hash = $1 AND expires_at > CURRENT_TIMESTAMP) RETURNING id`,
         values: [tokenHash, hashed],
       },

@@ -6,7 +6,7 @@ import { sendStudentLinked, sendStudentWelcome } from "./account-emails.js";
 // a usar a mesma conta. O aluno escolhe o personal na área dele.
 async function linkExistingAccount(db, student, trainerId) {
   const existing = (
-    await db.query("SELECT id, name, email, student_id AS \"studentId\" FROM student_accounts WHERE lower(email)=lower($1) LIMIT 1", [
+    await db.query("SELECT id, name, email, student_id AS \"studentId\", email_verified_at AS \"verifiedAt\" FROM student_accounts WHERE lower(email)=lower($1) LIMIT 1", [
       student.email,
     ])
   ).rows[0];
@@ -15,6 +15,16 @@ async function linkExistingAccount(db, student, trainerId) {
     await db.query("SELECT id FROM students WHERE account_id=$1 AND trainer_id=$2 AND id<>$3 LIMIT 1", [existing.id, trainerId, student.id])
   ).rows[0];
   if (already) return { error: "Este aluno já está na sua lista de alunos.", status: 409 };
+  // Conta com e-mail ainda não confirmado: pode ter sido criada por outra
+  // pessoa com o e-mail do aluno. Não liga (senão quem criou veria as fichas
+  // e avaliações). O aluno confirma o e-mail (ou usa "Esqueci minha senha") e
+  // o personal cadastra de novo.
+  if (!existing.verifiedAt)
+    return {
+      error:
+        "Este e-mail tem um cadastro de aluno que ainda não foi confirmado. Peça ao aluno para entrar na sua página, tocar em “Esqueci minha senha” e criar uma senha nova pelo link do e-mail. Depois cadastre de novo.",
+      status: 409,
+    };
   await db.query("UPDATE students SET account_id=$1 WHERE id=$2", [existing.id, student.id]);
   if (!existing.studentId)
     await db.query("UPDATE student_accounts SET student_id=$2, trainer_id=$3 WHERE id=$1", [existing.id, student.id, trainerId]);
