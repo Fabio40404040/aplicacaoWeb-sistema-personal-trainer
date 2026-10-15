@@ -60,18 +60,6 @@ export function initPwa() {
     return
   }
 
-  // Vitrine da FARISA: o botão leva ao painel, onde se instala o FARISA Painel.
-  if (document.documentElement.dataset.home === 'saas') {
-    installButtons.forEach((button) => {
-      button.title = 'Instalar o FARISA Painel'
-      button.addEventListener('click', () => {
-        location.href = '/personal/#acesso-farisa'
-      })
-    })
-    showButtons(true)
-    return
-  }
-
   let installPrompt
   if (isIos) showButtons(true)
 
@@ -98,9 +86,33 @@ export function initPwa() {
       if (choice?.outcome === 'accepted') showButtons(false)
       return
     }
-    instructions.textContent = isIos
-      ? 'No Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. Depois toque em Adicionar.'
-      : 'Abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.'
+    // iPhone dentro de outro app (Instagram, Facebook, Chrome…): só o Safari
+    // instala. Mostra como abrir no Safari e um botão para copiar o link.
+    const inApp = isIos && /FBAN|FBAV|Instagram|Line\/|CriOS|FxiOS|EdgiOS|GSA\//u.test(navigator.userAgent)
+    instructions.textContent = inApp
+      ? 'Para instalar, abra esta página no Safari: toque em Copiar link, abra o Safari e cole o link na barra de endereço. Depois toque em Compartilhar e escolha “Adicionar à Tela de Início”.'
+      : isIos
+        ? 'No Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. Depois toque em Adicionar.'
+        : 'Abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.'
+    let copy = dialog.querySelector('[data-install-copy]')
+    if (inApp && !copy) {
+      copy = document.createElement('button')
+      copy.type = 'button'
+      copy.dataset.installCopy = ''
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(location.href.split('#')[0])
+          copy.textContent = 'Link copiado'
+        } catch {
+          copy.textContent = location.href.split('#')[0]
+        }
+      })
+      dialog.querySelector('[data-close-install]').before(copy)
+    }
+    if (copy) {
+      copy.hidden = !inApp
+      copy.textContent = 'Copiar link'
+    }
     dialog.showModal()
   }
   installButtons.forEach((button) => button.addEventListener('click', install))

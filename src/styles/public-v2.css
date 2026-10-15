@@ -433,6 +433,10 @@
   font-weight: 700;
   cursor: pointer;
 }
+.install-dialog [data-install-copy] {
+  margin: 0 8px 8px 0;
+  background: #3a4b62;
+}
 .hero-scroll {
   position: absolute;
   z-index: 2;

@@ -144,6 +144,18 @@ function linkCard() {
   })
   row.append(url, copy, open)
   card.append(row)
+  // No app FARISA Painel instalado no iPhone, "Ver página" abre numa janela do
+  // próprio app, sem "Adicionar à Tela de Início": para instalar o app do
+  // aluno, o link precisa ser aberto no Safari.
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+  if (standalone && /iPad|iPhone|iPod/u.test(navigator.userAgent))
+    card.append(
+      el(
+        'p',
+        'support-muted site-safari-hint',
+        'Para instalar o app do aluno neste iPhone: toque em Copiar link, abra o Safari e cole o link. Depois toque em Compartilhar → “Adicionar à Tela de Início”.',
+      ),
+    )
   // QR Code para divulgar e o ícone que o aluno vê ao instalar o app.
   const share = el('div', 'site-share')
   const qrBox = el('div', 'site-share-item')
@@ -672,15 +684,39 @@ function syncDraft() {
   draft.heroPreset = site.heroPreset || null
 }
 
+// Busca com novas tentativas: no celular a conexão às vezes cai por um
+// instante (ex.: ao voltar para o app) e a aba ficava só com o erro.
+async function fetchWithRetry(attempts = 3) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await fetchSiteSettings()
+    } catch (error) {
+      if (attempt >= attempts) throw error
+      await new Promise((resolve) => window.setTimeout(resolve, 1500 * attempt))
+    }
+  }
+}
+
+let loading = false
 async function load() {
-  if (!sessionStorage.getItem('farisa-coach-api-token')) return
+  if (!sessionStorage.getItem('farisa-coach-api-token') || loading) return
   const root = document.querySelector('[data-site-root]')
+  loading = true
+  // Primeira abertura: avisa que está carregando (antes a aba ficava vazia).
+  if (root && !site) root.replaceChildren(el('p', 'support-muted site-loading', 'Carregando o Meu site…'))
   try {
-    site = await fetchSiteSettings()
+    site = await fetchWithRetry()
     syncDraft()
     render()
   } catch (error) {
-    if (root && !site) root.replaceChildren(el('p', 'support-muted', error.message))
+    if (root && !site) {
+      const retry = el('button', 'button button--secondary', 'Tentar de novo')
+      retry.type = 'button'
+      retry.addEventListener('click', () => void load())
+      root.replaceChildren(el('p', 'support-muted', error.message), retry)
+    }
+  } finally {
+    loading = false
   }
 }
 

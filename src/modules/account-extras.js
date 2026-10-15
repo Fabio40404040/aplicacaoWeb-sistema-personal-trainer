@@ -326,6 +326,11 @@ export async function paintOnboarding() {
     card?.remove()
     return
   }
+  // Outra pintura pode ter criado o cartão enquanto esperava a resposta:
+  // usa o que já existe e apaga sobras (antes apareciam dois cartões).
+  const cards = [...host.querySelectorAll('[data-onboarding]')]
+  card = cards.shift() || null
+  cards.forEach((extra) => extra.remove())
   if (!card) {
     card = el('section', 'panel onboarding')
     card.dataset.onboarding = ''
