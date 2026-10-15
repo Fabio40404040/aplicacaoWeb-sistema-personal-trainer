@@ -76,31 +76,54 @@ async function libraryMedia(db, trainerId, withGifs) {
   };
 }
 
+// Conferências de colunas/tabelas (migrações): antes eram 11 consultas, uma
+// depois da outra, a cada abertura do painel (~1 s no banco do Cloudflare).
+// Agora saem todas juntas, e o "sim" fica guardado enquanto o servidor estiver
+// ligado (coluna que existe não deixa de existir).
+const schemaYes = new Set();
+async function schemaChecks(db) {
+  const column = (sql) => db.query(sql).then(() => true).catch(() => false);
+  const checks = {
+    gifs: () => gifSchemaReady(db),
+    customGroups: () => customGroupsReady(db),
+    videoLink: () => videoLinkReady(db),
+    source: () => sourceReady(db),
+    studentAvatar: () => studentAvatarReady(db),
+    linkSeen: () => linkSeenReady(db),
+    sitePreview: () => column("SELECT is_site_preview FROM ready_workout_programs LIMIT 1"),
+    load: () => loadReady(db),
+    sex: () => column("SELECT sex FROM assessments LIMIT 1"),
+    assessmentSource: () => column("SELECT source FROM assessments LIMIT 1"),
+  };
+  const keys = Object.keys(checks);
+  const values = await Promise.all(keys.map((key) => (schemaYes.has(key) ? true : checks[key]())));
+  const result = {};
+  keys.forEach((key, index) => {
+    result[key] = Boolean(values[index]);
+    if (result[key]) schemaYes.add(key);
+  });
+  return result;
+}
+
 export async function dashboard(db, trainerId) {
-  const withGifs = await gifSchemaReady(db);
-  const withCustomGroups = await customGroupsReady(db);
-  const withVideoLink = await videoLinkReady(db);
-  const withSource = await sourceReady(db);
-  const withStudentAvatar = await studentAvatarReady(db);
+  const schema = await schemaChecks(db);
+  const withGifs = schema.gifs;
+  const withCustomGroups = schema.customGroups;
+  const withVideoLink = schema.videoLink;
+  const withSource = schema.source;
+  const withStudentAvatar = schema.studentAvatar;
   // Aluno vindo de outro personal: foto só depois que ele entrar na sua página.
-  const avatarSeen = (await linkSeenReady(db)) ? " AND COALESCE(s.account_seen,1)=1" : "";
-  let withSitePreview = true;
-  try {
-    await db.query("SELECT is_site_preview FROM ready_workout_programs LIMIT 1");
-  } catch {
-    withSitePreview = false;
-  }
+  const avatarSeen = schema.linkSeen ? " AND COALESCE(s.account_seen,1)=1" : "";
+  const withSitePreview = schema.sitePreview;
   const gifColumn =
     (withGifs ? ',gif_id AS "gifId"' : "") +
     (withVideoLink ? ',video_id AS "videoId"' : "");
-  const loadJson = (await loadReady(db)) ? "'load',we.load,'loadBy',we.load_by,'loadAt',we.load_at," : "";
+  const loadJson = schema.load ? "'load',we.load,'loadBy',we.load_by,'loadAt',we.load_at," : "";
   const gifJson =
     (withGifs ? "'gifId',e.gif_id," : "") +
     (withVideoLink ? "'videoId',e.video_id," : "");
   // Sexo na avaliação (migração 050).
-  const sexColumn =
-    ((await db.query("SELECT sex FROM assessments LIMIT 1").then(() => true).catch(() => false)) ? ', a.sex' : '') +
-    ((await db.query("SELECT source FROM assessments LIMIT 1").then(() => true).catch(() => false)) ? ', a.source' : '');
+  const sexColumn = (schema.sex ? ', a.sex' : '') + (schema.assessmentSource ? ', a.source' : '');
   const [
     students,
     exercises,

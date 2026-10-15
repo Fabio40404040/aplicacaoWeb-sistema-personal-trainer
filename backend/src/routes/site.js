@@ -390,14 +390,17 @@ async function siteRowLight(db, trainerId) {
 }
 
 export async function siteSettings(db, trainerId) {
-  let row
-  try {
-    row = await siteRowLight(db, trainerId)
-  } catch {
-    return { data: { ready: false } }
-  }
-  const trainer = (await db.query('SELECT id, name FROM trainers WHERE id=$1', [trainerId])).rows[0]
-  const isOwner = trainerId === (await ownerId(db))
+  // As consultas saem todas juntas (antes era uma depois da outra: ~1 s a mais).
+  const [row, trainerRows, owner, brandLocked, plans] = await Promise.all([
+    siteRowLight(db, trainerId).catch(() => null),
+    db.query('SELECT id, name FROM trainers WHERE id=$1', [trainerId]),
+    ownerId(db),
+    trainerLocked(db, trainerId),
+    trainerPlans(db, trainerId, { includeInactive: true }),
+  ])
+  if (!row) return { data: { ready: false } }
+  const trainer = trainerRows.rows[0]
+  const isOwner = trainerId === owner
   return {
     data: {
       ready: true,
@@ -405,9 +408,9 @@ export async function siteSettings(db, trainerId) {
       heroPreset: row.hero_preset || null,
       referrals: referralsOf(row),
       referralsReady: 'referrals' in row,
-      brandLocked: await trainerLocked(db, trainerId),
+      brandLocked,
       accents: ACCENTS,
-      plans: await trainerPlans(db, trainerId, { includeInactive: true }),
+      plans,
     },
   }
 }
