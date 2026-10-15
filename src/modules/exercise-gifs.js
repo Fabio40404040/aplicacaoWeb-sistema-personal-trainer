@@ -189,19 +189,41 @@ export async function firstFrameBlob(file) {
   }
 }
 
-export function gifImage(id, className) {
-  const image = document.createElement('img')
-  image.className = className
-  image.alt = ''
-  image.loading = 'lazy'
-  image.decoding = 'async'
-  void loadExerciseGif(id)
+// Só baixa o GIF quando a miniatura aparece na tela. Antes o painel baixava
+// na hora todos os GIFs da biblioteca (mesmo em telas e pastas fechadas) e as
+// outras chamadas do painel ficavam esperando até desistir.
+let gifObserver = null
+const startGif = (image) => {
+  void loadExerciseGif(image.dataset.gifId)
     .then((url) => {
       image.src = url
     })
     .catch(() => {
       image.remove()
     })
+}
+function watchGif(image) {
+  if (!('IntersectionObserver' in window)) return startGif(image)
+  gifObserver ||= new IntersectionObserver(
+    (entries) =>
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return
+        gifObserver.unobserve(entry.target)
+        startGif(entry.target)
+      }),
+    { rootMargin: '300px' },
+  )
+  gifObserver.observe(image)
+}
+
+export function gifImage(id, className) {
+  const image = document.createElement('img')
+  image.className = className
+  image.alt = ''
+  image.loading = 'lazy'
+  image.decoding = 'async'
+  image.dataset.gifId = id
+  watchGif(image)
   return image
 }
 
