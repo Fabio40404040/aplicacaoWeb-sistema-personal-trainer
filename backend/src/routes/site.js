@@ -273,7 +273,8 @@ export async function siteManifest(db, slug) {
     short_name: 'FARISA Aluno',
     description: `App de treinos de ${trainer?.name || 'seu personal'}.`,
     lang: 'pt-BR',
-    start_url: `/p/${clean}#entrar-aluno`,
+    // Abre na página pública do personal (o aluno toca em "Entrar").
+    start_url: `/p/${clean}`,
     scope: `/p/${clean}`,
     display: 'standalone',
     background_color: APP_COLORS[accent],
