@@ -1,6 +1,6 @@
 import { detachStudent, markLinkUnseen } from "./student-links.js";
 import { holdSeatIfUsed } from "./plan-access.js";
-import { sendStudentLinked, sendStudentWelcome } from "./account-emails.js";
+import { sendStudentLinked, sendStudentWelcome, trainerEmailVerified } from "./account-emails.js";
 
 // E-mail que já tem conta de aluno (com outro personal): este cadastro passa
 // a usar a mesma conta. O aluno escolhe o personal na área dele.
@@ -41,6 +41,12 @@ async function welcomeStudent(db, accountId, student, trainerId) {
 }
 import { recordLoad } from "./student-tools.js";
 import { hashPassword, isStrongPassword } from "../lib/session.js";
+
+// Aluno com acesso ao app recebe e-mail da FARISA com o nome do personal:
+// só depois que o personal confirmar o próprio e-mail (evita contas falsas
+// disparando e-mails em nome da FARISA). Aluno presencial, sem senha, segue livre.
+const APP_STUDENT_EMAIL_PENDING =
+  'Confirme o seu e-mail para cadastrar alunos com acesso ao app. Abra o link que enviamos (veja também o spam) ou use "Reenviar" na faixa amarela do painel.';
 
 // Só links https:// ou caminhos do próprio site (bloqueia "javascript:").
 function safeMediaUrl(value) {
@@ -353,6 +359,8 @@ export async function createResource(db, resource, trainerId, body) {
           "A senha deve ter no mínimo 8 caracteres, com maiúscula, minúscula, número e caractere especial.",
         status: 400,
       };
+    if (password && !(await trainerEmailVerified(db, trainerId)))
+      return { error: APP_STUDENT_EMAIL_PENDING, status: 403 };
     const student = (
       await db.query(config.insert, [trainerId, ...config.values(body)])
     ).rows[0];
@@ -423,6 +431,8 @@ export async function updateResource(db, resource, trainerId, id, body) {
         error: "A senha deve ter no mínimo 8 caracteres, com maiúscula, minúscula, número e caractere especial.",
         status: 400,
       };
+    if (password && !(await trainerEmailVerified(db, trainerId)))
+      return { error: APP_STUDENT_EMAIL_PENDING, status: 403 };
     // Conta usada com mais de um personal: a senha é do aluno. Sem isto, um
     // personal poderia trocar a senha e entrar como o aluno de outro personal.
     if (password) {
