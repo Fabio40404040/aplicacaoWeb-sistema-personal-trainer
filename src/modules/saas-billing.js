@@ -43,7 +43,7 @@ function planCard(plan, { selectable = false } = {}) {
         ? 'Grátis para sempre'
         : selectable
           ? `${money(monthly?.amountCents)}/mês`
-          : `Grátis por 30 dias · depois ${money(monthly?.amountCents)}/mês`,
+          : `Teste as ferramentas por 30 dias · depois ${money(monthly?.amountCents)}/mês`,
     ),
     el('small', '', limitText(plan.studentLimit)),
   )
@@ -61,7 +61,7 @@ async function initSignup() {
     .then((plans) => {
       if (!plans?.length) return
       plansBox.replaceChildren(
-        el('small', 'saas-plans-title', 'Você começa com 30 dias do Ilimitado grátis. Depois escolhe: seguir no Grátis ou assinar.'),
+        el('small', 'saas-plans-title', 'Você começa com 30 dias com todas as ferramentas liberadas, para até 3 alunos. Depois escolhe: seguir no Grátis ou assinar o Ilimitado.'),
         (() => {
           const grid = el('div', 'saas-plan-grid')
           grid.append(...plans.map((plan) => planCard(plan)))
