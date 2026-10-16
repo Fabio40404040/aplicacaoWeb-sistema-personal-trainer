@@ -743,21 +743,6 @@ export async function deleteExerciseFolder(env, db, trainerId, body) {
 
   if ((folderGifs.length || folderVideos.length) && !env.MEDIA)
     return { error: "O armazenamento da Cloudflare não está disponível para excluir a pasta agora.", status: 503 };
-  try {
-    const files = [
-      ...folderGifs.flatMap((item) => [item.objectKey, item.frameKey]),
-      ...folderVideos.map((item) => item.objectKey),
-    ].filter(Boolean);
-    const queue = files.slice();
-    const worker = async () => {
-      while (queue.length) await deleteMedia(env.MEDIA, queue.shift());
-    };
-    await Promise.all([worker(), worker(), worker(), worker()]);
-  } catch (error) {
-    console.error("[exercise-folders] falha ao excluir no R2", error?.message);
-    return { error: "A Cloudflare não conseguiu excluir a pasta agora. Tente novamente em instantes.", status: 503 };
-  }
-
   const deleteIds = rows
     .filter((exercise) =>
       !String(exercise.group || "").split(",").map((name) => name.trim()).filter((name) => name && !names.includes(name)).length,
@@ -784,5 +769,29 @@ export async function deleteExerciseFolder(env, db, trainerId, body) {
   if (queries.length) await db.batch(queries);
   const order = await folderOrder(db, trainerId);
   await saveFolderOrder(db, trainerId, { names: order.filter((name) => !names.includes(name)) });
+
+  // Só remove os objetos depois de o D1 confirmar toda a exclusão. Cada
+  // arquivo tem suas próprias tentativas; uma falha de limpeza não interrompe
+  // os demais nem deixa registros do banco apontando para arquivos ausentes.
+  const files = [
+    ...folderGifs.flatMap((item) => [item.objectKey, item.frameKey]),
+    ...folderVideos.map((item) => item.objectKey),
+  ].filter(Boolean);
+  const queue = [...new Set(files)];
+  let cleanupFailures = 0;
+  const worker = async () => {
+    while (queue.length) {
+      const key = queue.shift();
+      try {
+        await deleteMedia(env.MEDIA, key);
+      } catch (error) {
+        cleanupFailures += 1;
+        console.error("[exercise-folders] pasta excluída do banco, mas a limpeza no R2 falhou", key, error?.message);
+      }
+    }
+  };
+  if (queue.length) await Promise.all([worker(), worker(), worker(), worker()]);
+  if (cleanupFailures)
+    console.error(`[exercise-folders] ${cleanupFailures} arquivo(s) órfão(s) aguardam limpeza no R2`);
   return { data: { deleted, moved, blocked: [], gifs: folderGifs.length, videos: folderVideos.length } };
 }

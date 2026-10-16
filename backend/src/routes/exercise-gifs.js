@@ -175,13 +175,9 @@ export async function deleteExerciseGif(env, db, trainerId, id) {
     )
   ).rows[0];
   if (!row) return { error: "GIF não encontrado.", status: 404 };
-  try {
-    await deleteMedia(env.MEDIA, row.objectKey);
-    await deleteMedia(env.MEDIA, row.frameKey);
-  } catch (error) {
-    console.error("[exercise-gifs] falha ao excluir no R2", error?.message);
-    return { error: "A Cloudflare não conseguiu excluir o GIF agora. Tente novamente em instantes.", status: 503 };
-  }
+  // O banco vem primeiro: se o D1 recusar a operação, o arquivo continua
+  // disponível. Uma falha posterior de limpeza no R2 deixa somente um objeto
+  // órfão, sem quebrar exercícios que ainda aparecem na biblioteca.
   await db.batch([
     {
       sql: "UPDATE exercises SET gif_id=NULL WHERE gif_id=$1 AND trainer_id=$2",
@@ -192,6 +188,14 @@ export async function deleteExerciseGif(env, db, trainerId, id) {
       values: [id, trainerId],
     },
   ]);
+  const cleanup = await Promise.allSettled([
+    deleteMedia(env.MEDIA, row.objectKey),
+    deleteMedia(env.MEDIA, row.frameKey),
+  ]);
+  cleanup.forEach((result) => {
+    if (result.status === "rejected")
+      console.error("[exercise-gifs] GIF excluído do banco, mas a limpeza no R2 falhou", result.reason?.message);
+  });
   return null;
 }
 

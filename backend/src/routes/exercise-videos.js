@@ -240,12 +240,8 @@ export async function deleteExerciseVideo(env, db, trainerId, id) {
     )
   ).rows[0];
   if (!row) return { error: "Vídeo não encontrado.", status: 404 };
-  try {
-    await deleteMedia(env.MEDIA, row.objectKey);
-  } catch (error) {
-    console.error("[exercise-videos] falha ao excluir no R2", error?.message);
-    return { error: "A Cloudflare não conseguiu excluir o vídeo agora. Tente novamente em instantes.", status: 503 };
-  }
+  // Confirma a exclusão no D1 antes de limpar o R2. Assim uma falha do banco
+  // nunca deixa um vídeo cadastrado apontando para um arquivo já apagado.
   await db.batch([
     {
       sql: "UPDATE exercises SET video_id=NULL WHERE video_id=$1 AND trainer_id=$2",
@@ -256,6 +252,11 @@ export async function deleteExerciseVideo(env, db, trainerId, id) {
       values: [id, trainerId],
     },
   ]);
+  try {
+    await deleteMedia(env.MEDIA, row.objectKey);
+  } catch (error) {
+    console.error("[exercise-videos] vídeo excluído do banco, mas a limpeza no R2 falhou", error?.message);
+  }
   return null;
 }
 
