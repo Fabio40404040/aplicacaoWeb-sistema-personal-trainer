@@ -123,13 +123,23 @@ const exerciseKeyPart = (value) =>
     .replace(/[^a-z0-9]+/gu, ' ')
     .trim()
 
-const exerciseKey = (exercise) =>
+const exerciseBaseKey = (exercise) =>
   `${exerciseKeyPart(exercise.name)}|${exerciseKeyPart(exercise.equipment || 'Sem equipamento')}`
+
+const exerciseMediaKey = (exercise) => {
+  if (exercise.gif_id) return `gif:${exercise.gif_id}`
+  if (exercise.video_id) return `video:${exercise.video_id}`
+  if (exercise.media_url) return `url:${String(exercise.media_url).trim().toLowerCase()}`
+  return 'sem-midia'
+}
+
+const exerciseKey = (exercise) => `${exerciseBaseKey(exercise)}|${exerciseMediaKey(exercise)}`
 
 // Copiar exercícios da Biblioteca FARISA para a biblioteca do personal (um ou
 // uma pasta inteira). O nome da pasta não define duplicidade: primeiro procura
-// o source_id e depois compara nome + equipamento sem diferenciar maiúsculas,
-// acentos, pontuação ou espaços. A cópia reutiliza o mesmo GIF e vídeo.
+// o source_id e depois compara nome + equipamento + mídia sem diferenciar
+// maiúsculas, acentos, pontuação ou espaços. A cópia reutiliza o mesmo GIF e
+// vídeo; arquivos diferentes com o mesmo nome continuam sendo itens distintos.
 export async function copyFromLibrary(db, trainerId, body) {
   if (trainerId === LIBRARY_ID) return { error: 'A Biblioteca FARISA não copia para ela mesma.', status: 400 }
   const ids = [...new Set((Array.isArray(body?.ids) ? body.ids : []).map(String).filter((id) => /^[\w-]{1,64}$/u.test(id)))].slice(0, 500)
@@ -158,13 +168,20 @@ export async function copyFromLibrary(db, trainerId, body) {
   if (!sources.length) return { error: 'Os exercícios escolhidos não estão mais disponíveis.', status: 404 }
 
   const personal = (
-    await db.query('SELECT id,name,equipment,source_id AS "sourceId" FROM exercises WHERE trainer_id=$1', [trainerId])
+    await db.query(
+      `SELECT id,name,equipment,gif_id,video_id,media_url,source_id AS "sourceId"
+       FROM exercises WHERE trainer_id=$1`,
+      [trainerId],
+    )
   ).rows
   const bySource = new Map(personal.filter((item) => item.sourceId).map((item) => [String(item.sourceId), item]))
   const byKey = new Map()
+  const withoutMediaByBaseKey = new Map()
   personal.forEach((item) => {
     const key = exerciseKey(item)
     if (!byKey.has(key)) byKey.set(key, item)
+    if (exerciseMediaKey(item) === 'sem-midia' && !withoutMediaByBaseKey.has(exerciseBaseKey(item)))
+      withoutMediaByBaseKey.set(exerciseBaseKey(item), item)
   })
 
   const copies = []
@@ -173,7 +190,9 @@ export async function copyFromLibrary(db, trainerId, body) {
   const adoptedIds = new Set()
   sources.forEach((source) => {
     const linked = bySource.get(String(source.id))
-    const equal = linked || byKey.get(exerciseKey(source))
+    // Um exercício manual sem mídia ainda pode representar o mesmo movimento.
+    // Quando ambos têm mídia, GIFs/vídeos diferentes permanecem separados.
+    const equal = linked || byKey.get(exerciseKey(source)) || withoutMediaByBaseKey.get(exerciseBaseKey(source))
     if (equal) {
       copies.push({ id: equal.id, sourceId: source.id })
       if (!linked && !equal.sourceId && !adoptedIds.has(String(equal.id))) {

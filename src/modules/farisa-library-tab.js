@@ -15,7 +15,14 @@ const plain = (value) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, ' ')
     .trim()
-const exerciseKey = (exercise) => `${plain(exercise.name)}|${plain(exercise.equipment || 'Sem equipamento')}`
+const exerciseBaseKey = (exercise) => `${plain(exercise.name)}|${plain(exercise.equipment || 'Sem equipamento')}`
+const exerciseMediaKey = (exercise) => {
+  if (exercise.gifId) return `gif:${exercise.gifId}`
+  if (exercise.videoId) return `video:${exercise.videoId}`
+  if (exercise.mediaUrl) return `url:${String(exercise.mediaUrl).trim().toLowerCase()}`
+  return 'sem-midia'
+}
+const exerciseKey = (exercise) => `${exerciseBaseKey(exercise)}|${exerciseMediaKey(exercise)}`
 
 const el = (tag, className = '', text) => {
   const node = document.createElement(tag)
@@ -29,15 +36,23 @@ export function copiedMap() {
   const map = new Map()
   const exercises = getData().exercises || []
   const personalByKey = new Map()
+  const personalWithoutMediaByBaseKey = new Map()
   exercises.forEach((item) => {
     if (!item.library && !personalByKey.has(exerciseKey(item))) personalByKey.set(exerciseKey(item), item.id)
+    if (
+      !item.library &&
+      exerciseMediaKey(item) === 'sem-midia' &&
+      !personalWithoutMediaByBaseKey.has(exerciseBaseKey(item))
+    )
+      personalWithoutMediaByBaseKey.set(exerciseBaseKey(item), item.id)
     if (!item.library && item.sourceId) map.set(String(item.sourceId), item.id)
   })
-  // Também considera igual o exercício criado manualmente com o mesmo nome e
-  // equipamento, mesmo que esteja em outra pasta ou ainda não tenha sourceId.
+  // Também reconhece o exercício criado manualmente. Quando ambos têm mídia,
+  // o GIF ou vídeo precisa ser o mesmo; arquivos diferentes não são ocultados.
   exercises.forEach((item) => {
     if (!item.library || map.has(String(item.id))) return
-    const personalId = personalByKey.get(exerciseKey(item))
+    const personalId =
+      personalByKey.get(exerciseKey(item)) || personalWithoutMediaByBaseKey.get(exerciseBaseKey(item))
     if (personalId) map.set(String(item.id), personalId)
   })
   return map
