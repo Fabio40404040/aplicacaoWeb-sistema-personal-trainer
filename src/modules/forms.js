@@ -13,6 +13,29 @@ const openModal = (name) => {
   const modal = document.querySelector(`[data-modal="${name}"]`)
   if (!modal.open) modal.showModal()
 }
+
+function setExerciseFormOrigin(form, source = 'library') {
+  if (!form) return
+  const workout = source === 'workout'
+  form.dataset.exerciseOrigin = source
+  const chooseGif = form.querySelector('[data-gif-choose]')
+  const externalGif = form.querySelector('.exercise-gif-upload')
+  const gifDescription = form.querySelector('[data-gif-description]')
+  const gifStatus = form.querySelector('[data-exercise-gif-status]')
+  const videoSelect = form.elements.videoId
+  const videoPreview = form.querySelector('[data-exercise-video-preview]')
+  if (chooseGif) chooseGif.hidden = workout
+  if (externalGif) externalGif.hidden = !workout
+  if (gifDescription)
+    gifDescription.textContent = workout
+      ? 'Envie um GIF externo. O aluno vê o movimento e o PDF recebe um quadro dele.'
+      : 'O aluno vê o GIF mexendo e o PDF recebe um quadro dele.'
+  if (gifStatus) gifStatus.hidden = !workout
+  if (videoSelect) videoSelect.hidden = workout
+  if (videoPreview) videoPreview.hidden = workout
+  const submit = form.querySelector(':scope > footer [type="submit"]')
+  if (submit) submit.textContent = workout ? 'Salvar exercício' : 'Adicionar exercício'
+}
 // Texto do botão e mensagem de espera, conforme o formulário.
 function progressMessage(form) {
   const editingNow = Boolean(editing[form.dataset.form])
@@ -68,6 +91,10 @@ function closeModal(form) {
   const errorBox = form.querySelector('[data-form-error]')
   if (errorBox) errorBox.hidden = true
   form.closest('dialog').close()
+  if (form.dataset.form === 'exercise') {
+    delete form.dataset.uploadedVideoId
+    delete form.dataset.uploadedVideoName
+  }
   form.reset()
   editing[form.dataset.form] = null
 }
@@ -482,6 +509,7 @@ function fillForm(type, id) {
   }
   if (form.elements.published) form.elements.published.checked = Boolean(record.publishedAt)
   if (type === 'exercise') setExerciseGifField(form, record.gifId)
+  if (type === 'exercise') setExerciseFormOrigin(form)
   if (type === 'student') {
     form.querySelector('header .eyebrow').textContent = 'Editar cadastro'
     form.querySelector('header h2').textContent = 'Editar aluno'
@@ -496,7 +524,12 @@ export function initForms() {
       editing[b.dataset.openModal] = null
       if (b.dataset.openModal === 'exercise') {
         const form = document.querySelector('[data-form="exercise"]')
-        if (form) setExerciseGifField(form, '')
+        if (form) {
+          delete form.dataset.uploadedVideoId
+          delete form.dataset.uploadedVideoName
+          setExerciseGifField(form, '')
+          setExerciseFormOrigin(form)
+        }
       }
       if (b.dataset.openModal === 'student') {
         const form = document.querySelector('[data-form="student"]')
@@ -575,9 +608,14 @@ export function initForms() {
     const form = document.querySelector('[data-form="exercise"]')
     if (!form) return
     editing.exercise = null
+    delete form.dataset.uploadedVideoId
+    delete form.dataset.uploadedVideoName
     form.reset()
     setExerciseGifField(form, '')
-    const group = event.detail
+    const detail = event.detail
+    const group = typeof detail === 'object' ? detail?.group : detail
+    const source = typeof detail === 'object' ? detail?.source : 'library'
+    setExerciseFormOrigin(form, source)
     if (group) {
       // form.reset() já desmarcou tudo; só marca a caixinha desta pasta.
       const cleanGroup = String(group).trim()

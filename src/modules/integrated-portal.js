@@ -350,7 +350,9 @@ function catalogAddButton(groupName) {
   button.textContent = '+ Novo exercício neste grupo'
   button.addEventListener('click', () =>
     window.dispatchEvent(
-      new CustomEvent('farisa:new-exercise', { detail: groupName }),
+      new CustomEvent('farisa:new-exercise', {
+        detail: { group: groupName, source: 'workout' },
+      }),
     ),
   )
   return button
@@ -739,16 +741,36 @@ function exerciseVideoSelect(form) {
     })
     selectElement.addEventListener('change', () => {
       previewButton.disabled = !selectElement.value
+      if (
+        form.dataset.uploadedVideoId &&
+        selectElement.value !== form.dataset.uploadedVideoId
+      ) {
+        delete form.dataset.uploadedVideoId
+        delete form.dataset.uploadedVideoName
+      }
     })
   }
   const select = wrapper.querySelector('select')
-  const current = select.value
+  // Durante o envio, o painel faz uma nova leitura do servidor. Se essa
+  // leitura chegar antes do vídeo novo aparecer na lista, não podemos perder
+  // o ID que acabou de ser enviado.
+  const current = form.dataset.uploadedVideoId || select.value
   const checked = [...form.querySelectorAll('input[name="group"]:checked')].map((input) => input.value)
   const fresh = videoPickerSelect({ group: checked.join(', '), videoId: current })
   select.replaceChildren(...fresh.children)
+  if (current && ![...select.options].some((option) => option.value === current)) {
+    const pending = document.createElement('option')
+    pending.value = current
+    pending.textContent = form.dataset.uploadedVideoName || 'MP4 enviado agora'
+    select.append(pending)
+  }
   select.value = current
   const previewButton = wrapper.querySelector('[data-exercise-video-preview]')
-  if (previewButton) previewButton.disabled = !select.value
+  if (previewButton) {
+    previewButton.disabled = !select.value
+    previewButton.hidden = form.dataset.exerciseOrigin === 'workout'
+  }
+  select.hidden = form.dataset.exerciseOrigin === 'workout'
   return wrapper
 }
 
@@ -790,11 +812,14 @@ async function uploadVideoFromExerciseForm(form, input) {
   status.textContent = `Enviando ${file.name}…`
   try {
     const saved = await uploadExerciseVideo(payload)
+    if (!saved?.id) throw new Error('O vídeo foi enviado, mas o vínculo não foi confirmado.')
+    form.dataset.uploadedVideoId = String(saved.id)
+    form.dataset.uploadedVideoName = saved.name || name
     await syncRemoteData()
     exerciseVideoSelect(form)
-    if (saved?.id) form.elements.videoId.value = String(saved.id)
+    form.elements.videoId.value = String(saved.id)
     form.elements.videoId.dispatchEvent(new Event('change'))
-    status.textContent = `Vídeo "${saved?.name || name}" enviado e escolhido para este exercício.`
+    status.textContent = `Vídeo "${saved.name || name}" enviado e vinculado. Agora clique em “Adicionar exercício” para concluir.`
     showToast('Vídeo MP4 enviado para a biblioteca.')
   } catch (error) {
     status.textContent = error.message
@@ -2103,7 +2128,9 @@ export function initIntegratedPortal() {
   // garante primeiro que a caixa da pasta existe; em seguida o formulário
   // consegue marcá-la ao abrir o cadastro pelo montador de fichas.
   window.addEventListener('farisa:new-exercise', (event) =>
-    configureMuscleGroupFields(event.detail),
+    configureMuscleGroupFields(
+      typeof event.detail === 'object' ? event.detail?.group : event.detail,
+    ),
   )
   createReadyWorkoutLibraryPanel()
   createExerciseVideoLibraryPanel()

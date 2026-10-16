@@ -724,17 +724,63 @@ function enhanceExerciseForm() {
       <div class="gif-field-preview" data-gif-preview></div>
       <div class="gif-field-info">
         <strong data-gif-label>Nenhum GIF escolhido</strong>
-        <small>O aluno vê o GIF mexendo e o PDF recebe um quadro dele.</small>
+        <small data-gif-description>O aluno vê o GIF mexendo e o PDF recebe um quadro dele.</small>
       </div>
       <button class="button button--secondary" type="button" data-gif-choose>Escolher GIF</button>
+      <label class="button button--secondary exercise-gif-upload" hidden>Enviar GIF do computador<input type="file" accept=".gif,image/gif" hidden data-exercise-gif-file></label>
       <button class="icon-button" type="button" data-gif-field-clear aria-label="Remover GIF" hidden>×</button>
     </div>
+    <progress data-exercise-gif-progress hidden></progress>
+    <small class="field-hint" data-exercise-gif-status hidden>Escolha um arquivo .gif externo.</small>
     <input type="hidden" name="gifId">`
   body.append(field)
   field.querySelector('[data-gif-choose]').addEventListener('click', async () => {
     const chosen = await openGifPicker(currentExerciseFromForm(form))
     if (chosen === undefined) return
     setExerciseGifField(form, chosen)
+  })
+  field.querySelector('[data-exercise-gif-file]').addEventListener('change', async (event) => {
+    const input = event.target
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    const status = field.querySelector('[data-exercise-gif-status]')
+    const bar = field.querySelector('[data-exercise-gif-progress]')
+    const group = form.querySelector('input[name="group"]:checked')?.value
+    if (!group) {
+      status.textContent = 'Marque o grupo muscular antes de enviar o GIF.'
+      return
+    }
+    if (!file.name.toLocaleLowerCase('pt-BR').endsWith('.gif')) {
+      status.textContent = 'Escolha um arquivo .gif.'
+      return
+    }
+    const name = form.elements.name.value.trim() || nameFromFile(file.name) || 'Exercício'
+    const payload = new FormData()
+    payload.append('gif', file)
+    payload.append('name', name)
+    payload.append('group', group)
+    payload.append('catalog', '0')
+    const frame = await firstFrameBlob(file)
+    if (frame) payload.append('frame', frame, 'frame.jpg')
+    const upload = field.querySelector('.exercise-gif-upload')
+    upload.classList.add('is-busy')
+    bar.hidden = false
+    bar.removeAttribute('value')
+    status.textContent = `Enviando ${file.name}…`
+    try {
+      const saved = await uploadExerciseGif(payload)
+      if (!saved?.id) throw new Error('O GIF foi enviado, mas o vínculo não foi confirmado.')
+      await syncRemoteData()
+      setExerciseGifField(form, saved.id)
+      status.textContent = `GIF "${saved.name || name}" vinculado. Agora clique em “Salvar exercício”.`
+      showToast('GIF enviado e vinculado ao exercício.')
+    } catch (error) {
+      status.textContent = error.message
+    } finally {
+      bar.hidden = true
+      upload.classList.remove('is-busy')
+    }
   })
   field
     .querySelector('[data-gif-field-clear]')
