@@ -32,7 +32,7 @@ export async function syncLibraryExercises(db) {
        SELECT g.trainer_id, g.name, g.muscle_group, 'Sem equipamento', 'Intermediário', 'gif', g.id
        FROM exercise_gifs g
        WHERE g.trainer_id=$1
-         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.gif_id=g.id)`,
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND e.gif_id=g.id)`,
       [LIBRARY_ID],
     )
   } catch {
@@ -50,10 +50,7 @@ export async function syncLibraryExercises(db) {
        SELECT v.trainer_id, v.name, v.muscle_group, COALESCE(v.equipment,'Sem equipamento'), COALESCE(v.difficulty,'Intermediário'), 'video', v.id
        FROM exercise_videos v
        WHERE v.trainer_id=$1
-         AND NOT EXISTS (
-           SELECT 1 FROM exercises e
-           WHERE e.video_id=v.id OR (e.trainer_id=v.trainer_id AND e.id=v.id)
-         )`,
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
       [LIBRARY_ID],
     )
   } catch {
@@ -79,14 +76,11 @@ export async function libraryOverview(db) {
     ),
     count(
       `SELECT COUNT(*) AS n FROM exercise_gifs g WHERE g.trainer_id=$1
-         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.gif_id=g.id)`,
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND e.gif_id=g.id)`,
     ),
     count(
       `SELECT COUNT(*) AS n FROM exercise_videos v WHERE v.trainer_id=$1
-         AND NOT EXISTS (
-           SELECT 1 FROM exercises e
-           WHERE e.video_id=v.id OR (e.trainer_id=v.trainer_id AND e.id=v.id)
-         )`,
+         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
     ),
   ])
   return { exercises, gifs, videos, folders, looseGifs, looseVideos }
