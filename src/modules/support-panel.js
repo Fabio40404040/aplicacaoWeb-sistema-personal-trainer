@@ -245,15 +245,10 @@ function supportBanner() {
   }
   const bar = el('div', 'support-mode-banner')
   bar.dataset.supportBanner = ''
-  bar.append(
-    el(
-      'span',
-      '',
-      library
-        ? '📚 FARISA'
-        : `🛟 Modo suporte — você está no painel de ${name}. Tudo o que fizer aqui fica registrado.`,
-    ),
-  )
+  if (!library)
+    bar.append(
+      el('span', '', `🛟 Modo suporte — você está no painel de ${name}. Tudo o que fizer aqui fica registrado.`),
+    )
   if (library) {
     bar.classList.add('support-mode-banner--library')
     bar.setAttribute('aria-label', 'Biblioteca FARISA')
@@ -269,8 +264,13 @@ function supportBanner() {
     window.addEventListener('hashchange', stayInLibrary)
     stayInLibrary()
   }
-  const exit = el('button', 'button button--secondary', library ? 'Sair' : 'Encerrar acesso')
+  const exit = el('button', `button ${library ? 'library-exit-button' : 'button--secondary'}`, library ? '' : 'Encerrar acesso')
   exit.type = 'button'
+  if (library) {
+    exit.replaceChildren(document.createTextNode('← Sair'), el('span', 'library-exit-label', ' da Biblioteca'))
+    exit.setAttribute('aria-label', 'Sair da Biblioteca FARISA')
+    exit.title = 'Fechar a Biblioteca FARISA e voltar ao acesso do personal'
+  }
   exit.addEventListener('click', () => {
     ;['farisa-support-mode', 'farisa-library-mode', 'farisa-coach-api-token', 'farisa-coach-session-v2', 'farisa-coach-data-v1'].forEach((key) =>
       sessionStorage.removeItem(key),

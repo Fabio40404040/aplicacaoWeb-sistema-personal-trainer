@@ -5057,59 +5057,46 @@ button.is-loading {
   cursor: default;
 }
 
-/* Abastecendo a Biblioteca FARISA (aberta pelo admin): controle fixo no
-   cabeçalho da biblioteca, sem cobrir pastas nem mensagens. */
+/* Biblioteca FARISA aberta pelo admin: uma única ação clara no cabeçalho,
+   sem cápsula externa nem conteúdo disputando espaço com o botão. */
 .support-mode-banner--library {
   position: static;
-  left: auto;
-  right: auto;
-  bottom: auto;
   transform: none;
   width: auto;
   max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
   align-self: flex-end;
-  flex-wrap: nowrap;
-  gap: 8px;
-  padding: 6px 8px 6px 12px;
-  border-radius: 999px;
-  background: #bfdbfe;
-  color: #0f172a;
-  font-size: 0.82rem;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
   z-index: auto;
 }
-.support-mode-banner--library > span {
-  min-width: 0;
-  white-space: nowrap;
-}
-.page-heading .support-mode-banner--library .button {
+.page-heading .support-mode-banner--library .library-exit-button {
   width: auto;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #1d4ed8;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.2);
+  font-weight: 700;
+  white-space: nowrap;
   flex: 0 0 auto;
+}
+.page-heading .support-mode-banner--library .library-exit-button:hover {
+  border-color: #1e40af;
+  background: #1d4ed8;
 }
 @media (max-width: 620px) {
   .support-mode-banner--library {
-    width: 100%;
-    align-self: stretch;
-    justify-content: space-between;
-    border-radius: 12px;
+    width: auto;
+    align-self: flex-start;
   }
 }
 @media (max-width: 360px) {
-  .support-mode-banner--library {
-    gap: 4px;
-    padding: 5px 6px;
-  }
-  .support-mode-banner--library > span {
-    font-size: 0;
-  }
-  .support-mode-banner--library > span::after {
-    content: '📚';
-    font-size: 1rem;
-  }
-  .page-heading .support-mode-banner--library .button {
-    padding-inline: 8px;
+  .library-exit-label {
+    display: none;
   }
 }
 /* A faixa de suporte não esconde o fim da página. */
