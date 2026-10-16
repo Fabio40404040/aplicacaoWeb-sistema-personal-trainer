@@ -115,9 +115,21 @@ export async function adminSyncLibrary(db, admin) {
   return { data: { created: after.exercises - before.exercises, ...after } }
 }
 
+const exerciseKeyPart = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, ' ')
+    .trim()
+
+const exerciseKey = (exercise) =>
+  `${exerciseKeyPart(exercise.name)}|${exerciseKeyPart(exercise.equipment || 'Sem equipamento')}`
+
 // Copiar exercícios da Biblioteca FARISA para a biblioteca do personal (um ou
-// uma pasta inteira). Pula os que ele já copiou. A cópia usa o mesmo GIF e
-// vídeo (não gasta espaço) e guarda de onde veio (source_id, migração 047).
+// uma pasta inteira). O nome da pasta não define duplicidade: primeiro procura
+// o source_id e depois compara nome + equipamento sem diferenciar maiúsculas,
+// acentos, pontuação ou espaços. A cópia reutiliza o mesmo GIF e vídeo.
 export async function copyFromLibrary(db, trainerId, body) {
   if (trainerId === LIBRARY_ID) return { error: 'A Biblioteca FARISA não copia para ela mesma.', status: 400 }
   const ids = [...new Set((Array.isArray(body?.ids) ? body.ids : []).map(String).filter((id) => /^[\w-]{1,64}$/u.test(id)))].slice(0, 500)
@@ -127,12 +139,73 @@ export async function copyFromLibrary(db, trainerId, body) {
   } catch {
     return { error: 'A cópia ainda não está disponível. Tente de novo mais tarde.', status: 503 }
   }
-  const created = []
-  // Em blocos (o banco limita a quantidade de valores por consulta).
+  const sources = []
+  // Busca em blocos porque o banco limita a quantidade de parâmetros.
   for (let start = 0; start < ids.length; start += 50) {
     const chunk = ids.slice(start, start + 50)
+    const marks = chunk.map((_, index) => `$${index + 2}`).join(',')
+    sources.push(
+      ...(
+        await db.query(
+          `SELECT id,name,muscle_group,equipment,instructions,difficulty,media_type,media_url,
+             thumbnail_url,animation_clip,gif_id,video_id
+           FROM exercises WHERE trainer_id=$1 AND id IN (${marks})`,
+          [LIBRARY_ID, ...chunk],
+        )
+      ).rows,
+    )
+  }
+  if (!sources.length) return { error: 'Os exercícios escolhidos não estão mais disponíveis.', status: 404 }
+
+  const personal = (
+    await db.query('SELECT id,name,equipment,source_id AS "sourceId" FROM exercises WHERE trainer_id=$1', [trainerId])
+  ).rows
+  const bySource = new Map(personal.filter((item) => item.sourceId).map((item) => [String(item.sourceId), item]))
+  const byKey = new Map()
+  personal.forEach((item) => {
+    const key = exerciseKey(item)
+    if (!byKey.has(key)) byKey.set(key, item)
+  })
+
+  const copies = []
+  const missingByKey = new Map()
+  const adoptions = []
+  const adoptedIds = new Set()
+  sources.forEach((source) => {
+    const linked = bySource.get(String(source.id))
+    const equal = linked || byKey.get(exerciseKey(source))
+    if (equal) {
+      copies.push({ id: equal.id, sourceId: source.id })
+      if (!linked && !equal.sourceId && !adoptedIds.has(String(equal.id))) {
+        adoptedIds.add(String(equal.id))
+        adoptions.push({ id: equal.id, sourceId: source.id })
+      }
+      return
+    }
+    const key = exerciseKey(source)
+    if (!missingByKey.has(key)) missingByKey.set(key, [])
+    missingByKey.get(key).push(source)
+  })
+
+  // Associa os exercícios iguais que já existiam para as próximas consultas
+  // reconhecerem a origem sem alterar o conteúdo editado pelo personal.
+  for (let start = 0; start < adoptions.length; start += 50) {
+    const chunk = adoptions.slice(start, start + 50)
+    const cases = chunk.map((_, index) => `WHEN $${index * 2 + 2} THEN $${index * 2 + 3}`).join(' ')
+    const marks = chunk.map((_, index) => `$${index * 2 + 2}`).join(',')
+    await db.query(
+      `UPDATE exercises SET source_id=CASE id ${cases} ELSE source_id END
+       WHERE trainer_id=$1 AND source_id IS NULL AND id IN (${marks})`,
+      [trainerId, ...chunk.flatMap((item) => [item.id, item.sourceId])],
+    )
+  }
+
+  const representatives = [...missingByKey.values()].map((group) => group[0])
+  const created = []
+  for (let start = 0; start < representatives.length; start += 50) {
+    const chunk = representatives.slice(start, start + 50)
     const marks = chunk.map((_, index) => `$${index + 3}`).join(',')
-    const rows = (
+    created.push(...(
       await db.query(
         `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,media_url,
            thumbnail_url,animation_clip,gif_id,video_id,source_id)
@@ -142,10 +215,23 @@ export async function copyFromLibrary(db, trainerId, body) {
          WHERE e.trainer_id=$2 AND e.id IN (${marks})
            AND NOT EXISTS (SELECT 1 FROM exercises c WHERE c.trainer_id=$1 AND c.source_id=e.id)
          RETURNING id, source_id AS "sourceId"`,
-        [trainerId, LIBRARY_ID, ...chunk],
+        [trainerId, LIBRARY_ID, ...chunk.map((item) => item.id)],
       )
-    ).rows
-    created.push(...rows)
+    ).rows)
   }
-  return { data: { created: created.length, skipped: ids.length - created.length, items: created } }
+
+  const createdBySource = new Map(created.map((item) => [String(item.sourceId), item]))
+  missingByKey.forEach((group) => {
+    const inserted = createdBySource.get(String(group[0].id))
+    if (inserted) group.forEach((source) => copies.push({ id: inserted.id, sourceId: source.id }))
+  })
+
+  return {
+    data: {
+      created: created.length,
+      existing: sources.length - created.length,
+      skipped: sources.length - created.length,
+      items: copies,
+    },
+  }
 }

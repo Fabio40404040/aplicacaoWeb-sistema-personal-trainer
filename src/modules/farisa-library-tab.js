@@ -2,7 +2,7 @@
 // exercícios, GIFs e vídeos que a FARISA disponibiliza para todos. Só para
 // consultar e usar nas fichas; "Copiar para minha biblioteca" cria uma cópia
 // editável (mesmo GIF e vídeo, sem gastar espaço).
-import { getData } from './state.js'
+import { getData, updateData } from './state.js'
 import { exerciseGroups, showToast } from './utils.js'
 import { copyFromLibrary, syncRemoteData } from './api-client.js'
 import { findGif, findVideo, gifImage, openGifLightbox, openVideoLightbox } from './exercise-gifs.js'
@@ -13,6 +13,9 @@ const plain = (value) =>
     .normalize('NFD')
     .replace(/[̀-ͯ]/gu, '')
     .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, ' ')
+    .trim()
+const exerciseKey = (exercise) => `${plain(exercise.name)}|${plain(exercise.equipment || 'Sem equipamento')}`
 
 const el = (tag, className = '', text) => {
   const node = document.createElement(tag)
@@ -24,8 +27,18 @@ const el = (tag, className = '', text) => {
 // Exercícios da FARISA que você já copiou (id da FARISA → id da sua cópia).
 export function copiedMap() {
   const map = new Map()
-  ;(getData().exercises || []).forEach((item) => {
+  const exercises = getData().exercises || []
+  const personalByKey = new Map()
+  exercises.forEach((item) => {
+    if (!item.library && !personalByKey.has(exerciseKey(item))) personalByKey.set(exerciseKey(item), item.id)
     if (!item.library && item.sourceId) map.set(String(item.sourceId), item.id)
+  })
+  // Também considera igual o exercício criado manualmente com o mesmo nome e
+  // equipamento, mesmo que esteja em outra pasta ou ainda não tenha sourceId.
+  exercises.forEach((item) => {
+    if (!item.library || map.has(String(item.id))) return
+    const personalId = personalByKey.get(exerciseKey(item))
+    if (personalId) map.set(String(item.id), personalId)
   })
   return map
 }
@@ -67,22 +80,55 @@ function groupBy(items, groupsOf) {
   return folders
 }
 
-async function copyExercises(items, button, label) {
+async function copyExercises(items, button, label, targetGroup = '') {
   const ids = items.map((item) => item.id)
   if (!ids.length) return
   button.disabled = true
   button.textContent = ids.length > 1 ? `Copiando ${ids.length}…` : 'Copiando…'
   try {
     const result = await copyFromLibrary(ids)
+    // Mostra as cópias imediatamente. A sincronização logo abaixo substitui
+    // estes dados pelos valores oficiais; se a rede oscilar, a tela não fica
+    // dizendo "copiado" sem exibir os exercícios.
+    const sources = new Map(items.map((item) => [String(item.id), item]))
+    updateData((data) => {
+      ;(result.items || []).forEach((copy) => {
+        if ((data.exercises || []).some((item) => String(item.id) === String(copy.id))) return
+        const source = sources.get(String(copy.sourceId))
+        if (!source) return
+        data.exercises.push({ ...source, id: copy.id, sourceId: copy.sourceId, library: false })
+      })
+    })
     await syncRemoteData()
+    const copied = copiedMap()
+    const confirmed = ids.filter((id) => copied.has(String(id)))
+    if (confirmed.length !== ids.length)
+      throw new Error('A cópia foi registrada, mas a lista não conseguiu exibir todos os exercícios. Recarregue a página para atualizar.')
     if (ids.length === 1) {
-      showToast(`“${items[0].name}” está em Meus exercícios. Agora você pode editar a sua cópia.`)
+      showToast(
+        result.created
+          ? `“${items[0].name}” foi copiado para Meus exercícios. Agora você pode editar a sua cópia.`
+          : `“${items[0].name}” já estava em Meus exercícios.`,
+      )
       const mine = copiedMap().get(String(ids[0]))
       if (mine) window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: mine }))
     } else {
       showToast(
-        `${result.created} exercício(s) copiado(s) para Meus exercícios${result.skipped ? ` (${result.skipped} já estavam lá)` : ''}.`,
+        `${result.created} exercício(s) copiado(s) para Meus exercícios${result.existing ? ` · ${result.existing} já existente(s)` : ''}.`,
       )
+      // Depois de copiar uma pasta inteira, mostra o resultado no lugar certo
+      // em vez de deixar o usuário olhando a pasta original da FARISA.
+      document.querySelector('[data-library-tab="exercicios"]')?.click()
+      const group = targetGroup || exerciseGroups(items[0])[0]
+      window.requestAnimationFrame(() => {
+        const folder = [...document.querySelectorAll('[data-exercises-list] .exercise-folder')].find(
+          (item) => item.dataset.group === group,
+        )
+        if (folder) {
+          folder.open = true
+          folder.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      })
     }
     renderFarisaLibrary()
   } catch (error) {
@@ -153,7 +199,7 @@ function folderCopyButton(name, items) {
   button.addEventListener('click', (event) => {
     event.preventDefault()
     event.stopPropagation()
-    void copyExercises(pending, button, label)
+    void copyExercises(pending, button, label, name)
   })
   return button
 }
