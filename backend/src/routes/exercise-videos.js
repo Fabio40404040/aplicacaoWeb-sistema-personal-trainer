@@ -27,6 +27,43 @@ function videoResponse(object, filename) {
   return new Response(object.body, { headers });
 }
 
+// O envio individual de MP4 também cataloga o exercício. Recupera o formato
+// antigo (exercício e vídeo com o mesmo id, mas video_id vazio) e não cria uma
+// segunda linha quando o arquivo já está ligado a outro exercício da conta.
+async function ensureVideoExercise(db, trainerId, video, details) {
+  const linked = (
+    await db.query(
+      `SELECT id,video_id AS "videoId" FROM exercises
+       WHERE trainer_id=$1 AND (video_id=$2 OR id=$2)
+       ORDER BY CASE WHEN video_id=$2 THEN 0 ELSE 1 END LIMIT 1`,
+      [trainerId, video.id],
+    )
+  ).rows[0];
+  if (linked) {
+    if (!linked.videoId)
+      await db.query(
+        "UPDATE exercises SET video_id=$1 WHERE id=$2 AND trainer_id=$3 AND video_id IS NULL",
+        [video.id, linked.id, trainerId],
+      );
+    return linked.id;
+  }
+  await db.query(
+    `INSERT OR IGNORE INTO exercises
+      (id,trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,is_active,video_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,'video',1,$1)`,
+    [
+      video.id,
+      trainerId,
+      details.name,
+      details.group,
+      details.equipment || "Sem equipamento",
+      details.instructions || null,
+      details.difficulty || "Intermediário",
+    ],
+  );
+  return video.id;
+}
+
 export async function uploadExerciseVideo(request, env, db, trainerId) {
   if (!env.MEDIA) return storageUnavailable();
   const form = await request.formData();
@@ -67,6 +104,14 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
     const nextGroup = wantsMove ? group : existing.group;
     const moved = nextGroup !== existing.group;
     const renamed = catalogar && name !== existing.name;
+    if (catalogar)
+      await ensureVideoExercise(db, trainerId, existing, {
+        name,
+        group: nextGroup,
+        equipment,
+        instructions,
+        difficulty,
+      });
     if (moved || renamed) {
       await db.batch([
         {
@@ -131,8 +176,8 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
     if (catalogar)
       queries.push({
         sql: `INSERT OR IGNORE INTO exercises
-          (id,trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'video',1)`,
+          (id,trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,is_active,video_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'video',1,$1)`,
         values: [
           id,
           trainerId,
