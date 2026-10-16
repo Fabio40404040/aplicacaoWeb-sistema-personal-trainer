@@ -613,18 +613,9 @@ export async function deleteExerciseFolder(env, db, trainerId, body) {
   let moved = 0;
   const blocked = [];
   for (const exercise of rows) {
-    const remaining = String(exercise.group || "")
-      .split(",")
-      .map((name) => name.trim())
-      .filter((name) => name && !names.includes(name));
-    if (remaining.length) {
-      queries.push({
-        sql: "UPDATE exercises SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
-        values: [remaining.join(", "), exercise.id, trainerId],
-      });
-      moved += 1;
-      continue;
-    }
+    // Mesmo quando o exercício também pertence a outro grupo, apagar esta
+    // pasta pode retirar o GIF ou vídeo usado na ficha. Protege primeiro e só
+    // depois decide se o exercício será movido ou excluído.
     const usage = (
       await db.query(
         `SELECT
@@ -637,6 +628,18 @@ export async function deleteExerciseFolder(env, db, trainerId, body) {
       blocked.push(exercise.name);
       continue;
     }
+    const remaining = String(exercise.group || "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter((name) => name && !names.includes(name));
+    if (remaining.length) {
+      queries.push({
+        sql: "UPDATE exercises SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
+        values: [remaining.join(", "), exercise.id, trainerId],
+      });
+      moved += 1;
+      continue;
+    }
     deleted += 1;
   }
   if (blocked.length)
@@ -647,16 +650,96 @@ export async function deleteExerciseFolder(env, db, trainerId, body) {
 
   const folderGifs = (
     await db.query(
-      "SELECT id,muscle_group AS \"group\",object_key AS \"objectKey\",frame_key AS \"frameKey\" FROM exercise_gifs WHERE trainer_id=$1",
+      "SELECT id,name,muscle_group AS \"group\",object_key AS \"objectKey\",frame_key AS \"frameKey\" FROM exercise_gifs WHERE trainer_id=$1",
       [trainerId],
     )
   ).rows.filter((item) => names.includes(item.group));
   const folderVideos = (
     await db.query(
-      "SELECT id,muscle_group AS \"group\",object_key AS \"objectKey\" FROM exercise_videos WHERE trainer_id=$1",
+      "SELECT id,name,muscle_group AS \"group\",object_key AS \"objectKey\" FROM exercise_videos WHERE trainer_id=$1",
       [trainerId],
     )
   ).rows.filter((item) => names.includes(item.group));
+
+  // As cópias feitas pelos personais reutilizam os arquivos da Biblioteca
+  // FARISA. Apagar o objeto do R2 ou sua linha de mídia quebraria essas
+  // cópias, mesmo que o exercício original já não esteja numa ficha. Por isso
+  // a pasta inteira é bloqueada antes de qualquer exclusão.
+  const sharedMedia = [];
+  const otherFolderMedia = [];
+  const collectShared = async (items, column, kind) => {
+    for (let start = 0; start < items.length; start += 50) {
+      const chunk = items.slice(start, start + 50);
+      if (!chunk.length) continue;
+      const marks = chunk.map((_, index) => `$${index + 2}`).join(",");
+      const rows = (
+        await db.query(
+          `SELECT ${column} AS "mediaId",COUNT(*) AS copies
+           FROM exercises
+           WHERE trainer_id<>$1 AND ${column} IN (${marks})
+           GROUP BY ${column}`,
+          [trainerId, ...chunk.map((item) => item.id)],
+        )
+      ).rows;
+      const byId = new Map(chunk.map((item) => [String(item.id), item]));
+      rows.forEach((row) => {
+        const media = byId.get(String(row.mediaId));
+        if (media)
+          sharedMedia.push({
+            kind,
+            name: media.name,
+            copies: Number(row.copies) || 0,
+          });
+      });
+
+      const ownLinks = (
+        await db.query(
+          `SELECT name,muscle_group AS "group",${column} AS "mediaId"
+           FROM exercises
+           WHERE trainer_id=$1 AND ${column} IN (${marks})`,
+          [trainerId, ...chunk.map((item) => item.id)],
+        )
+      ).rows;
+      ownLinks.forEach((exercise) => {
+        const staysInAnotherFolder = String(exercise.group || "")
+          .split(",")
+          .map((name) => name.trim())
+          .some((name) => name && !names.includes(name));
+        if (!staysInAnotherFolder) return;
+        const media = byId.get(String(exercise.mediaId));
+        if (
+          media &&
+          !otherFolderMedia.some(
+            (item) => item.kind === kind && String(item.id) === String(media.id),
+          )
+        )
+          otherFolderMedia.push({ id: media.id, kind, name: media.name, exercise: exercise.name });
+      });
+    }
+  };
+  await collectShared(folderGifs, "gif_id", "GIF");
+  await collectShared(folderVideos, "video_id", "vídeo");
+  if (sharedMedia.length) {
+    const copies = sharedMedia.reduce((total, item) => total + item.copies, 0);
+    const examples = sharedMedia
+      .slice(0, 3)
+      .map((item) => `${item.kind} “${item.name}”`)
+      .join(", ");
+    return {
+      error: `A pasta não foi excluída porque ${sharedMedia.length} arquivo(s) são usados por ${copies} exercício(s) de outros personal(is): ${examples}${sharedMedia.length > 3 ? "…" : ""}. Exclua primeiro essas cópias ou mantenha a pasta FARISA.`,
+      status: 409,
+    };
+  }
+  if (otherFolderMedia.length) {
+    const examples = otherFolderMedia
+      .slice(0, 3)
+      .map((item) => `${item.kind} “${item.name}” em “${item.exercise}”`)
+      .join(", ");
+    return {
+      error: `A pasta não foi excluída porque ${otherFolderMedia.length} arquivo(s) também estão ligados a exercícios mantidos em outras pastas: ${examples}${otherFolderMedia.length > 3 ? "…" : ""}. Remova primeiro esse vínculo para não afetar as outras pastas.`,
+      status: 409,
+    };
+  }
 
   if ((folderGifs.length || folderVideos.length) && !env.MEDIA)
     return { error: "O armazenamento da Cloudflare não está disponível para excluir a pasta agora.", status: 503 };

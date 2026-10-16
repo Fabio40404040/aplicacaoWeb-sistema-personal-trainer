@@ -1649,7 +1649,7 @@ async function removeVideoGroup(groupName, videos) {
     message: videos.length
       ? `A pasta inteira será removida, incluindo ${videos.length} vídeo(s), exercícios e GIFs que estiverem nela.`
       : 'A pasta inteira será removida, junto com exercícios ou GIFs que estiverem nela.',
-    note: 'Esta ação não pode ser desfeita.',
+    note: 'Se algum exercício estiver em uso ou alguma mídia tiver sido copiada por outro personal, nada será excluído.',
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return

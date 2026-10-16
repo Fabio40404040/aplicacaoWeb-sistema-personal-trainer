@@ -1077,7 +1077,7 @@ async function removeGifGroup(group, lista) {
     message: lista.length
       ? `A pasta inteira será removida, incluindo ${lista.length} GIF(s), exercícios e vídeos que estiverem nela.${aviso}`
       : 'A pasta inteira será removida, junto com exercícios ou vídeos que estiverem nela.',
-    note: 'Esta ação não pode ser desfeita.',
+    note: 'Se algum exercício estiver em uso ou alguma mídia tiver sido copiada por outro personal, nada será excluído.',
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return

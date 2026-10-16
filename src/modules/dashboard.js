@@ -42,8 +42,8 @@ async function removeExerciseFolder(name, exercises) {
       ? `A pasta inteira será removida com ${total} exercício(s), GIFs e vídeos que estiverem nela. Exercícios que também pertencem a outro grupo apenas sairão desta pasta.`
       : 'A pasta inteira será removida, junto com GIFs ou vídeos que estiverem nela.',
     note: total
-      ? 'Se algum exercício estiver em uso numa ficha ou treino pronto, nada será excluído e você receberá um aviso.'
-      : 'Esta ação não pode ser desfeita.',
+      ? 'Se algum exercício estiver em uso ou alguma mídia tiver sido copiada por outro personal, nada será excluído e você receberá um aviso.'
+      : 'Se alguma mídia tiver sido copiada por outro personal, nada será excluído.',
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
