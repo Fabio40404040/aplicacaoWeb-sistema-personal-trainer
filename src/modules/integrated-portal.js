@@ -416,7 +416,7 @@ function catalogDeleteButton(exercise, form, mapName, rerender) {
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'catalog-exercise-delete'
-  button.textContent = 'Apagar'
+  button.textContent = '×'
   button.setAttribute('aria-label', `Apagar ${exercise.name}`)
   button.title = `Apagar o exercício próprio ${exercise.name}`
   button.addEventListener('click', async () => {

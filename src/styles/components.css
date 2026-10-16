@@ -1195,25 +1195,40 @@ td {
   display: none;
 }
 .ready-exercise-option-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
-  gap: 6px;
+  position: relative;
+  min-width: 0;
 }
 .ready-exercise-option-row[hidden] {
   display: none;
 }
 .catalog-exercise-delete {
-  align-self: stretch;
-  padding: 7px 10px;
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  transform: translateY(-50%);
   border: 1px solid #f1b8b4;
-  border-radius: 9px;
+  border-radius: 50%;
   color: #a52620;
   background: #fff7f6;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1;
   font-weight: 700;
   cursor: pointer;
+}
+.ready-exercise-option-row .ready-exercise-option {
+  width: 100%;
+  min-width: 0;
+  padding-right: 48px;
+}
+.ready-exercise-option-row .ready-exercise-option > span {
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .catalog-exercise-delete:hover {
   border-color: #d65b54;
@@ -1222,6 +1237,10 @@ td {
 .catalog-exercise-delete:disabled {
   cursor: wait;
   opacity: 0.55;
+}
+.catalog-exercise-delete:focus-visible {
+  outline: 3px solid color-mix(in srgb, #d65b54 28%, transparent);
+  outline-offset: 2px;
 }
 .ready-exercise-option input {
   margin-top: 3px;
