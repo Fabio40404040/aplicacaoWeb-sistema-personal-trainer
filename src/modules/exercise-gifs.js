@@ -96,18 +96,24 @@ export function externalFolderName(folderName) {
     .slice(0, 40)
 }
 
-// Grupos para escolher na mão: os do filtro da biblioteca + as suas pastas.
+// Pastas reais para escolher na mão, na mesma ordem da biblioteca. Não cria
+// opções fixas que ainda não existem na conta do personal.
 export function allGroupNames() {
-  const names = [
-    ...(document.querySelector('[data-exercise-filter]')?.options || []),
-  ]
-    .map((option) => option.value)
-    .filter((value) => value && value !== 'all')
-  if (!names.length) names.push(...FOLDER_GROUPS.map(([, group]) => group))
+  const data = getData()
+  const names = []
+  const add = (name) => {
+    const clean = String(name || '').trim()
+    if (clean && !names.includes(clean)) names.push(clean)
+  }
+  ;(data.exercises || [])
+    .filter((item) => !item.library)
+    .forEach((item) => exerciseGroups(item).forEach(add))
+  ;(data.exerciseGifs || []).forEach((item) => add(item.group))
+  ;(data.exerciseVideos || []).forEach((item) => add(item.group))
   ;(getData().customGroups || []).forEach((item) => {
-    if (!names.includes(item.name)) names.push(item.name)
+    add(item.name)
   })
-  return names
+  return names.sort(folderSorter())
 }
 
 function paintLooseGroups() {
@@ -115,6 +121,8 @@ function paintLooseGroups() {
   if (!select) return
   const selected = select.value
   const names = allGroupNames()
+  if (selected && !names.includes(selected)) names.push(selected)
+  if (!names.length) names.push('Sem grupo')
   select.replaceChildren(
     ...names.map((group) => {
       const option = document.createElement('option')

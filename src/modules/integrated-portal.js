@@ -21,6 +21,7 @@ import { exerciseCatalog } from '../data/exercises.js'
 import { exerciseVideoLibrary, muscleGroups } from '../data/library.js'
 import { askConfirm, exerciseGroups, showToast } from './utils.js'
 import {
+  allGroupNames,
   exerciseGifThumb,
   externalFolderName,
   filesFromDrop,
@@ -818,14 +819,7 @@ function paintGroupCount(target, total, selected, label) {
 }
 
 function configureMuscleGroupFields() {
-  // Pastas criadas por você entram junto das do catálogo.
-  const customNames = (getData().customGroups || []).map((item) => item.name)
-  const values = [
-    ...muscleGroups.map((group) => group.name),
-    ...customNames.filter(
-      (name) => !muscleGroups.some((group) => group.name === name),
-    ),
-  ]
+  const values = allGroupNames()
   // Um exercício pode trabalhar mais de um grupo (ex.: afundo no smith =
   // quadríceps e glúteos), então isto é uma lista de caixas de marcar, não
   // um select de escolha única.
@@ -853,16 +847,10 @@ function configureMuscleGroupFields() {
     const all = document.createElement('option')
     all.value = 'all'
     all.textContent = 'Todos os grupos'
-    const catalogNames = workoutCatalogGroups(getData().exercises || []).map(
-      (group) => group.name,
-    )
-    const filterValues = [
-      ...catalogNames,
-      ...customNames.filter((name) => !catalogNames.includes(name)),
-    ]
+    const catalogNames = values
     filter.replaceChildren(
       all,
-      ...filterValues.map((value) => {
+      ...catalogNames.map((value) => {
         const option = document.createElement('option')
         option.value = value
         option.textContent = value
@@ -1621,13 +1609,9 @@ function syncVideoGroupOptions(target) {
   const select = target || document.querySelector('[data-video-muscle-group]')
   if (!select) return
   const escolhido = select.value
-  const lista = [...muscleGroups]
-  const abdomenIndex = lista.findIndex((group) => group.name === 'Abdômen')
-  lista.splice(abdomenIndex + 1, 0, { id: 'pernas', name: 'Pernas' })
-  const nomes = lista.map((group) => group.name)
-  ;(getData().customGroups || []).forEach((item) => {
-    if (!nomes.includes(item.name)) nomes.push(item.name)
-  })
+  const nomes = allGroupNames()
+  if (escolhido && !nomes.includes(escolhido)) nomes.push(escolhido)
+  if (!nomes.length) nomes.push('Sem grupo')
   select.replaceChildren(
     ...nomes.map((name) => {
       const option = document.createElement('option')

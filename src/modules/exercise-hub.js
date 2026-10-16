@@ -460,7 +460,7 @@ function createUploadPanel(page) {
   // Arquivos soltos vão para o grupo escolhido nas pastinhas (ou o primeiro).
   const fallbackGroup = () => {
     const chosen = document.querySelector('[data-exercise-filter]')?.value
-    return chosen && chosen !== 'all' ? chosen : allGroupNames()[0] || 'Peitoral'
+    return chosen && chosen !== 'all' ? chosen : allGroupNames()[0] || 'Sem grupo'
   }
   pick.addEventListener('click', () => input.click())
   input.addEventListener('change', () => {
