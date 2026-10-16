@@ -1003,6 +1003,101 @@ function openPoseGuide(poses) {
   poseGuide.replaceChildren(head, grid, el("strong", "student-pose-subtitle", "Para comparar bem"), tips, el("small", "student-tool-hint", "Envie as fotos para o seu personal pelo canal que vocês combinaram. 🔒 Só você e ele veem as fotos aqui."));
   poseGuide.showModal();
 }
+
+// Guia visual das medidas corporais. Os desenhos ficam no próprio código para
+// carregar imediatamente, inclusive em conexão lenta, e acompanham as cores
+// escolhidas para a página do personal.
+const MEASURE_GUIDE = [
+  ["weight", "Peso", "Balança em piso firme, de manhã, em jejum e depois de ir ao banheiro."],
+  ["height", "Altura", "Descalço, calcanhares no chão, costas retas e olhar para a frente."],
+  ["chest", "Peitoral", "Passe a fita na altura dos mamilos e anote depois de soltar o ar normalmente."],
+  ["waist", "Cintura", "Meça na altura do umbigo, com a barriga relaxada e sem prender a respiração."],
+  ["hip", "Quadril", "Pés juntos e fita na parte mais larga do bumbum."],
+  ["arm", "Braço", "Braço relaxado: meça no meio entre o ombro e o cotovelo, sempre do mesmo lado."],
+  ["thigh", "Coxa", "Em pé, peso nas duas pernas: meça no meio entre a virilha e o joelho."],
+  ["calf", "Panturrilha", "Em pé, passe a fita na parte mais grossa, sem contrair a perna."],
+];
+
+function measureModel(model, label) {
+  const holder = el("span", "student-measure-model");
+  const body = `
+    <circle cx="60" cy="20" r="11" fill="currentColor"/>
+    <rect x="55" y="29" width="10" height="9" rx="3" fill="currentColor"/>
+    <path d="M41 42 Q60 35 79 42 L73 99 Q60 105 47 99 Z" fill="currentColor"/>
+    <path d="M46 96 Q60 104 74 96 L77 116 L43 116 Z" fill="currentColor"/>
+    <path d="M42 45 L30 100 M78 45 L90 100 M51 112 L48 188 M69 112 L72 188"
+      fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="10"/>
+    <path d="M48 190 L40 191 M72 190 L80 191" fill="none" stroke="currentColor"
+      stroke-linecap="round" stroke-width="5"/>`;
+  const band = (cx, cy, rx, ry = 5) =>
+    `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none"
+      stroke="var(--measure-accent, #fbbf24)" stroke-width="4"/>
+     <circle cx="${cx + rx}" cy="${cy}" r="3.5" fill="var(--measure-accent, #fbbf24)"/>`;
+  const details = {
+    chest: band(60, 62, 22, 6),
+    waist: band(60, 88, 17, 5),
+    hip: band(60, 108, 21, 6),
+    arm: `${band(31, 72, 7, 4)}<path d="M20 58 L11 50" stroke="var(--measure-accent, #fbbf24)" stroke-width="2"/><text x="2" y="47" fill="var(--measure-accent, #fbbf24)" font-size="9">meio</text>`,
+    thigh: band(49, 137, 8, 4),
+    calf: band(49, 164, 7, 4),
+    height: `<path d="M103 10 V191 M97 11 H109 M97 190 H109" fill="none" stroke="var(--measure-accent, #fbbf24)" stroke-width="3"/><path d="M98 35 H106 M98 60 H106 M98 85 H106 M98 110 H106 M98 135 H106 M98 160 H106" stroke="var(--measure-accent, #fbbf24)" stroke-width="2"/>`,
+  };
+  const weight = `
+    <rect x="19" y="68" width="82" height="74" rx="15" fill="currentColor" opacity=".92"/>
+    <rect x="39" y="78" width="42" height="25" rx="8" fill="var(--measure-panel, #1b2a40)"/>
+    <path d="M60 98 L69 86" stroke="var(--measure-accent, #fbbf24)" stroke-linecap="round" stroke-width="4"/>
+    <path d="M34 119 Q42 106 50 121 M70 121 Q78 106 86 119" fill="none" stroke="var(--measure-panel, #1b2a40)" stroke-linecap="round" stroke-width="8"/>`;
+  holder.innerHTML = `<svg viewBox="0 0 120 200" role="img" aria-label="Ilustração: ${label}">${model === "weight" ? weight : body + (details[model] || "")}</svg>`;
+  return holder;
+}
+
+let measureGuide = null;
+function openMeasureGuide() {
+  if (!measureGuide) {
+    measureGuide = el("dialog", "student-pose-guide student-measure-guide");
+    document.body.append(measureGuide);
+    measureGuide.addEventListener("click", (event) => {
+      if (event.target === measureGuide) measureGuide.close();
+    });
+  }
+  const head = el("header");
+  head.append(el("h2", "", "📏 Como tirar as medidas"));
+  const close = el("button", "student-pose-close", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Fechar");
+  close.addEventListener("click", () => measureGuide.close());
+  head.append(close);
+  const intro = el(
+    "p",
+    "student-measure-intro",
+    "Use uma fita métrica flexível diretamente sobre a pele ou roupa bem fina. A fita deve ficar reta e encostada, sem apertar.",
+  );
+  const grid = el("div", "student-pose-grid student-measure-grid");
+  MEASURE_GUIDE.forEach(([model, label, tip]) => {
+    const card = el("figure", "student-pose-card student-measure-card");
+    const caption = el("figcaption");
+    caption.append(el("strong", "", label), el("span", "", tip));
+    card.append(measureModel(model, label), caption);
+    grid.append(card);
+  });
+  const tips = el("ul", "student-pose-tips");
+  [
+    "Meça sempre no mesmo horário, de preferência pela manhã.",
+    "Mantenha a fita paralela ao chão nas medidas do tronco.",
+    "Faça duas vezes; se os valores forem diferentes, meça uma terceira vez.",
+    "Use sempre o mesmo lado do corpo para braço, coxa e panturrilha.",
+    "Anote em centímetros, incluindo uma casa decimal quando necessário.",
+  ].forEach((tip) => tips.append(el("li", "", tip)));
+  measureGuide.replaceChildren(
+    head,
+    intro,
+    grid,
+    el("strong", "student-pose-subtitle", "Para comparar corretamente"),
+    tips,
+    el("small", "student-tool-hint", "Se puder, peça ajuda para manter a fita reta. Em caso de dúvida, confirme o ponto de medição com o seu personal."),
+  );
+  measureGuide.showModal();
+}
 // ---------- Autoavaliação (consultoria à distância)
 // O aluno envia peso, medidas e fotos; o personal revisa e publica. Fica
 // numa janela própria para não encher a área do aluno.
@@ -1238,7 +1333,7 @@ function assessmentActions(poseList, selfOptions, loadPhoto) {
     send.addEventListener("click", () => openSelfAssessment(selfOptions, poseList, loadPhoto));
     row.append(send);
   }
-  row.append(poseGuideButton(poseList));
+  row.append(poseGuideButton(poseList), measureGuideButton());
   const box = el("div", "student-assessment-actions-box");
   box.append(row);
   if (selfOptions?.pending) {
@@ -1252,6 +1347,13 @@ export function poseGuideButton(poses) {
   const button = el("button", "button button--secondary student-pose-button", "📸 Como tirar as fotos (poses)");
   button.type = "button";
   button.addEventListener("click", () => openPoseGuide(posesFor(poses)));
+  return button;
+}
+
+export function measureGuideButton() {
+  const button = el("button", "button button--secondary student-pose-button", "📏 Como tirar as medidas");
+  button.type = "button";
+  button.addEventListener("click", openMeasureGuide);
   return button;
 }
 
