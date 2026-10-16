@@ -5067,6 +5067,9 @@ button.is-loading {
   transform: none;
   width: auto;
   max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  align-self: flex-end;
   flex-wrap: nowrap;
   gap: 8px;
   padding: 6px 8px 6px 12px;
@@ -5076,6 +5079,22 @@ button.is-loading {
   font-size: 0.82rem;
   box-shadow: none;
   z-index: auto;
+}
+.support-mode-banner--library > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.page-heading .support-mode-banner--library .button {
+  width: auto;
+  flex: 0 0 auto;
+}
+@media (max-width: 620px) {
+  .support-mode-banner--library {
+    width: 100%;
+    align-self: stretch;
+    justify-content: space-between;
+    border-radius: 12px;
+  }
 }
 /* A faixa de suporte não esconde o fim da página. */
 body.has-support-banner .main-content {
