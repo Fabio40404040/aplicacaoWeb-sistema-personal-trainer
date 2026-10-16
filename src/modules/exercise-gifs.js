@@ -427,7 +427,9 @@ export function folderCreateButton() {
 
 // Miniatura do GIF para usar fora da Biblioteca (ex.: no montador de ficha).
 export function exerciseGifThumb(exercise, className = 'exercise-pick-gif') {
-  if (!exercise?.gifId || !findGif(exercise.gifId)) return null
+  // O vínculo do exercício é suficiente. A rota também permite buscar GIFs
+  // da Biblioteca FARISA usados por uma cópia do personal.
+  if (!exercise?.gifId) return null
   return gifImage(exercise.gifId, className)
 }
 

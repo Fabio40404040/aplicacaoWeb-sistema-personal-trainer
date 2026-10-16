@@ -18,7 +18,7 @@ import { downloadWorkoutPdf } from './workout-pdf.js'
 import { quickReleaseAccess } from './dashboard.js'
 import { getData } from './state.js'
 import { exerciseCatalog } from '../data/exercises.js'
-import { exerciseVideoLibrary, legGroupNames, muscleGroups } from '../data/library.js'
+import { exerciseVideoLibrary, muscleGroups } from '../data/library.js'
 import { askConfirm, exerciseGroups, showToast } from './utils.js'
 import {
   exerciseGifThumb,
@@ -52,35 +52,17 @@ const mediaExerciseCatalog = [
     animationClip: '',
   })),
 ]
-const legMuscleGroups = ['Pernas', ...legGroupNames]
-
 function workoutCatalogGroups(exercises) {
-  const knownGroups = new Set([...muscleGroups.map((group) => group.name), 'Pernas'])
-  const groups = muscleGroups
-    .filter((group) => !legMuscleGroups.includes(group.name))
-    .map((group) => ({ ...group, memberNames: [group.name] }))
-  const abdomenIndex = groups.findIndex((group) => group.name === 'Abdômen')
-  groups.splice(abdomenIndex + 1, 0, {
-    id: 'pernas',
-    name: 'Pernas',
-    memberNames: legMuscleGroups,
-  })
-  // Um exercício pode ter mais de um grupo (ex.: quadríceps e glúteos):
-  // percorre cada nome separadamente, não a string toda.
-  exercises.forEach((exercise) => {
-    exerciseGroups(exercise)
-      .filter((name) => !knownGroups.has(name))
-      .forEach((name) => {
-        if (groups.some((group) => group.name === name)) return
-        groups.push({ id: name, name, memberNames: [name] })
-      })
-  })
-  // Pastas criadas por você aparecem também aqui, mesmo ainda vazias.
+  // O montador reflete as pastas reais da biblioteca, inclusive as vazias,
+  // e segue a mesma ordem configurada pelo personal.
+  const names = new Set()
+  exercises.forEach((exercise) => exerciseGroups(exercise).forEach((name) => names.add(name)))
   ;(getData().customGroups || []).forEach((item) => {
-    if (groups.some((group) => group.name === item.name)) return
-    groups.push({ id: item.id, name: item.name, memberNames: [item.name] })
+    if (item.name) names.add(item.name)
   })
-  return groups
+  return [...names]
+    .sort(folderSorter())
+    .map((name) => ({ id: name, name, memberNames: [name] }))
 }
 
 function field(label, html) {
@@ -595,7 +577,7 @@ function enhanceWorkout() {
   const wizard = document.createElement('section')
   wizard.className = 'ready-workout-wizard'
   wizard.dataset.workoutWizard = ''
-  wizard.innerHTML = `<div class="ready-session-tabs" data-workout-session-tabs></div><div class="ready-wizard-heading"><div><span class="eyebrow eyebrow--blue">Etapa atual</span><h3 data-workout-current-title></h3></div><p>Abra Peitoral, Costas, Ombros ou outro grupo e marque os exercícios deste treino.</p></div><div class="ready-exercise-catalog" data-workout-exercise-catalog></div><button class="button button--secondary workout-add-session" type="button" data-workout-add-session></button><div class="workout-prescription-builder" data-workout-prescriptions></div>`
+  wizard.innerHTML = `<div class="ready-session-tabs" data-workout-session-tabs></div><div class="ready-wizard-heading"><div><span class="eyebrow eyebrow--blue">Etapa atual</span><h3 data-workout-current-title></h3></div><p>Abra uma pasta da sua biblioteca e marque os exercícios deste treino.</p></div><div class="ready-exercise-catalog" data-workout-exercise-catalog></div><button class="button button--secondary workout-add-session" type="button" data-workout-add-session></button><div class="workout-prescription-builder" data-workout-prescriptions></div>`
   const publish = document.createElement('label')
   publish.className = 'check-field'
   publish.innerHTML = `<input name="published" type="checkbox" value="1"><span>Publicar esta ficha personalizada para o aluno selecionado</span>`
@@ -1205,7 +1187,7 @@ function createReadyWorkoutLibraryPanel() {
   const dialog = document.createElement('dialog')
   dialog.className = 'modal modal--wide'
   dialog.dataset.readyProgramDialog = ''
-  dialog.innerHTML = `<form method="dialog"><header><div><span class="eyebrow eyebrow--blue">Ficha geral</span><h2>Montar treino pronto completo</h2></div><button class="icon-button" type="button" data-ready-close aria-label="Fechar">×</button></header><div class="modal-body"><label class="field"><span>Nome do programa</span><input name="name" required placeholder="Ex.: Hipertrofia avançada"></label><div class="field-grid field-grid--three"><label class="field"><span>Objetivo</span><select name="goal"><option>Hipertrofia</option><option>Emagrecimento</option><option>Condicionamento</option><option>Força</option></select></label><label class="field"><span>Nível</span><select name="level"><option>Iniciante</option><option selected>Intermediário</option><option>Avançado</option></select></label><label class="field"><span>Quantidade de semanas</span><input name="durationWeeks" type="number" min="1" max="104" value="12" required></label></div><div class="field-grid field-grid--three"><label class="field"><span>Divisão do treino</span><select name="division"><option value="fullbody">Full body</option><option value="ab">AB</option><option value="abc">ABC</option><option value="abcd">ABCD</option><option value="abcde" selected>ABCDE</option><option value="abcdef">ABCDEF</option></select></label><label class="field"><span>Cor da ficha</span><select name="colorTheme"><option value="blue">Azul FARISA</option><option value="red">Vermelho e grafite</option><option value="green">Verde</option><option value="black">Preto</option></select></label><label class="field"><span>Descrição</span><input name="description" placeholder="Resumo e orientações gerais"></label></div><section class="ready-workout-wizard"><div class="ready-session-tabs" data-ready-session-tabs></div><div class="ready-wizard-heading"><div><span class="eyebrow eyebrow--blue">Etapa atual</span><h3 data-ready-current-title></h3></div><p>Abra um grupo muscular e marque os exercícios desta etapa.</p></div><div class="ready-exercise-catalog" data-ready-exercise-catalog></div><button class="button button--secondary ready-next-button" type="button" data-ready-next></button><div class="workout-prescription-builder" data-ready-prescriptions></div></section><label class="check-field"><input name="published" type="checkbox" value="1"><span>Publicar para todos que compraram Treinos Prontos</span></label><p role="status" aria-live="polite"></p></div><footer><button class="button button--secondary" type="button" data-ready-close>Cancelar</button><button class="button button--primary" type="submit">Salvar treino pronto</button></footer></form>`
+  dialog.innerHTML = `<form method="dialog"><header><div><span class="eyebrow eyebrow--blue">Ficha geral</span><h2>Montar treino pronto completo</h2></div><button class="icon-button" type="button" data-ready-close aria-label="Fechar">×</button></header><div class="modal-body"><label class="field"><span>Nome do programa</span><input name="name" required placeholder="Ex.: Hipertrofia avançada"></label><div class="field-grid field-grid--three"><label class="field"><span>Objetivo</span><select name="goal"><option>Hipertrofia</option><option>Emagrecimento</option><option>Condicionamento</option><option>Força</option></select></label><label class="field"><span>Nível</span><select name="level"><option>Iniciante</option><option selected>Intermediário</option><option>Avançado</option></select></label><label class="field"><span>Quantidade de semanas</span><input name="durationWeeks" type="number" min="1" max="104" value="12" required></label></div><div class="field-grid field-grid--three"><label class="field"><span>Divisão do treino</span><select name="division"><option value="fullbody">Full body</option><option value="ab">AB</option><option value="abc">ABC</option><option value="abcd">ABCD</option><option value="abcde" selected>ABCDE</option><option value="abcdef">ABCDEF</option></select></label><label class="field"><span>Cor da ficha</span><select name="colorTheme"><option value="blue">Azul FARISA</option><option value="red">Vermelho e grafite</option><option value="green">Verde</option><option value="black">Preto</option></select></label><label class="field"><span>Descrição</span><input name="description" placeholder="Resumo e orientações gerais"></label></div><section class="ready-workout-wizard"><div class="ready-session-tabs" data-ready-session-tabs></div><div class="ready-wizard-heading"><div><span class="eyebrow eyebrow--blue">Etapa atual</span><h3 data-ready-current-title></h3></div><p>Abra uma pasta da sua biblioteca e marque os exercícios desta etapa.</p></div><div class="ready-exercise-catalog" data-ready-exercise-catalog></div><button class="button button--secondary ready-next-button" type="button" data-ready-next></button><div class="workout-prescription-builder" data-ready-prescriptions></div></section><label class="check-field"><input name="published" type="checkbox" value="1"><span>Publicar para todos que compraram Treinos Prontos</span></label><p role="status" aria-live="polite"></p></div><footer><button class="button button--secondary" type="button" data-ready-close>Cancelar</button><button class="button button--primary" type="submit">Salvar treino pronto</button></footer></form>`
   document.body.append(dialog)
   const form = dialog.querySelector('form')
   form.elements.division.addEventListener('change', () => {
