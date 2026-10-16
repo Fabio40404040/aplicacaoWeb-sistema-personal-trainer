@@ -517,7 +517,7 @@ export async function updateResource(db, resource, trainerId, id, body) {
   return row;
 }
 
-export async function deleteResource(db, resource, trainerId, id) {
+export async function deleteResource(db, resource, trainerId, id, env = null) {
   if (!configs[resource] && resource !== "workouts") return null;
   if (resource === "students") {
     // No Grátis, a vaga de um aluno já atendido fica em espera por 30 dias.
@@ -536,6 +536,14 @@ export async function deleteResource(db, resource, trainerId, id) {
     return results.at(-1).rows[0] || null;
   }
   if (resource === "exercises") {
+    const exercise = (
+      await db.query(
+        `SELECT id,gif_id AS "gifId",video_id AS "videoId"
+         FROM exercises WHERE id=$1 AND trainer_id=$2 LIMIT 1`,
+        [id, trainerId],
+      )
+    ).rows[0];
+    if (!exercise) return null;
     // O exercicio e referenciado pelas fichas e pelos treinos prontos. Se
     // apagarmos direto, o banco recusa e o painel mostra um erro generico.
     const uso = (
@@ -563,9 +571,83 @@ export async function deleteResource(db, resource, trainerId, id) {
         status: 409,
       };
     }
-    await db.query("DELETE FROM exercises WHERE id=$1 AND trainer_id=$2", [
-      id,
-      trainerId,
+
+    // Ao apagar um exercício, também remove o arquivo que pertence somente a
+    // ele. Antes o exercício sumia, mas o GIF/MP4 ficava solto e o admin o
+    // contava novamente como se fosse outro envio. Arquivos usados por uma
+    // cópia de outro personal continuam preservados.
+    const gif = exercise.gifId
+      ? (
+          await db.query(
+            `SELECT id,object_key AS "objectKey",frame_key AS "frameKey"
+             FROM exercise_gifs WHERE id=$1 AND trainer_id=$2 LIMIT 1`,
+            [exercise.gifId, trainerId],
+          )
+        ).rows[0]
+      : null;
+    const video = exercise.videoId
+      ? (
+          await db.query(
+            `SELECT id,object_key AS "objectKey"
+             FROM exercise_videos WHERE id=$1 AND trainer_id=$2 LIMIT 1`,
+            [exercise.videoId, trainerId],
+          )
+        ).rows[0]
+      : null;
+    const gifShared = gif
+      ? Boolean(
+          (
+            await db.query(
+              "SELECT id FROM exercises WHERE gif_id=$1 AND NOT (id=$2 AND trainer_id=$3) LIMIT 1",
+              [gif.id, id, trainerId],
+            )
+          ).rows[0],
+        )
+      : false;
+    const videoShared = video
+      ? Boolean(
+          (
+            await db.query(
+              `SELECT id FROM exercises
+               WHERE (video_id=$1 OR (trainer_id=$3 AND id=$1))
+                 AND NOT (id=$2 AND trainer_id=$3) LIMIT 1`,
+              [video.id, id, trainerId],
+            )
+          ).rows[0],
+        )
+      : false;
+    const removableGif = gif && !gifShared ? gif : null;
+    const removableVideo = video && !videoShared ? video : null;
+    if ((removableGif || removableVideo) && !env?.MEDIA)
+      return {
+        error: "O armazenamento da Cloudflare não está disponível para excluir este exercício agora.",
+        status: 503,
+      };
+    try {
+      for (const key of [
+        removableGif?.objectKey,
+        removableGif?.frameKey,
+        removableVideo?.objectKey,
+      ].filter(Boolean))
+        await deleteMedia(env.MEDIA, key);
+    } catch (error) {
+      console.error("[exercises] falha ao excluir mídia no R2", error?.message);
+      return {
+        error: "A Cloudflare não conseguiu excluir o arquivo deste exercício agora. Tente novamente em instantes.",
+        status: 503,
+      };
+    }
+    await db.batch([
+      {
+        sql: "DELETE FROM exercises WHERE id=$1 AND trainer_id=$2",
+        values: [id, trainerId],
+      },
+      ...(removableGif
+        ? [{ sql: "DELETE FROM exercise_gifs WHERE id=$1 AND trainer_id=$2", values: [removableGif.id, trainerId] }]
+        : []),
+      ...(removableVideo
+        ? [{ sql: "DELETE FROM exercise_videos WHERE id=$1 AND trainer_id=$2", values: [removableVideo.id, trainerId] }]
+        : []),
     ]);
     return null;
   }

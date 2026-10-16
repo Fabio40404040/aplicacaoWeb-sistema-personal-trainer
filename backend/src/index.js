@@ -991,7 +991,7 @@ async function handleRoutes(request, env) {
       return updated?.error ? updated : { data: updated };
     }
     if (request.method === "DELETE" && id) {
-      const removed = await deleteResource(db, resource, session.sub, id);
+      const removed = await deleteResource(db, resource, session.sub, id, env);
       return removed?.error ? removed : { data: null, status: 204 };
     }
     return { error: "Rota não encontrada.", status: 404 };
