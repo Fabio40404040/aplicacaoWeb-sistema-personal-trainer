@@ -1,8 +1,8 @@
 import { exercisesForWorkouts } from './farisa-library-tab.js'
 import { folderSorter } from './folder-order.js'
 import {
+  deleteExerciseFolder,
   deleteExerciseVideo,
-  deleteMuscleGroup,
   loadExerciseGifFrame,
   loadExerciseVideo,
   persistReadyProgram,
@@ -1611,68 +1611,25 @@ function confirmExerciseVideoDeletion(exercise) {
   )
 }
 
-async function removeVideoGroup(groupName, videos, ownedGroup) {
-  if (!videos.length && !ownedGroup) {
-    showToast(
-      `A pasta ${groupName} é do catálogo e já está vazia — não há nada para excluir.`,
-    )
-    return
-  }
+async function removeVideoGroup(groupName, videos) {
   const ok = await askConfirm({
     eyebrow: 'Biblioteca de MP4',
     title: `Excluir a pasta ${groupName}?`,
     message: videos.length
-      ? `${videos.length} vídeo(s) serão apagados e deixam de aparecer para os alunos.`
-      : 'A pasta será removida da lista de grupos musculares.',
+      ? `A pasta inteira será removida, incluindo ${videos.length} vídeo(s), exercícios e GIFs que estiverem nela.`
+      : 'A pasta inteira será removida, junto com exercícios ou GIFs que estiverem nela.',
     note: 'Esta ação não pode ser desfeita.',
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
-  const status = document.querySelector('[data-video-bulk-status]')
-  const bar = document.querySelector('[data-video-bulk-progress]')
-  let apagados = 0
-  const falhas = []
-  const paint = () => {
-    if (bar) {
-      bar.max = videos.length
-      bar.value = apagados + falhas.length
-      bar.hidden = false
-    }
-    if (status)
-      status.textContent = `Excluindo ${apagados + falhas.length} de ${videos.length}…`
+  try {
+    const result = await deleteExerciseFolder(groupName)
+    await syncRemoteData()
+    showToast(`Pasta ${groupName} e todo o conteúdo excluídos (${Number(result?.deleted || 0)} exercício(s), ${Number(result?.gifs || 0)} GIF(s) e ${Number(result?.videos || 0)} vídeo(s)).`)
+    window.dispatchEvent(new Event('farisa:remote-refresh'))
+  } catch (error) {
+    showToast(error.message)
   }
-  paint()
-  const fila = videos.slice()
-  const worker = async () => {
-    while (fila.length) {
-      const video = fila.shift()
-      try {
-        await deleteExerciseVideo(video.id)
-        apagados += 1
-      } catch (error) {
-        falhas.push(`${video.name}: ${error.message}`)
-      }
-      paint()
-    }
-  }
-  await Promise.all([worker(), worker(), worker()])
-  if (ownedGroup && !falhas.length) {
-    try {
-      await deleteMuscleGroup(ownedGroup.id)
-    } catch {
-      /* a pasta some sozinha quando fica vazia */
-    }
-  }
-  if (bar) bar.hidden = true
-  if (status)
-    status.textContent = `${apagados} vídeo(s) de ${groupName} excluídos${falhas.length ? `, ${falhas.length} não saíram` : ''}.`
-  if (falhas.length) console.warn('MP4 que não foram excluídos:', falhas)
-  showToast(
-    falhas.length
-      ? `Pasta ${groupName}: ${apagados} vídeo(s) excluídos, ${falhas.length} não saíram.`
-      : `Pasta ${groupName} excluída.`,
-  )
-  window.dispatchEvent(new Event('farisa:remote-refresh'))
 }
 
 // Opções do campo "Grupo muscular" do envio de MP4: catálogo + pastas criadas
@@ -1790,9 +1747,6 @@ function renderExerciseVideoLibrary() {
       groupCount.className = 'exercise-folder-count'
       groupCount.textContent = `${group.exercises.length} vídeo(s)`
       summary.append(groupName, groupCount, videoUploadHereButton(group.name))
-      const ownedGroup = (getData().customGroups || []).find(
-        (item) => item.name === group.name,
-      )
       const wipe = document.createElement('button')
       wipe.type = 'button'
       wipe.className = 'button button--secondary gif-group-remove'
@@ -1801,7 +1755,7 @@ function renderExerciseVideoLibrary() {
       wipe.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        void removeVideoGroup(group.name, group.exercises, ownedGroup)
+        void removeVideoGroup(group.name, group.exercises)
       })
       summary.append(wipe)
       const content = document.createElement('div')

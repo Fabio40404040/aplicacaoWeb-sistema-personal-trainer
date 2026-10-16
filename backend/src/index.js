@@ -921,7 +921,7 @@ async function handleRoutes(request, env) {
     if (request.method === "PUT" && route === "exercise-folders/order")
       return saveFolderOrder(db, session.sub, await readJson(request));
     if (request.method === "DELETE" && route === "exercise-folders")
-      return deleteExerciseFolder(db, session.sub, await readJson(request));
+      return deleteExerciseFolder(env, db, session.sub, await readJson(request));
     if (request.method === "GET" && route === "muscle-groups")
       return { data: await listMuscleGroups(db, session.sub) };
     if (request.method === "POST" && route === "muscle-groups") {

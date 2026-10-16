@@ -278,8 +278,15 @@ function supportBanner() {
     location.replace('/personal/#acesso-farisa')
   })
   bar.append(exit)
-  document.body.prepend(bar)
-  document.body.classList.add('has-support-banner')
+  if (library) {
+    // No modo Biblioteca FARISA o identificador fica no cabeçalho da própria
+    // página. Assim não cobre os avisos exibidos no canto inferior da tela.
+    const heading = document.querySelector('[data-route="exercicios"] .page-heading')
+    ;(heading || document.body).append(bar)
+  } else {
+    document.body.prepend(bar)
+    document.body.classList.add('has-support-banner')
+  }
 }
 
 export function initSupportPanel() {

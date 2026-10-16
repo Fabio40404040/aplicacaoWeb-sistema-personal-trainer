@@ -6,7 +6,6 @@ import { getData, updateData } from './state.js'
 import { askConfirm, exerciseGroups, formatDate, showToast } from './utils.js'
 import {
   deleteExerciseFolder,
-  deleteMuscleGroup,
   loadExerciseGifFrame,
   persistRecord,
   removeRecord,
@@ -34,43 +33,39 @@ import {
 // um grupo muscular (ex.: afundo no smith = quadríceps e glúteos), excluir
 // uma pasta só apaga de verdade o exercício se esse era o único grupo dele —
 // se ele também está em outro grupo, apenas tiramos esta pasta da lista dele.
-async function removeExerciseFolder(name, exercises, owned) {
+async function removeExerciseFolder(name, exercises) {
   const total = exercises.length
   const ok = await askConfirm({
     eyebrow: 'Biblioteca de exercícios',
     title: `Excluir a pasta ${name}?`,
     message: total
-      ? `Os ${total} exercício(s) que estão dentro dela serão excluídos — exceto os que também pertencem a outro grupo, que só saem desta pasta.`
-      : 'A pasta será removida da lista de grupos musculares.',
+      ? `A pasta inteira será removida com ${total} exercício(s), GIFs e vídeos que estiverem nela. Exercícios que também pertencem a outro grupo apenas sairão desta pasta.`
+      : 'A pasta inteira será removida, junto com GIFs ou vídeos que estiverem nela.',
     note: total
-      ? 'Exercícios usados em alguma ficha ou treino pronto não são excluídos — eu aviso quais ficaram.'
+      ? 'Se algum exercício estiver em uso numa ficha ou treino pronto, nada será excluído e você receberá um aviso.'
       : 'Esta ação não pode ser desfeita.',
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
-  const result = await deleteExerciseFolder(name)
-  const apagados = Number(result?.deleted || 0)
-  const mantidos = Number(result?.moved || 0)
-  const emUso = result?.blocked || []
-  if (owned && !emUso.length) {
-    try {
-      await deleteMuscleGroup(owned.id)
-    } catch {
-      /* a pasta some sozinha quando fica vazia */
-    }
+  try {
+    const result = await deleteExerciseFolder(name)
+    const apagados = Number(result?.deleted || 0)
+    const gifs = Number(result?.gifs || 0)
+    const videos = Number(result?.videos || 0)
+    const mantidos = Number(result?.moved || 0)
+    await syncRemoteData()
+    const parts = []
+    if (apagados) parts.push(`${apagados} exercício(s) excluído(s)`)
+    if (gifs) parts.push(`${gifs} GIF(s) excluído(s)`)
+    if (videos) parts.push(`${videos} vídeo(s) excluído(s)`)
+    if (mantidos) parts.push(`${mantidos} mantido(s) em outro grupo`)
+    showToast(parts.length ? `${parts.join('. ')}.` : `Pasta ${name} excluída.`)
+  } catch (error) {
+    showToast(error.message)
   }
-  await syncRemoteData()
-  const parts = []
-  if (apagados) parts.push(`${apagados} excluído(s)`)
-  if (mantidos) parts.push(`${mantidos} mantido(s) em outro grupo`)
-  if (emUso.length) {
-    const lista = emUso.slice(0, 3).join(', ')
-    parts.push(`${emUso.length} continuam porque estão em uso: ${lista}${emUso.length > 3 ? '…' : ''}`)
-  }
-  showToast(parts.length ? `${parts.join('. ')}.` : `Pasta ${name} excluída.`)
 }
 
-function exerciseFolderRemoveButton(name, exercises, owned) {
+function exerciseFolderRemoveButton(name, exercises) {
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'button button--secondary gif-group-remove'
@@ -79,7 +74,7 @@ function exerciseFolderRemoveButton(name, exercises, owned) {
   button.addEventListener('click', (event) => {
     event.preventDefault()
     event.stopPropagation()
-    void removeExerciseFolder(name, exercises, owned)
+    void removeExerciseFolder(name, exercises)
   })
   return button
 }
@@ -643,14 +638,13 @@ function renderExercises() {
         const count = document.createElement('span')
         count.className = 'exercise-folder-count'
         count.textContent = `${exercises.length} ${exercises.length === 1 ? 'exercício' : 'exercícios'}`
-        const owned = custom.find((item) => item.name === name)
         if (library) summary.append(label, count)
         else
           summary.append(
             label,
             count,
             folderAddButton(name),
-            exerciseFolderRemoveButton(name, exercises, owned),
+            exerciseFolderRemoveButton(name, exercises),
           )
         const body = document.createElement('div')
         body.className = 'exercise-folder-body'

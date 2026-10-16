@@ -5057,13 +5057,16 @@ button.is-loading {
   cursor: default;
 }
 
-/* Abastecendo a Biblioteca FARISA (aberta pelo admin): selo pequeno no
-   canto, sem cobrir as pastas. */
+/* Abastecendo a Biblioteca FARISA (aberta pelo admin): controle fixo no
+   cabeçalho da biblioteca, sem cobrir pastas nem mensagens. */
 .support-mode-banner--library {
+  position: static;
   left: auto;
-  right: 12px;
-  bottom: 12px;
+  right: auto;
+  bottom: auto;
   transform: none;
+  width: auto;
+  max-width: 100%;
   flex-wrap: nowrap;
   gap: 8px;
   padding: 6px 8px 6px 12px;
@@ -5071,6 +5074,8 @@ button.is-loading {
   background: #bfdbfe;
   color: #0f172a;
   font-size: 0.82rem;
+  box-shadow: none;
+  z-index: auto;
 }
 /* A faixa de suporte não esconde o fim da página. */
 body.has-support-banner .main-content {

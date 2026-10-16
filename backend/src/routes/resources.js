@@ -2,6 +2,7 @@ import { detachStudent, markLinkUnseen } from "./student-links.js";
 import { holdSeatIfUsed } from "./plan-access.js";
 import { sendStudentLinked, sendStudentWelcome, trainerEmailVerified } from "./account-emails.js";
 import { ensureMuscleGroup, folderOrder, saveFolderOrder } from "./muscle-groups.js";
+import { deleteMedia } from "../lib/media-storage.js";
 
 async function ensureExerciseGroups(db, trainerId, value) {
   const groups = String(value || "")
@@ -574,10 +575,11 @@ export async function deleteResource(db, resource, trainerId, id) {
   ]);
 }
 
-// Exclui uma pasta da biblioteca em uma única chamada. Exercícios que também
-// pertencem a outra pasta só perdem este grupo; os usados em fichas continuam
-// protegidos. A operação é igualmente isolada para personal e farisa-library.
-export async function deleteExerciseFolder(db, trainerId, body) {
+// Exclui uma pasta inteira em uma única chamada: exercícios, GIFs, vídeos e o
+// registro da pasta. Exercícios usados em fichas continuam protegidos e fazem
+// a operação parar antes de qualquer exclusão. A conta do personal e a
+// Biblioteca FARISA permanecem isoladas pelo trainer_id.
+export async function deleteExerciseFolder(env, db, trainerId, body) {
   const names = [
     ...new Set(
       (Array.isArray(body?.names) ? body.names : [body?.name])
@@ -626,37 +628,69 @@ export async function deleteExerciseFolder(db, trainerId, body) {
       blocked.push(exercise.name);
       continue;
     }
-    queries.push({
-      sql: "DELETE FROM exercises WHERE id=$1 AND trainer_id=$2",
-      values: [exercise.id, trainerId],
-    });
     deleted += 1;
   }
+  if (blocked.length)
+    return {
+      error: `A pasta não foi excluída porque ${blocked.length} exercício(s) estão em uso: ${blocked.slice(0, 3).join(", ")}${blocked.length > 3 ? "…" : ""}`,
+      status: 409,
+    };
+
+  const folderGifs = (
+    await db.query(
+      "SELECT id,muscle_group AS \"group\",object_key AS \"objectKey\",frame_key AS \"frameKey\" FROM exercise_gifs WHERE trainer_id=$1",
+      [trainerId],
+    )
+  ).rows.filter((item) => names.includes(item.group));
+  const folderVideos = (
+    await db.query(
+      "SELECT id,muscle_group AS \"group\",object_key AS \"objectKey\" FROM exercise_videos WHERE trainer_id=$1",
+      [trainerId],
+    )
+  ).rows.filter((item) => names.includes(item.group));
+
+  if ((folderGifs.length || folderVideos.length) && !env.MEDIA)
+    return { error: "O armazenamento da Cloudflare não está disponível para excluir a pasta agora.", status: 503 };
+  try {
+    const files = [
+      ...folderGifs.flatMap((item) => [item.objectKey, item.frameKey]),
+      ...folderVideos.map((item) => item.objectKey),
+    ].filter(Boolean);
+    const queue = files.slice();
+    const worker = async () => {
+      while (queue.length) await deleteMedia(env.MEDIA, queue.shift());
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+  } catch (error) {
+    console.error("[exercise-folders] falha ao excluir no R2", error?.message);
+    return { error: "A Cloudflare não conseguiu excluir a pasta agora. Tente novamente em instantes.", status: 503 };
+  }
+
+  const deleteIds = rows
+    .filter((exercise) =>
+      !String(exercise.group || "").split(",").map((name) => name.trim()).filter((name) => name && !names.includes(name)).length,
+    )
+    .map((exercise) => exercise.id);
+  for (let start = 0; start < deleteIds.length; start += 50) {
+    const ids = deleteIds.slice(start, start + 50);
+    queries.push({
+      sql: `DELETE FROM exercises WHERE trainer_id=$1 AND id IN (${ids.map((_, index) => `$${index + 2}`).join(",")})`,
+      values: [trainerId, ...ids],
+    });
+  }
+  folderGifs.forEach((item) =>
+    queries.push({ sql: "UPDATE exercises SET gif_id=NULL WHERE trainer_id=$1 AND gif_id=$2", values: [trainerId, item.id] }),
+  );
+  folderVideos.forEach((item) =>
+    queries.push({ sql: "UPDATE exercises SET video_id=NULL WHERE trainer_id=$1 AND video_id=$2", values: [trainerId, item.id] }),
+  );
+  names.forEach((name) => {
+    queries.push({ sql: "DELETE FROM exercise_gifs WHERE trainer_id=$1 AND muscle_group=$2", values: [trainerId, name] });
+    queries.push({ sql: "DELETE FROM exercise_videos WHERE trainer_id=$1 AND muscle_group=$2", values: [trainerId, name] });
+    queries.push({ sql: "DELETE FROM trainer_muscle_groups WHERE trainer_id=$1 AND lower(name)=lower($2)", values: [trainerId, name] });
+  });
   if (queries.length) await db.batch(queries);
-  const empty = [];
-  const remainingExercises = (
-    await db.query("SELECT muscle_group AS \"group\" FROM exercises WHERE trainer_id=$1", [trainerId])
-  ).rows;
-  for (const name of names) {
-    const exercises = remainingExercises.filter((row) =>
-      String(row.group || "")
-        .split(",")
-        .map((item) => item.trim())
-        .includes(name),
-    ).length;
-    const media = (
-      await db.query(
-        `SELECT
-           (SELECT COUNT(*) FROM exercise_videos WHERE trainer_id=$1 AND muscle_group=$2) AS videos,
-           (SELECT COUNT(*) FROM exercise_gifs WHERE trainer_id=$1 AND muscle_group=$2) AS gifs`,
-        [trainerId, name],
-      )
-    ).rows[0];
-    if (!exercises && !Number(media?.videos) && !Number(media?.gifs)) empty.push(name);
-  }
-  if (empty.length) {
-    const order = await folderOrder(db, trainerId);
-    await saveFolderOrder(db, trainerId, { names: order.filter((name) => !empty.includes(name)) });
-  }
-  return { data: { deleted, moved, blocked } };
+  const order = await folderOrder(db, trainerId);
+  await saveFolderOrder(db, trainerId, { names: order.filter((name) => !names.includes(name)) });
+  return { data: { deleted, moved, blocked: [], gifs: folderGifs.length, videos: folderVideos.length } };
 }

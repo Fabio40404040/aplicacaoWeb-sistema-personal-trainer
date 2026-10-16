@@ -4,6 +4,7 @@ import { legGroupNames } from '../data/library.js'
 import { askConfirm, askText, exerciseGroups, showToast } from './utils.js'
 import {
   createMuscleGroup,
+  deleteExerciseFolder,
   deleteExerciseGif,
   deleteMuscleGroup,
   forgetExerciseGif,
@@ -85,14 +86,11 @@ export function groupFromFolder(folderName, { custom = true } = {}) {
   return match ? match[1] : ''
 }
 
-// Nome da pasta no computador, sem transformar "Peito" em "Peitoral" ou
-// juntar grupos diferentes. Remove apenas um prefixo numérico usado para
-// ordenar pastas ("01-Peito" → "Peito") e deixa o restante por extenso.
+// Nome da pasta no computador exatamente como foi criado. Só retiramos
+// espaços externos/repetidos e limitamos ao tamanho aceito pelo banco.
 export function externalFolderName(folderName) {
   return String(folderName || '')
     .trim()
-    .replace(/^\d+\s*[-_.]\s*/u, '')
-    .replace(/[-_]+/gu, ' ')
     .replace(/\s+/gu, ' ')
     .trim()
     .slice(0, 40)
@@ -1052,7 +1050,7 @@ function createGifLibraryPanel() {
   renderGifLibrary()
 }
 
-async function removeGifGroup(group, lista, ownedGroup) {
+async function removeGifGroup(group, lista) {
   const emUso = (getData().exercises || []).filter((exercise) =>
     lista.some((gif) => gif.id === exercise.gifId),
   ).length
@@ -1063,59 +1061,21 @@ async function removeGifGroup(group, lista, ownedGroup) {
     eyebrow: 'Biblioteca de GIFs',
     title: `Excluir a pasta ${group}?`,
     message: lista.length
-      ? `${lista.length} GIF(s) serão apagados.${aviso}`
-      : 'A pasta será removida da lista de grupos musculares.',
+      ? `A pasta inteira será removida, incluindo ${lista.length} GIF(s), exercícios e vídeos que estiverem nela.${aviso}`
+      : 'A pasta inteira será removida, junto com exercícios ou vídeos que estiverem nela.',
     note: 'Esta ação não pode ser desfeita.',
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
-  const status = document.querySelector('[data-gif-status]')
-  const bar = document.querySelector('[data-gif-progress]')
-  let apagados = 0
-  const falhas = []
-  const paint = () => {
-    if (bar) {
-      bar.max = lista.length
-      bar.value = apagados + falhas.length
-      bar.hidden = false
-    }
-    if (status)
-      status.textContent = `Excluindo ${apagados + falhas.length} de ${lista.length}…`
+  try {
+    const result = await deleteExerciseFolder(group)
+    lista.forEach((gif) => forgetExerciseGif(gif.id))
+    await syncRemoteData()
+    renderGifLibrary()
+    showToast(`Pasta ${group} e todo o conteúdo excluídos (${Number(result?.deleted || 0)} exercício(s), ${Number(result?.gifs || 0)} GIF(s) e ${Number(result?.videos || 0)} vídeo(s)).`)
+  } catch (error) {
+    showToast(error.message)
   }
-  paint()
-  const fila = lista.slice()
-  const worker = async () => {
-    while (fila.length) {
-      const gif = fila.shift()
-      try {
-        await deleteExerciseGif(gif.id)
-        forgetExerciseGif(gif.id)
-        apagados += 1
-      } catch (error) {
-        falhas.push(`${gif.name}: ${error.message}`)
-      }
-      paint()
-    }
-  }
-  await Promise.all([worker(), worker(), worker(), worker()])
-  if (ownedGroup && !falhas.length) {
-    try {
-      await deleteMuscleGroup(ownedGroup.id)
-    } catch {
-      /* a pasta some sozinha quando fica vazia */
-    }
-  }
-  await syncRemoteData()
-  if (bar) bar.hidden = true
-  if (status)
-    status.textContent = `${apagados} GIF(s) do grupo ${group} excluídos${falhas.length ? `, ${falhas.length} não saíram` : ''}.`
-  if (falhas.length) console.warn('GIFs que não foram excluídos:', falhas)
-  renderGifLibrary()
-  showToast(
-    falhas.length
-      ? `Pasta ${group}: ${apagados} GIF(s) excluídos, ${falhas.length} não saíram.`
-      : `Pasta ${group} excluída.`,
-  )
 }
 
 // Pastas abertas e GIFs recém-enviados na Biblioteca de GIFs. Antes, depois
@@ -1222,9 +1182,6 @@ function renderGifLibrary() {
       const count = document.createElement('span')
       count.className = 'exercise-folder-count'
       count.textContent = `${lista.length} GIF(s)`
-      const ownedGroup = (getData().customGroups || []).find(
-        (item) => item.name === group,
-      )
       const wipe = document.createElement('button')
       wipe.type = 'button'
       wipe.className = 'button button--secondary gif-group-remove'
@@ -1235,7 +1192,7 @@ function renderGifLibrary() {
         // a pasta em vez de excluir.
         event.preventDefault()
         event.stopPropagation()
-        void removeGifGroup(group, lista, ownedGroup)
+        void removeGifGroup(group, lista)
       })
       summary.append(name, count, gifUploadHereButton(group), folderAddButton(group), wipe)
       const body = document.createElement('div')
