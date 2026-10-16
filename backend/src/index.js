@@ -69,6 +69,7 @@ import {
 } from "./routes/profile.js";
 import {
   createResource,
+  deleteExerciseFolder,
   deleteResource,
   listResource,
   updateResource,
@@ -919,6 +920,8 @@ async function handleRoutes(request, env) {
       return trainerExerciseVideoFile(env, db, session.sub, segments[1]);
     if (request.method === "PUT" && route === "exercise-folders/order")
       return saveFolderOrder(db, session.sub, await readJson(request));
+    if (request.method === "DELETE" && route === "exercise-folders")
+      return deleteExerciseFolder(db, session.sub, await readJson(request));
     if (request.method === "GET" && route === "muscle-groups")
       return { data: await listMuscleGroups(db, session.sub) };
     if (request.method === "POST" && route === "muscle-groups") {

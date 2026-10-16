@@ -3,10 +3,7 @@
 // vez; depois a ordem em que cada pasta foi criada (a primeira que você
 // adicionou fica em cima); empate em ordem alfabética.
 import { getData } from './state.js'
-import { legGroupNames } from '../data/library.js'
 import { exerciseGroups } from './utils.js'
-
-const folderOf = (group) => (legGroupNames.includes(group) ? 'Pernas' : group)
 
 export function folderSorter(source = null) {
   const data = getData()
@@ -23,9 +20,7 @@ export function folderSorter(source = null) {
   const note = (group, when) => {
     if (!group) return
     const stamp = String(when || '9999')
-    ;[group, folderOf(group)].forEach((name) => {
-      if (!firstSeen.has(name) || stamp < firstSeen.get(name)) firstSeen.set(name, stamp)
-    })
+    if (!firstSeen.has(group) || stamp < firstSeen.get(group)) firstSeen.set(group, stamp)
   }
   ;(own.exercises || []).forEach((item) =>
     exerciseGroups(item).forEach((group) => note(group, item.createdAt)),

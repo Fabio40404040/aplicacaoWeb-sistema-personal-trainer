@@ -1,4 +1,6 @@
 import { mediaQuotaProblem } from "./account-self.js";
+import { deleteMedia, putMedia } from "../lib/media-storage.js";
+import { ensureMuscleGroup } from "./muscle-groups.js";
 const MAX_VIDEO_BYTES = 90 * 1024 * 1024;
 
 const selectFields = `id,name,muscle_group AS "group",equipment,difficulty,instructions,
@@ -60,10 +62,19 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
 
   const id = crypto.randomUUID().replaceAll("-", "");
   const objectKey = `trainers/${trainerId}/exercise-videos/${id}.mp4`;
-  await env.MEDIA.put(objectKey, bytes, {
-    httpMetadata: { contentType: "video/mp4" },
-    customMetadata: { originalFilename: file.name, trainerId },
-  });
+  try {
+    await putMedia(env.MEDIA, objectKey, bytes, {
+      httpMetadata: { contentType: "video/mp4" },
+      customMetadata: { originalFilename: file.name, trainerId },
+    });
+  } catch (error) {
+    console.error("[exercise-videos] falha no R2", error?.message);
+    await deleteMedia(env.MEDIA, objectKey).catch(() => {});
+    return {
+      error: "O armazenamento da Cloudflare oscilou durante o envio. Tente novamente; o sistema fará até três tentativas automaticamente.",
+      status: 503,
+    };
+  }
   try {
     const queries = [];
     if (catalogar)
@@ -103,9 +114,10 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
       },
     );
     const results = await db.batch(queries);
+    await ensureMuscleGroup(db, trainerId, group).catch(() => {});
     return results[results.length - 1].rows[0];
   } catch (error) {
-    await env.MEDIA.delete(objectKey);
+    await deleteMedia(env.MEDIA, objectKey).catch(() => {});
     throw error;
   }
 }
@@ -119,7 +131,12 @@ export async function deleteExerciseVideo(env, db, trainerId, id) {
     )
   ).rows[0];
   if (!row) return { error: "Vídeo não encontrado.", status: 404 };
-  await env.MEDIA.delete(row.objectKey);
+  try {
+    await deleteMedia(env.MEDIA, row.objectKey);
+  } catch (error) {
+    console.error("[exercise-videos] falha ao excluir no R2", error?.message);
+    return { error: "A Cloudflare não conseguiu excluir o vídeo agora. Tente novamente em instantes.", status: 503 };
+  }
   await db.query("DELETE FROM exercise_videos WHERE id=$1 AND trainer_id=$2", [
     id,
     trainerId,

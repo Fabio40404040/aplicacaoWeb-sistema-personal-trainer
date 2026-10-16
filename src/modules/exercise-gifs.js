@@ -9,6 +9,7 @@ import {
   forgetExerciseGif,
   loadExerciseGif,
   loadExerciseVideo,
+  saveFolderOrder,
   syncRemoteData,
   uploadExerciseGif,
 } from './api-client.js'
@@ -82,6 +83,19 @@ export function groupFromFolder(folderName, { custom = true } = {}) {
   }
   const match = FOLDER_GROUPS.find(([pattern]) => pattern.test(plain))
   return match ? match[1] : ''
+}
+
+// Nome da pasta no computador, sem transformar "Peito" em "Peitoral" ou
+// juntar grupos diferentes. Remove apenas um prefixo numérico usado para
+// ordenar pastas ("01-Peito" → "Peito") e deixa o restante por extenso.
+export function externalFolderName(folderName) {
+  return String(folderName || '')
+    .trim()
+    .replace(/^\d+\s*[-_.]\s*/u, '')
+    .replace(/[-_]+/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, 40)
 }
 
 // Grupos para escolher na mão: os do filtro da biblioteca + as suas pastas.
@@ -825,16 +839,18 @@ async function sendGifFolder(
   bar.hidden = false
   paint()
 
-  const queue = chosen.slice()
+  const entries = chosen.map((file) => {
+    const folder = (file.webkitRelativePath || '').split('/').slice(-2, -1)[0]
+    // Pasta externa ganha exatamente o nome dela; arquivo solto continua
+    // usando o reconhecimento por grupo muscular ou o grupo escolhido.
+    const explicit = forceGroup || externalFolderName(folder)
+    const guessed = looseToFallback ? '' : groupFromFolder(file.name, { custom: false })
+    return { file, explicit, group: explicit || guessed || fallbackGroup }
+  })
+  const queue = entries.slice()
   const worker = async () => {
     while (queue.length) {
-      const file = queue.shift()
-      const folder = (file.webkitRelativePath || '').split('/').slice(-2, -1)[0]
-      // Grupo escolhido de propósito (botão da pasta ou nome da pasta de
-      // origem): se o GIF já existe em outra pasta, ele é mudado para esta.
-      const explicit = forceGroup || groupFromFolder(folder)
-      const guessed = looseToFallback ? '' : groupFromFolder(file.name, { custom: false })
-      const group = explicit || guessed || fallbackGroup
+      const { file, explicit, group } = queue.shift()
       try {
         if (!group)
           throw new Error(
@@ -855,6 +871,26 @@ async function sendGifFolder(
     }
   }
   await Promise.all([worker(), worker(), worker()])
+
+  // A ordem vem da seleção/da pasta externa, não da velocidade de cada
+  // upload paralelo. Isso vale igualmente na biblioteca do admin e do personal.
+  const storedGroups = new Set(gifs.map((gif) => gif.group))
+  const addedOrder = [...new Set(entries.map((item) => item.group).filter((group) => storedGroups.has(group)))]
+  if (addedOrder.length) {
+    const data = getData()
+    const current = data.folderOrder || []
+    const existing = [
+      ...new Set([
+        ...(data.exercises || []).filter((item) => !item.library).flatMap((item) => exerciseGroups(item)),
+        ...(data.exerciseGifs || []).map((item) => item.group),
+        ...(data.exerciseVideos || []).map((item) => item.group),
+        ...(data.customGroups || []).map((item) => item.name),
+      ].filter(Boolean)),
+    ].sort(folderSorter())
+    const base = current.length ? current : existing
+    const next = [...base, ...addedOrder.filter((name) => !base.includes(name))]
+    if (next.join('|') !== current.join('|')) await saveFolderOrder(next).catch(() => {})
+  }
 
   await syncRemoteData()
   bar.hidden = true

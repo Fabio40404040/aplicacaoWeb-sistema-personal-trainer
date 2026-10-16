@@ -1,6 +1,15 @@
 import { detachStudent, markLinkUnseen } from "./student-links.js";
 import { holdSeatIfUsed } from "./plan-access.js";
 import { sendStudentLinked, sendStudentWelcome, trainerEmailVerified } from "./account-emails.js";
+import { ensureMuscleGroup, folderOrder, saveFolderOrder } from "./muscle-groups.js";
+
+async function ensureExerciseGroups(db, trainerId, value) {
+  const groups = String(value || "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  for (const name of groups) await ensureMuscleGroup(db, trainerId, name);
+}
 
 // E-mail que já tem conta de aluno (com outro personal): este cadastro passa
 // a usar a mesma conta. O aluno escolhe o personal na área dele.
@@ -393,6 +402,8 @@ export async function createResource(db, resource, trainerId, body) {
   }
   if (!config) return null;
   const row = (await db.query(config.insert, [trainerId, ...config.values(body)])).rows[0];
+  if (resource === "exercises" && row)
+    await ensureExerciseGroups(db, trainerId, body.group).catch(() => {});
   // Avaliação: sexo do aluno (migração 050), para classificar o % de gordura.
   if (resource === "assessments" && row?.id && ["M", "F"].includes(body?.sex))
     await db.query("UPDATE assessments SET sex=$2 WHERE id=$1 AND trainer_id=$3", [row.id, body.sex, trainerId]).catch(() => {});
@@ -492,15 +503,17 @@ export async function updateResource(db, resource, trainerId, id, body) {
     }
     return updated;
   }
-  return config
-    ? (
-        await db.query(config.update, [
-          trainerId,
-          id,
-          ...(config.updateValues?.(body) || config.values(body)),
-        ])
-      ).rows[0]
-    : null;
+  if (!config) return null;
+  const row = (
+    await db.query(config.update, [
+      trainerId,
+      id,
+      ...(config.updateValues?.(body) || config.values(body)),
+    ])
+  ).rows[0];
+  if (resource === "exercises" && row)
+    await ensureExerciseGroups(db, trainerId, body.group).catch(() => {});
+  return row;
 }
 
 export async function deleteResource(db, resource, trainerId, id) {
@@ -559,4 +572,91 @@ export async function deleteResource(db, resource, trainerId, id) {
     id,
     trainerId,
   ]);
+}
+
+// Exclui uma pasta da biblioteca em uma única chamada. Exercícios que também
+// pertencem a outra pasta só perdem este grupo; os usados em fichas continuam
+// protegidos. A operação é igualmente isolada para personal e farisa-library.
+export async function deleteExerciseFolder(db, trainerId, body) {
+  const names = [
+    ...new Set(
+      (Array.isArray(body?.names) ? body.names : [body?.name])
+        .map((name) => String(name || "").trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 20);
+  if (!names.length) return { error: "Informe a pasta que será excluída.", status: 400 };
+  const rows = (
+    await db.query(
+      `SELECT id,name,muscle_group AS "group" FROM exercises WHERE trainer_id=$1`,
+      [trainerId],
+    )
+  ).rows.filter((exercise) =>
+    String(exercise.group || "")
+      .split(",")
+      .map((name) => name.trim())
+      .some((name) => names.includes(name)),
+  );
+  const queries = [];
+  let deleted = 0;
+  let moved = 0;
+  const blocked = [];
+  for (const exercise of rows) {
+    const remaining = String(exercise.group || "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter((name) => name && !names.includes(name));
+    if (remaining.length) {
+      queries.push({
+        sql: "UPDATE exercises SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
+        values: [remaining.join(", "), exercise.id, trainerId],
+      });
+      moved += 1;
+      continue;
+    }
+    const usage = (
+      await db.query(
+        `SELECT
+           (SELECT COUNT(*) FROM workout_exercises WHERE exercise_id=$1) AS fichas,
+           (SELECT COUNT(*) FROM ready_program_exercises WHERE exercise_id=$1) AS prontos`,
+        [exercise.id],
+      )
+    ).rows[0];
+    if (Number(usage?.fichas) || Number(usage?.prontos)) {
+      blocked.push(exercise.name);
+      continue;
+    }
+    queries.push({
+      sql: "DELETE FROM exercises WHERE id=$1 AND trainer_id=$2",
+      values: [exercise.id, trainerId],
+    });
+    deleted += 1;
+  }
+  if (queries.length) await db.batch(queries);
+  const empty = [];
+  const remainingExercises = (
+    await db.query("SELECT muscle_group AS \"group\" FROM exercises WHERE trainer_id=$1", [trainerId])
+  ).rows;
+  for (const name of names) {
+    const exercises = remainingExercises.filter((row) =>
+      String(row.group || "")
+        .split(",")
+        .map((item) => item.trim())
+        .includes(name),
+    ).length;
+    const media = (
+      await db.query(
+        `SELECT
+           (SELECT COUNT(*) FROM exercise_videos WHERE trainer_id=$1 AND muscle_group=$2) AS videos,
+           (SELECT COUNT(*) FROM exercise_gifs WHERE trainer_id=$1 AND muscle_group=$2) AS gifs`,
+        [trainerId, name],
+      )
+    ).rows[0];
+    if (!exercises && !Number(media?.videos) && !Number(media?.gifs)) empty.push(name);
+  }
+  if (empty.length) {
+    const order = await folderOrder(db, trainerId);
+    await saveFolderOrder(db, trainerId, { names: order.filter((name) => !empty.includes(name)) });
+  }
+  return { data: { deleted, moved, blocked } };
 }

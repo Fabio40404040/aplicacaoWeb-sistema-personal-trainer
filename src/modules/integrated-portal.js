@@ -9,6 +9,7 @@ import {
   setReadyProgramSitePreview,
   persistRecord,
   removeReadyProgram,
+  saveFolderOrder,
   syncRemoteData,
   updateStudentAccess,
   uploadExerciseVideo,
@@ -21,6 +22,7 @@ import { exerciseVideoLibrary, legGroupNames, muscleGroups } from '../data/libra
 import { askConfirm, exerciseGroups, showToast } from './utils.js'
 import {
   exerciseGifThumb,
+  externalFolderName,
   filesFromDrop,
   groupFromFolder,
   openGifPicker,
@@ -1477,17 +1479,23 @@ function createExerciseVideoLibraryPanel() {
       bulkStatus.textContent = `Enviando ${concluidos} de ${chosen.length}… (${enviados} enviados${falhas.length ? `, ${falhas.length} com erro` : ''})`
     }
     paint()
-    const fila = chosen.slice()
+    const entries = chosen.map((file) => {
+      const folder = (file.webkitRelativePath || '').split('/').slice(-2, -1)[0]
+      return {
+        file,
+        group:
+          forceGroup ||
+          externalFolderName(folder) ||
+          groupFromFolder(file.name) ||
+          groupSelect.value,
+      }
+    })
+    const fila = entries.slice()
+    const storedGroups = new Set()
     // Dois de cada vez: MP4 é pesado e o limite do servidor é 90 MB por arquivo.
     const worker = async () => {
       while (fila.length) {
-        const file = fila.shift()
-        const folder = (file.webkitRelativePath || '').split('/').slice(-2, -1)[0]
-        const group =
-          forceGroup ||
-          groupFromFolder(folder) ||
-          groupFromFolder(file.name) ||
-          groupSelect.value
+        const { file, group } = fila.shift()
         try {
           const payload = new FormData()
           payload.append('video', file)
@@ -1504,6 +1512,7 @@ function createExerciseVideoLibraryPanel() {
           // Em lote o vídeo entra só no acervo, sem virar exercício solto.
           payload.append('catalog', '0')
           await uploadExerciseVideo(payload)
+          storedGroups.add(group)
           enviados += 1
         } catch (error) {
           falhas.push(`${file.name}: ${error.message}`)
@@ -1513,6 +1522,20 @@ function createExerciseVideoLibraryPanel() {
       }
     }
     await Promise.all([worker(), worker()])
+    const data = getData()
+    const current = data.folderOrder || []
+    const existing = [
+      ...new Set([
+        ...(data.exercises || []).filter((item) => !item.library).flatMap((item) => exerciseGroups(item)),
+        ...(data.exerciseGifs || []).map((item) => item.group),
+        ...(data.exerciseVideos || []).map((item) => item.group),
+        ...(data.customGroups || []).map((item) => item.name),
+      ].filter(Boolean)),
+    ].sort(folderSorter())
+    const base = current.length ? current : existing
+    const added = [...new Set(entries.map((item) => item.group).filter((name) => storedGroups.has(name)))]
+    const next = [...base, ...added.filter((name) => !base.includes(name))]
+    if (next.join('|') !== current.join('|')) await saveFolderOrder(next).catch(() => {})
     bulkBar.hidden = true
     bulkStatus.textContent = `Pronto: ${enviados} vídeo(s) enviados${falhas.length ? `, ${falhas.length} não subiram` : ''}.`
     if (falhas.length) console.warn('MP4 com erro:', falhas)
@@ -1726,12 +1749,18 @@ function renderExerciseVideoLibrary() {
   // Só aparecem as pastas que já têm vídeo ou que você criou. As pastas fixas
   // do catálogo (Peitoral, Costas…) surgem quando o primeiro MP4 é enviado.
   const customNames = new Set((getData().customGroups || []).map((item) => item.name))
-  const visibleGroups = workoutCatalogGroups(videos)
-    .map((group) => ({
-      ...group,
-      exercises: videos.filter((video) => group.memberNames.includes(video.group)),
-    }))
-    .filter((group) => group.exercises.length || customNames.has(group.name))
+  const exactNames = [
+    ...new Set([
+      ...videos.map((video) => video.group),
+      ...customNames,
+    ].filter(Boolean)),
+  ]
+  const visibleGroups = exactNames.map((name) => ({
+    id: name,
+    name,
+    memberNames: [name],
+    exercises: videos.filter((video) => video.group === name),
+  }))
   // Mesma ordem das pastas de Exercícios e GIFs.
   const byFolder = folderSorter()
   visibleGroups.sort((a, b) => byFolder(a.name, b.name))

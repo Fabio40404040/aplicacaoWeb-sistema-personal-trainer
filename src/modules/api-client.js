@@ -300,6 +300,12 @@ export function saveFolderOrder(names) {
     body: JSON.stringify({ names }),
   });
 }
+export function deleteExerciseFolder(name) {
+  return request("/exercise-folders", {
+    method: "DELETE",
+    body: JSON.stringify({ name }),
+  });
+}
 export function deleteMuscleGroup(id) {
   return request(`/muscle-groups/${id}`, { method: "DELETE" });
 }

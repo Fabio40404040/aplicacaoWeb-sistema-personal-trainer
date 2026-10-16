@@ -15,10 +15,58 @@ export async function listMuscleGroups(db, trainerId) {
   return (
     await db.query(
       `SELECT id,name,created_at AS "createdAt" FROM trainer_muscle_groups
-       WHERE trainer_id=$1 ORDER BY name`,
+       WHERE trainer_id=$1 ORDER BY created_at,id`,
       [trainerId],
     )
   ).rows;
+}
+
+const cleanName = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\s+/gu, " ")
+    .slice(0, 40);
+
+async function appendFolderOrder(db, trainerId, name) {
+  try {
+    const current = await folderOrder(db, trainerId);
+    if (current.includes(name)) return;
+    await saveFolderOrder(db, trainerId, { names: [...current, name] });
+  } catch {
+    /* sem a migração de ordem: a pasta continua válida pela data de criação */
+  }
+}
+
+// GIFs, vídeos e exercícios usam a mesma pasta. Registrar o nome aqui faz a
+// pasta aparecer vazia nas outras abas e mantém admin e personal isolados
+// pelo trainer_id (a Biblioteca FARISA usa o id próprio farisa-library).
+export async function ensureMuscleGroup(db, trainerId, value) {
+  if (!(await schemaReady(db))) return null;
+  const name = cleanName(value);
+  if (name.length < 2) return null;
+  let row = (
+    await db.query(
+      `SELECT id,name,created_at AS "createdAt" FROM trainer_muscle_groups
+       WHERE trainer_id=$1 AND lower(name)=lower($2) LIMIT 1`,
+      [trainerId, name],
+    )
+  ).rows[0];
+  if (!row) {
+    await db.query(
+      "INSERT OR IGNORE INTO trainer_muscle_groups (trainer_id,name) VALUES ($1,$2)",
+      [trainerId, name],
+    );
+    row = (
+      await db.query(
+        `SELECT id,name,created_at AS "createdAt" FROM trainer_muscle_groups
+         WHERE trainer_id=$1 AND lower(name)=lower($2) LIMIT 1`,
+        [trainerId, name],
+      )
+    ).rows[0];
+  }
+  if (!row) return null;
+  await appendFolderOrder(db, trainerId, row.name);
+  return row;
 }
 
 export async function createMuscleGroup(db, trainerId, body) {
@@ -28,9 +76,7 @@ export async function createMuscleGroup(db, trainerId, body) {
         "A criação de pastas ainda não foi habilitada no banco. Rode a migração 016.",
       status: 503,
     };
-  const name = String(body?.name || "")
-    .trim()
-    .replace(/\s+/gu, " ");
+  const name = cleanName(body?.name);
   if (name.length < 2 || name.length > 40)
     return {
       error: "Dê um nome à pasta, de 2 a 40 caracteres.",
@@ -43,13 +89,11 @@ export async function createMuscleGroup(db, trainerId, body) {
       [trainerId, name],
     )
   ).rows[0];
-  if (existing) return { ...existing, alreadyStored: true };
-  const result = await db.query(
-    `INSERT INTO trainer_muscle_groups (trainer_id,name) VALUES ($1,$2)
-     RETURNING id,name,created_at AS "createdAt"`,
-    [trainerId, name],
-  );
-  return result.rows[0];
+  if (existing) {
+    await appendFolderOrder(db, trainerId, existing.name);
+    return { ...existing, alreadyStored: true };
+  }
+  return ensureMuscleGroup(db, trainerId, name);
 }
 
 export async function deleteMuscleGroup(db, trainerId, id) {
@@ -118,6 +162,9 @@ export async function deleteMuscleGroup(db, trainerId, id) {
     "DELETE FROM trainer_muscle_groups WHERE id=$1 AND trainer_id=$2",
     [id, trainerId],
   );
+  const order = await folderOrder(db, trainerId);
+  if (order.includes(group.name))
+    await saveFolderOrder(db, trainerId, { names: order.filter((name) => name !== group.name) });
   return null;
 }
 

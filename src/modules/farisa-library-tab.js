@@ -7,9 +7,7 @@ import { exerciseGroups, showToast } from './utils.js'
 import { copyFromLibrary, syncRemoteData } from './api-client.js'
 import { findGif, findVideo, gifImage, openGifLightbox, openVideoLightbox } from './exercise-gifs.js'
 import { folderSorter } from './folder-order.js'
-import { legGroupNames } from '../data/library.js'
-
-const folderOf = (group) => (legGroupNames.includes(group) ? 'Pernas' : group || 'Sem grupo')
+const folderOf = (group) => group || 'Sem grupo'
 const plain = (value) =>
   String(value || '')
     .normalize('NFD')
@@ -57,7 +55,7 @@ function sorter(lib) {
   return folderSorter({ exercises: lib.exercises, gifs: lib.gifs, videos: lib.videos, custom: [], explicit: lib.order })
 }
 
-// Agrupa por pasta (Glúteos, Quadríceps… ficam em "Pernas").
+// Cada grupo mantém a própria pasta, com o nome e a ordem definidos no envio.
 function groupBy(items, groupsOf) {
   const folders = new Map()
   items.forEach((item) =>

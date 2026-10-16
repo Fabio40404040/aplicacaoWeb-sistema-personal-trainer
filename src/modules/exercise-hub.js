@@ -8,7 +8,6 @@
 //   • Arquivos — as bibliotecas de GIFs e de MP4, para enviar em lote e
 //     fazer faxina.
 import { getData } from './state.js'
-import { legGroupNames } from '../data/library.js'
 import {
   persistRecord,
   saveFolderOrder,
@@ -20,6 +19,7 @@ import {
   allGroupNames,
   filesFromDrop,
   firstFrameBlob,
+  externalFolderName,
   groupFromFolder,
 } from './exercise-gifs.js'
 import { exerciseGroups, showToast } from './utils.js'
@@ -204,7 +204,7 @@ function buildItems(files, fallbackGroup) {
         byKey.set(key, {
           key,
           name: prettyName(file.name),
-          group: groupFromFolder(folder) || groupFromFolder(file.name, { custom: false }) || fallbackGroup,
+          group: externalFolderName(folder) || groupFromFolder(file.name, { custom: false }) || fallbackGroup,
           gif: null,
           video: null,
         })
@@ -340,11 +340,10 @@ async function saveItem(item) {
   return 'created'
 }
 
-// As pastas ficam na ordem em que foram arrastadas (Peitoral primeiro → em
-// cima). Uma pasta só, nova, vai para o fim; várias de uma vez definem a ordem.
-const folderNameOfGroup = (group) => (legGroupNames.includes(group) ? 'Pernas' : group)
+// As pastas ficam na ordem em que foram adicionadas. Uma nova sempre entra
+// depois das existentes; várias mantêm a sequência da pasta no computador.
 async function rememberFolderOrder(items) {
-  const dropped = [...new Set(items.map((item) => folderNameOfGroup(item.group)).filter(Boolean))]
+  const dropped = [...new Set(items.map((item) => item.group).filter(Boolean))]
   if (!dropped.length) return
   const data = getData()
   const current = data.folderOrder || []
@@ -356,19 +355,13 @@ async function rememberFolderOrder(items) {
         ...(data.exerciseGifs || []).map((item) => item.group),
         ...(data.exerciseVideos || []).map((item) => item.group),
         ...(data.customGroups || []).map((item) => item.name),
-      ]
-        .filter(Boolean)
-        .map(folderNameOfGroup),
+      ].filter(Boolean),
     ),
   ].sort(folderSorter())
-  // Uma pasta nova sozinha vai para o FIM de todas (antes, se nenhuma ordem
-  // tinha sido salva, ela ia para o topo). Pasta que já existia fica onde está.
-  const next =
-    dropped.length > 1
-      ? [...dropped, ...current.filter((name) => !dropped.includes(name))]
-      : existing.includes(dropped[0])
-        ? current
-        : [...existing, dropped[0]]
+  // Mantém tudo o que já existia e acrescenta as novas na sequência em que
+  // chegaram do computador. Upload paralelo não altera essa ordem.
+  const base = current.length ? current : existing
+  const next = [...base, ...dropped.filter((name) => !base.includes(name))]
   if (next.join('|') === current.join('|')) return
   await saveFolderOrder(next)
 }

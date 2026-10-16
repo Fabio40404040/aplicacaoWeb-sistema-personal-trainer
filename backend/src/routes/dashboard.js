@@ -256,7 +256,7 @@ export async function dashboard(db, trainerId) {
       : { rows: [] },
     withCustomGroups
       ? db.query(
-          `SELECT id,name,created_at AS "createdAt" FROM trainer_muscle_groups WHERE trainer_id=$1 ORDER BY name`,
+          `SELECT id,name,created_at AS "createdAt" FROM trainer_muscle_groups WHERE trainer_id=$1 ORDER BY created_at,id`,
           [trainerId],
         )
       : { rows: [] },

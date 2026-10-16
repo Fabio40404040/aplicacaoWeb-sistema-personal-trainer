@@ -1,4 +1,6 @@
 import { mediaQuotaProblem } from "./account-self.js";
+import { deleteMedia, putMedia } from "../lib/media-storage.js";
+import { ensureMuscleGroup } from "./muscle-groups.js";
 // Sem limite próprio de tamanho por arquivo: o teto é o do Cloudflare (100 MB
 // por envio). No plano Grátis o total entra na cota de espaço (account-self.js).
 const MAX_GIF_BYTES = 100 * 1024 * 1024;
@@ -78,6 +80,7 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
         "UPDATE exercise_gifs SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
         [group, existing.id, trainerId],
       );
+      await ensureMuscleGroup(db, trainerId, group).catch(() => {});
       return { ...existing, group, alreadyStored: true, moved: true };
     }
     return { ...existing, alreadyStored: true };
@@ -93,20 +96,29 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
   const id = crypto.randomUUID().replaceAll("-", "");
   const objectKey = `trainers/${trainerId}/exercise-gifs/${id}.gif`;
   const frameKey = `trainers/${trainerId}/exercise-gifs/${id}.jpg`;
-  await env.MEDIA.put(objectKey, bytes, {
-    httpMetadata: { contentType: "image/gif" },
-    customMetadata: { originalFilename: file.name, trainerId },
-  });
-
   // Quadro estatico gerado no navegador, usado no PDF (PDF nao aceita GIF animado).
   const frame = form.get("frame");
   let storedFrameKey = null;
-  if (frame instanceof File && frame.size && frame.size <= MAX_FRAME_BYTES) {
-    await env.MEDIA.put(frameKey, await frame.arrayBuffer(), {
-      httpMetadata: { contentType: "image/jpeg" },
-      customMetadata: { trainerId },
+  try {
+    await putMedia(env.MEDIA, objectKey, bytes, {
+      httpMetadata: { contentType: "image/gif" },
+      customMetadata: { originalFilename: file.name, trainerId },
     });
-    storedFrameKey = frameKey;
+    if (frame instanceof File && frame.size && frame.size <= MAX_FRAME_BYTES) {
+      await putMedia(env.MEDIA, frameKey, await frame.arrayBuffer(), {
+        httpMetadata: { contentType: "image/jpeg" },
+        customMetadata: { trainerId },
+      });
+      storedFrameKey = frameKey;
+    }
+  } catch (error) {
+    console.error("[exercise-gifs] falha no R2", error?.message);
+    await deleteMedia(env.MEDIA, objectKey).catch(() => {});
+    await deleteMedia(env.MEDIA, frameKey).catch(() => {});
+    return {
+      error: "O armazenamento da Cloudflare oscilou durante o envio. Tente novamente; o sistema fará até três tentativas automaticamente.",
+      status: 503,
+    };
   }
 
   try {
@@ -117,10 +129,11 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
        RETURNING ${selectFields}`,
       [id, trainerId, name, group, objectKey, storedFrameKey, file.name, file.size],
     );
+    await ensureMuscleGroup(db, trainerId, group).catch(() => {});
     return result.rows[0];
   } catch (error) {
-    await env.MEDIA.delete(objectKey);
-    if (storedFrameKey) await env.MEDIA.delete(storedFrameKey);
+    await deleteMedia(env.MEDIA, objectKey).catch(() => {});
+    await deleteMedia(env.MEDIA, storedFrameKey).catch(() => {});
     throw error;
   }
 }
@@ -135,8 +148,13 @@ export async function deleteExerciseGif(env, db, trainerId, id) {
     )
   ).rows[0];
   if (!row) return { error: "GIF não encontrado.", status: 404 };
-  await env.MEDIA.delete(row.objectKey);
-  if (row.frameKey) await env.MEDIA.delete(row.frameKey);
+  try {
+    await deleteMedia(env.MEDIA, row.objectKey);
+    await deleteMedia(env.MEDIA, row.frameKey);
+  } catch (error) {
+    console.error("[exercise-gifs] falha ao excluir no R2", error?.message);
+    return { error: "A Cloudflare não conseguiu excluir o GIF agora. Tente novamente em instantes.", status: 503 };
+  }
   await db.batch([
     {
       sql: "UPDATE exercises SET gif_id=NULL WHERE gif_id=$1 AND trainer_id=$2",

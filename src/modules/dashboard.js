@@ -5,6 +5,7 @@ import { showPaidDialog } from './paid-dialog.js'
 import { getData, updateData } from './state.js'
 import { askConfirm, exerciseGroups, formatDate, showToast } from './utils.js'
 import {
+  deleteExerciseFolder,
   deleteMuscleGroup,
   loadExerciseGifFrame,
   persistRecord,
@@ -20,7 +21,6 @@ import { openAssessmentPhotos } from './assessment-photos.js'
 import { renderEvolutionChart } from './evolution-chart.js'
 import { ACCENTS } from './site-brand.js'
 import { paintAvatar } from './profile-kit.js'
-import { legGroupNames } from '../data/library.js'
 import {
   applyExerciseGifThumb,
   exerciseGifStatus,
@@ -29,11 +29,6 @@ import {
   folderAddButton,
   folderCreateButton,
 } from './exercise-gifs.js'
-
-// A pasta "Pernas" é só uma forma de agrupar essas quatro na exibição — o
-// exercício continua guardando o(s) grupo(s) reais dele (Glúteos,
-// Quadríceps, etc.), nunca a palavra "Pernas".
-const legGroups = legGroupNames
 
 // Excluir a pasta inteira. Como agora um exercício pode pertencer a mais de
 // um grupo muscular (ex.: afundo no smith = quadríceps e glúteos), excluir
@@ -53,29 +48,10 @@ async function removeExerciseFolder(name, exercises, owned) {
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
-  const groupsToStrip = name === 'Pernas' ? legGroups : [name]
-  let apagados = 0
-  let mantidos = 0
-  const emUso = []
-  for (const exercise of exercises) {
-    const currentGroups = exerciseGroups(exercise)
-    const remaining = currentGroups.filter((groupName) => !groupsToStrip.includes(groupName))
-    if (remaining.length) {
-      try {
-        await persistRecord('exercises', { ...exercise, group: remaining.join(', ') }, exercise.id)
-        mantidos += 1
-      } catch {
-        emUso.push(exercise.name)
-      }
-      continue
-    }
-    try {
-      await removeRecord('exercises', exercise.id)
-      apagados += 1
-    } catch {
-      emUso.push(exercise.name)
-    }
-  }
+  const result = await deleteExerciseFolder(name)
+  const apagados = Number(result?.deleted || 0)
+  const mantidos = Number(result?.moved || 0)
+  const emUso = result?.blocked || []
   if (owned && !emUso.length) {
     try {
       await deleteMuscleGroup(owned.id)
@@ -536,7 +512,7 @@ function renderExerciseSummary(exercises) {
 const exerciseFolderNames = (exercise) => {
   const groups = exerciseGroups(exercise)
   if (!groups.length) return ['Sem grupo']
-  return [...new Set(groups.map((name) => (legGroups.includes(name) ? 'Pernas' : name)))]
+  return [...new Set(groups)]
 }
 // Ordem das pastas: a mesma das abas GIFs e Vídeos (ver folder-order.js).
 let folderSort = { at: 0, compare: null }
