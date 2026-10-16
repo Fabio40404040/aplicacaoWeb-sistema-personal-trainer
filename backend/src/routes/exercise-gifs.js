@@ -35,6 +35,29 @@ function isGif(bytes) {
   return header === "GIF87a" || header === "GIF89a";
 }
 
+// A aba GIFs e a lista "Meus exercícios" representam o mesmo catálogo. Um
+// reenvio recupera o vínculo existente; só cria uma linha quando aquele GIF
+// ainda não possui exercício nesta conta.
+async function ensureGifExercise(db, trainerId, gif, details) {
+  const linked = (
+    await db.query(
+      `SELECT id FROM exercises
+       WHERE trainer_id=$1 AND gif_id=$2
+       ORDER BY created_at,id LIMIT 1`,
+      [trainerId, gif.id],
+    )
+  ).rows[0];
+  if (linked) return linked.id;
+  const created = await db.query(
+    `INSERT INTO exercises
+      (trainer_id,name,muscle_group,equipment,difficulty,media_type,is_active,gif_id)
+     VALUES ($1,$2,$3,'Sem equipamento','Intermediário','gif',1,$4)
+     RETURNING id`,
+    [trainerId, details.name, details.group, gif.id],
+  );
+  return created.rows[0]?.id;
+}
+
 export async function listExerciseGifs(db, trainerId) {
   return (
     await db.query(
@@ -61,6 +84,7 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
   const group = String(form.get("group") || "").trim();
   if (!name || !group)
     return { error: "Informe o nome e o grupo muscular do GIF.", status: 400 };
+  const catalogar = form.get("catalog") !== "0";
 
   const existing = (
     await db.query(
@@ -78,6 +102,11 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
     const nextGroup = wantsMove ? group : existing.group;
     const moved = nextGroup !== existing.group;
     const renamed = name !== existing.name;
+    if (catalogar)
+      await ensureGifExercise(db, trainerId, existing, {
+        name,
+        group: nextGroup,
+      });
     if (moved || renamed) {
       await db.batch([
         {
@@ -136,15 +165,25 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
   }
 
   try {
-    const result = await db.query(
-      `INSERT INTO exercise_gifs
-        (id,trainer_id,name,muscle_group,object_key,frame_key,original_filename,size_bytes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING ${selectFields}`,
-      [id, trainerId, name, group, objectKey, storedFrameKey, file.name, file.size],
-    );
+    const queries = [
+      {
+        sql: `INSERT INTO exercise_gifs
+          (id,trainer_id,name,muscle_group,object_key,frame_key,original_filename,size_bytes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING ${selectFields}`,
+        values: [id, trainerId, name, group, objectKey, storedFrameKey, file.name, file.size],
+      },
+    ];
+    if (catalogar)
+      queries.push({
+        sql: `INSERT INTO exercises
+          (trainer_id,name,muscle_group,equipment,difficulty,media_type,is_active,gif_id)
+         VALUES ($1,$2,$3,'Sem equipamento','Intermediário','gif',1,$4)`,
+        values: [trainerId, name, group, id],
+      });
+    const results = await db.batch(queries);
     await ensureMuscleGroup(db, trainerId, group).catch(() => {});
-    return result.rows[0];
+    return results[0].rows[0];
   } catch (error) {
     await deleteMedia(env.MEDIA, objectKey).catch(() => {});
     await deleteMedia(env.MEDIA, storedFrameKey).catch(() => {});

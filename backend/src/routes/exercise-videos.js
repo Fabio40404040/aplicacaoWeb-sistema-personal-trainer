@@ -86,8 +86,8 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
       error: "Preencha nome, grupo muscular e dificuldade.",
       status: 400,
     };
-  // No envio em lote o vídeo entra só no acervo: criar um exercício por
-  // arquivo enchia a biblioteca de nomes soltos vindos do nome do arquivo.
+  // Os formulários unificados usam catalog=0 porque ligam o MP4 ao exercício
+  // que estão salvando. Envios diretos na aba Vídeos catalogam por padrão.
   const catalogar = form.get("catalog") !== "0";
 
   // O mesmo MP4 não ocupa espaço duas vezes. Se o usuário escolheu outra

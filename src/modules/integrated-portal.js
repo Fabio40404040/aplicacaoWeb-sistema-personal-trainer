@@ -1524,8 +1524,8 @@ function createExerciseVideoLibraryPanel() {
           payload.append('group', group)
           payload.append('difficulty', 'Intermediário')
           payload.append('published', '1')
-          // Em lote o vídeo entra só no acervo, sem virar exercício solto.
-          payload.append('catalog', '0')
+          // Na aba Vídeos, cada MP4 também aparece em Meus exercícios.
+          payload.append('catalog', '1')
           payload.append('move', '1')
           const saved = await uploadExerciseVideo(payload)
           storedGroups.add(group)

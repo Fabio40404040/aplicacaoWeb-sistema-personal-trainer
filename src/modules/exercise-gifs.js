@@ -795,6 +795,7 @@ async function sendOneGif(file, group, move = false) {
   payload.append('gif', file)
   payload.append('name', nameFromFile(file.name))
   payload.append('group', group)
+  payload.append('catalog', '1')
   if (move) payload.append('move', '1')
   const frame = await firstFrameBlob(file)
   if (frame) payload.append('frame', frame, 'frame.jpg')
@@ -1036,6 +1037,7 @@ function createGifLibraryPanel() {
       const chosenGroup = singleForm.elements.group.value
       payload.append('group', chosenGroup)
       payload.append('move', '1')
+      payload.append('catalog', '1')
       const frame = await firstFrameBlob(file)
       if (frame) payload.append('frame', frame, 'frame.jpg')
       const saved = await uploadExerciseGif(payload)
@@ -1052,7 +1054,7 @@ function createGifLibraryPanel() {
             ? `Esse GIF já existia e foi atualizado para “${saved.name}”.`
           : saved?.alreadyStored
             ? 'Esse arquivo já estava na biblioteca.'
-            : 'GIF enviado para a biblioteca.',
+            : 'GIF e exercício adicionados à biblioteca.',
       )
     } catch (error) {
       single.textContent = error.message

@@ -380,6 +380,8 @@ async function saveItem(item) {
     payload.append('name', item.name)
     payload.append('group', item.group)
     payload.append('move', '1')
+    // O hub liga GIF e MP4 no mesmo exercício logo abaixo.
+    payload.append('catalog', '0')
     const frame = await firstFrameBlob(item.gif)
     if (frame) payload.append('frame', frame, 'frame.jpg')
     const saved = await uploadExerciseGif(payload)
