@@ -5082,7 +5082,7 @@ button.is-loading {
 }
 .support-mode-banner--library > span {
   min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .page-heading .support-mode-banner--library .button {
   width: auto;
@@ -5094,6 +5094,22 @@ button.is-loading {
     align-self: stretch;
     justify-content: space-between;
     border-radius: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .support-mode-banner--library {
+    gap: 4px;
+    padding: 5px 6px;
+  }
+  .support-mode-banner--library > span {
+    font-size: 0;
+  }
+  .support-mode-banner--library > span::after {
+    content: '📚';
+    font-size: 1rem;
+  }
+  .page-heading .support-mode-banner--library .button {
+    padding-inline: 8px;
   }
 }
 /* A faixa de suporte não esconde o fim da página. */

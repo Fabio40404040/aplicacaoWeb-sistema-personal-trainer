@@ -250,12 +250,13 @@ function supportBanner() {
       'span',
       '',
       library
-        ? '📚 Biblioteca FARISA'
+        ? '📚 FARISA'
         : `🛟 Modo suporte — você está no painel de ${name}. Tudo o que fizer aqui fica registrado.`,
     ),
   )
   if (library) {
     bar.classList.add('support-mode-banner--library')
+    bar.setAttribute('aria-label', 'Biblioteca FARISA')
     bar.title = 'Você está abastecendo a Biblioteca FARISA: o que salvar aqui vai para todos os personais.'
     // Só a biblioteca interessa aqui: esconde o resto do menu.
     document.body.classList.add('is-library-mode')
