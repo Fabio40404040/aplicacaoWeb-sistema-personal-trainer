@@ -70,7 +70,8 @@ async function libraryMedia(db, trainerId, withGifs) {
       ? await rows(`SELECT id,name,muscle_group AS "group",created_at AS "createdAt" FROM exercise_gifs WHERE trainer_id=$1`)
       : [],
     libraryVideos: await rows(
-      `SELECT id,name,muscle_group AS "group",published,created_at AS "createdAt" FROM exercise_videos WHERE trainer_id=$1`,
+      `SELECT id,name,muscle_group AS "group",equipment,difficulty,instructions,
+         published,created_at AS "createdAt" FROM exercise_videos WHERE trainer_id=$1`,
     ),
     libraryFolderOrder: await folderOrder(db, "farisa-library"),
   };

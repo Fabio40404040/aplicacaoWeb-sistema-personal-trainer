@@ -46,8 +46,9 @@ export async function syncLibraryExercises(db) {
       [LIBRARY_ID],
     )
     await db.query(
-      `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,difficulty,media_type,video_id)
-       SELECT v.trainer_id, v.name, v.muscle_group, COALESCE(v.equipment,'Sem equipamento'), COALESCE(v.difficulty,'Intermediário'), 'video', v.id
+      `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,video_id)
+       SELECT v.trainer_id, v.name, v.muscle_group, COALESCE(NULLIF(trim(v.equipment),''),'Sem equipamento'),
+         v.instructions, COALESCE(NULLIF(trim(v.difficulty),''),'Intermediário'), 'video', v.id
        FROM exercise_videos v
        WHERE v.trainer_id=$1
          AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
