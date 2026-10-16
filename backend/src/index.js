@@ -942,6 +942,23 @@ async function handleRoutes(request, env) {
     }
     if (request.method === "GET" && route === "exercise-gifs")
       return { data: await listExerciseGifs(db, session.sub) };
+    // A sessão interna da Biblioteca FARISA pode concluir os arquivos soltos
+    // sem o admin precisar sair e voltar à tela Personais.
+    if (
+      request.method === "POST" &&
+      route === "library/sync" &&
+      session.sub === "farisa-library"
+    ) {
+      const before = await libraryOverview(db);
+      await syncLibraryExercises(db);
+      const after = await libraryOverview(db);
+      return {
+        data: {
+          created: Math.max(0, after.exercises - before.exercises),
+          ...after,
+        },
+      };
+    }
     // Copiar exercícios da Biblioteca FARISA para "Meus exercícios".
     if (request.method === "POST" && route === "exercises/copy-from-library")
       return copyFromLibrary(db, session.sub, await readJson(request));

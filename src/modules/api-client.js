@@ -220,6 +220,9 @@ export function uploadExerciseGif(formData) {
     timeoutMs: 180000,
   });
 }
+export function syncFarisaLibraryFiles() {
+  return request("/library/sync", { method: "POST", body: "{}" });
+}
 export function deleteExerciseGif(id) {
   return request(`/exercise-gifs/${id}`, { method: "DELETE" });
 }

@@ -11,6 +11,7 @@ import { getData } from './state.js'
 import {
   persistRecord,
   saveFolderOrder,
+  syncFarisaLibraryFiles,
   syncRemoteData,
   uploadExerciseGif,
   uploadExerciseVideo,
@@ -103,7 +104,11 @@ function createTabs(page) {
   } else page.prepend(tabs)
   setView(page, readView())
   paintCounts()
-  window.addEventListener('farisa:data-changed', paintCounts)
+  paintLibraryPending()
+  window.addEventListener('farisa:data-changed', () => {
+    paintCounts()
+    paintLibraryPending()
+  })
 }
 
 function paintCounts() {
@@ -127,6 +132,56 @@ function paintCounts() {
     const node = document.querySelector(`[data-library-count="${key}"]`)
     if (node) node.textContent = String(value)
   })
+}
+
+function paintLibraryPending() {
+  const page = document.querySelector('[data-route="exercicios"]')
+  if (!page) return
+  const current = page.querySelector('[data-library-pending]')
+  if (sessionStorage.getItem('farisa-library-mode') !== '1') {
+    current?.remove()
+    return
+  }
+  const data = getData()
+  const gifIds = new Set((data.exercises || []).map((item) => item.gifId).filter(Boolean))
+  const videoIds = new Set(
+    (data.exercises || []).flatMap((item) => [item.videoId, item.id]).filter(Boolean),
+  )
+  const looseGifs = (data.exerciseGifs || []).filter((item) => !gifIds.has(item.id)).length
+  const looseVideos = (data.exerciseVideos || []).filter((item) => !videoIds.has(item.id)).length
+  const total = looseGifs + looseVideos
+  if (!total) {
+    current?.remove()
+    return
+  }
+  const alert = current || document.createElement('section')
+  alert.className = 'panel library-pending'
+  alert.dataset.libraryPending = ''
+  alert.innerHTML = `
+    <div>
+      <strong>⚠️ ${total} arquivo(s) ainda não aparecem para os personais</strong>
+      <p>${looseGifs} GIF(s) e ${looseVideos} vídeo(s) ainda precisam virar exercícios.</p>
+    </div>
+    <button class="button button--primary" type="button">Transformar em exercícios</button>`
+  alert.querySelector('button').addEventListener('click', async (event) => {
+    const button = event.currentTarget
+    button.disabled = true
+    button.textContent = 'Criando exercícios…'
+    try {
+      const result = await syncFarisaLibraryFiles()
+      await syncRemoteData()
+      showToast(`${Number(result?.created || 0)} exercício(s) criado(s). Já aparecem para os personais.`)
+    } catch (error) {
+      button.disabled = false
+      button.textContent = 'Transformar em exercícios'
+      showToast(error.message)
+    }
+  })
+  if (!current) {
+    const header = page.querySelector('.library-header')
+    if (header) header.after(alert)
+    else page.prepend(alert)
+  }
 }
 
 /* ------------------------------------------------------------------ */

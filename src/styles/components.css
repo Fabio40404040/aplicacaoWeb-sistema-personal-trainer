@@ -5194,6 +5194,33 @@ button.is-loading {
   border-color: #93c5fd;
   background: #dbeafe;
 }
+.library-pending {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+  border: 1px solid #f3c64f;
+  background: #fffbea;
+}
+.library-pending strong {
+  display: block;
+  color: #17213c;
+  font-size: 1rem;
+}
+.library-pending p {
+  margin: 6px 0 0;
+  color: #68738c;
+}
+@media (max-width: 680px) {
+  .library-pending {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .library-pending .button {
+    width: 100%;
+  }
+}
 @media (max-width: 620px) {
   .support-mode-banner--library {
     width: 100%;
