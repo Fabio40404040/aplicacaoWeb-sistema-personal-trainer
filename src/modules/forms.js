@@ -18,6 +18,7 @@ function setExerciseFormOrigin(form, source = 'library') {
   if (!form) return
   const workout = source === 'workout'
   form.dataset.exerciseOrigin = source
+  window.dispatchEvent(new CustomEvent('farisa:exercise-origin', { detail: source }))
   const chooseGif = form.querySelector('[data-gif-choose]')
   const externalGif = form.querySelector('.exercise-gif-upload')
   const gifDescription = form.querySelector('[data-gif-description]')

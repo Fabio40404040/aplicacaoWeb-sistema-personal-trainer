@@ -53,6 +53,22 @@ const mediaExerciseCatalog = [
     animationClip: '',
   })),
 ]
+
+function workoutFolderSorter() {
+  const fallback = folderSorter()
+  const priority = (name) => {
+    const clean = String(name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/gu, '')
+      .toLocaleLowerCase('pt-BR')
+      .trim()
+    if (clean === 'peito' || clean === 'peitoral') return 0
+    if (clean === 'costas') return 1
+    return 2
+  }
+  return (a, b) => priority(a) - priority(b) || fallback(a, b)
+}
+
 function workoutCatalogGroups(exercises) {
   // O montador reflete as pastas reais da biblioteca, inclusive as vazias,
   // e segue a mesma ordem configurada pelo personal.
@@ -62,7 +78,7 @@ function workoutCatalogGroups(exercises) {
     if (item.name) names.add(item.name)
   })
   return [...names]
-    .sort(folderSorter())
+    .sort(workoutFolderSorter())
     .map((name) => ({ id: name, name, memberNames: [name] }))
 }
 
@@ -882,12 +898,13 @@ function paintGroupCount(target, total, selected, label) {
   target.append(document.createTextNode(' · '), mark)
 }
 
-function configureMuscleGroupFields(preferredGroup = '') {
+function configureMuscleGroupFields(preferredGroup = '', workoutOrder = false) {
   const values = allGroupNames()
   const requested = String(preferredGroup || '').trim()
   // A pasta clicada no montador precisa aparecer mesmo quando os dados
   // remotos acabaram de chegar e a lista de caixas ainda estava antiga.
   if (requested && !values.includes(requested)) values.push(requested)
+  if (workoutOrder) values.sort(workoutFolderSorter())
   // Um exercício pode trabalhar mais de um grupo (ex.: afundo no smith =
   // quadríceps e glúteos), então isto é uma lista de caixas de marcar, não
   // um select de escolha única.
@@ -2130,7 +2147,11 @@ export function initIntegratedPortal() {
   window.addEventListener('farisa:new-exercise', (event) =>
     configureMuscleGroupFields(
       typeof event.detail === 'object' ? event.detail?.group : event.detail,
+      event.detail?.source === 'workout',
     ),
+  )
+  window.addEventListener('farisa:exercise-origin', (event) =>
+    configureMuscleGroupFields('', event.detail === 'workout'),
   )
   createReadyWorkoutLibraryPanel()
   createExerciseVideoLibraryPanel()
@@ -2163,7 +2184,8 @@ export function initIntegratedPortal() {
     })
   })
   window.addEventListener('farisa:data-changed', () => {
-    configureMuscleGroupFields()
+    const exerciseForm = document.querySelector('[data-form="exercise"]')
+    configureMuscleGroupFields('', exerciseForm?.dataset.exerciseOrigin === 'workout')
     renderOperations()
     renderReadyWorkoutLibrary()
     renderExerciseVideoLibrary()
