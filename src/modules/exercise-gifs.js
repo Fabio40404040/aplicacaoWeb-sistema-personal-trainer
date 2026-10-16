@@ -1067,6 +1067,7 @@ async function removeGifGroup(group, lista) {
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
+  showToast(`A pasta ${group} está sendo apagada…`, 30_000)
   try {
     const result = await deleteExerciseFolder(group)
     lista.forEach((gif) => forgetExerciseGif(gif.id))

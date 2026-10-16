@@ -139,10 +139,10 @@ export function askText({
   })
 }
 
-export function showToast(message) {
+export function showToast(message, duration = 2600) {
   const toast = document.querySelector('[data-toast]')
   toast.querySelector('span').textContent = message
   toast.classList.add('is-visible')
   window.clearTimeout(showToast.timer)
-  showToast.timer = window.setTimeout(() => toast.classList.remove('is-visible'), 2600)
+  showToast.timer = window.setTimeout(() => toast.classList.remove('is-visible'), duration)
 }

@@ -47,6 +47,7 @@ async function removeExerciseFolder(name, exercises) {
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
+  showToast(`A pasta ${name} está sendo apagada…`, 30_000)
   try {
     const result = await deleteExerciseFolder(name)
     const apagados = Number(result?.deleted || 0)

@@ -1622,6 +1622,7 @@ async function removeVideoGroup(groupName, videos) {
     confirmLabel: 'Excluir pasta',
   })
   if (!ok) return
+  showToast(`A pasta ${groupName} está sendo apagada…`, 30_000)
   try {
     const result = await deleteExerciseFolder(groupName)
     await syncRemoteData()
