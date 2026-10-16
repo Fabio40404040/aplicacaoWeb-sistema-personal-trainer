@@ -65,7 +65,7 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
   const existing = (
     await db.query(
       `SELECT ${selectFields} FROM exercise_gifs
-       WHERE trainer_id=$1 AND original_filename=$2 LIMIT 1`,
+       WHERE trainer_id=$1 AND lower(original_filename)=lower($2) LIMIT 1`,
       [trainerId, file.name],
     )
   ).rows[0];

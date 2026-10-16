@@ -38,8 +38,6 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
     return { error: "Selecione um arquivo MP4 válido.", status: 400 };
   if (!file.size || file.size > MAX_VIDEO_BYTES)
     return { error: "O vídeo MP4 deve ter no máximo 90 MB.", status: 400 };
-  const noSpace = await mediaQuotaProblem(db, trainerId, file.size);
-  if (noSpace) return { error: noSpace, status: 403 };
 
   const name = String(form.get("name") || "").trim();
   const group = String(form.get("group") || "").trim();
@@ -51,6 +49,38 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
       error: "Preencha nome, grupo muscular e dificuldade.",
       status: 400,
     };
+
+  // O mesmo MP4 não ocupa espaço duas vezes. Se o usuário escolheu outra
+  // pasta, move o registro existente e o exercício vinculado para ela.
+  const existing = (
+    await db.query(
+      `SELECT ${selectFields} FROM exercise_videos
+       WHERE trainer_id=$1 AND lower(original_filename)=lower($2) LIMIT 1`,
+      [trainerId, file.name],
+    )
+  ).rows[0];
+  if (existing) {
+    const wantsMove = String(form.get("move") || "") === "1";
+    if (wantsMove && existing.group !== group) {
+      await db.batch([
+        {
+          sql: "UPDATE exercise_videos SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
+          values: [group, existing.id, trainerId],
+        },
+        {
+          sql: `UPDATE exercises SET muscle_group=$1
+                WHERE trainer_id=$2 AND (video_id=$3 OR id=$3)`,
+          values: [group, trainerId, existing.id],
+        },
+      ]);
+      await ensureMuscleGroup(db, trainerId, group).catch(() => {});
+      return { ...existing, group, alreadyStored: true, moved: true };
+    }
+    return { ...existing, alreadyStored: true };
+  }
+
+  const noSpace = await mediaQuotaProblem(db, trainerId, file.size);
+  if (noSpace) return { error: noSpace, status: 403 };
 
   // No envio em lote o vídeo entra só no acervo: criar um exercício por
   // arquivo enchia a biblioteca de nomes soltos vindos do nome do arquivo.

@@ -1157,8 +1157,7 @@ function renderGifLibrary() {
     else openGifFolders.delete(folder.dataset.group)
   })
   holder.replaceChildren()
-  const custom = getData().customGroups || []
-  if (!gifs.length && !custom.length) {
+  if (!gifs.length) {
     const empty = document.createElement('p')
     empty.className = 'password-requirements'
     empty.textContent =
@@ -1167,9 +1166,8 @@ function renderGifLibrary() {
     return
   }
   const grupos = new Map()
-  // Pastas criadas por você aparecem mesmo vazias, para poder enviar GIFs
-  // direto nelas (igual à biblioteca de exercícios).
-  custom.forEach((item) => grupos.set(item.name, []))
+  // Nesta aba aparecem somente pastas que realmente contêm GIFs. Uma pasta
+  // exclusiva de vídeos não pode surgir vazia aqui nem ser apagada por engano.
   gifs.forEach((gif) => {
     if (!grupos.has(gif.group)) grupos.set(gif.group, [])
     grupos.get(gif.group).push(gif)

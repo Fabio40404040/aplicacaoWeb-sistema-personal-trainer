@@ -1440,13 +1440,15 @@ function createExerciseVideoLibraryPanel() {
       return
     }
     let enviados = 0
+    let movidos = 0
+    let repetidos = 0
     const falhas = []
     let concluidos = 0
     const paint = () => {
       bulkBar.max = chosen.length
       bulkBar.value = concluidos
       bulkBar.hidden = false
-      bulkStatus.textContent = `Enviando ${concluidos} de ${chosen.length}… (${enviados} enviados${falhas.length ? `, ${falhas.length} com erro` : ''})`
+      bulkStatus.textContent = `Enviando ${concluidos} de ${chosen.length}… (${enviados} novos, ${movidos} mudados de pasta, ${repetidos} já existentes${falhas.length ? `, ${falhas.length} com erro` : ''})`
     }
     paint()
     const entries = chosen.map((file) => {
@@ -1481,9 +1483,12 @@ function createExerciseVideoLibraryPanel() {
           payload.append('published', '1')
           // Em lote o vídeo entra só no acervo, sem virar exercício solto.
           payload.append('catalog', '0')
-          await uploadExerciseVideo(payload)
+          payload.append('move', '1')
+          const saved = await uploadExerciseVideo(payload)
           storedGroups.add(group)
-          enviados += 1
+          if (saved?.moved) movidos += 1
+          else if (saved?.alreadyStored) repetidos += 1
+          else enviados += 1
         } catch (error) {
           falhas.push(`${file.name}: ${error.message}`)
         }
@@ -1507,9 +1512,9 @@ function createExerciseVideoLibraryPanel() {
     const next = [...base, ...added.filter((name) => !base.includes(name))]
     if (next.join('|') !== current.join('|')) await saveFolderOrder(next).catch(() => {})
     bulkBar.hidden = true
-    bulkStatus.textContent = `Pronto: ${enviados} vídeo(s) enviados${falhas.length ? `, ${falhas.length} não subiram` : ''}.`
+    bulkStatus.textContent = `Pronto: ${enviados} novo(s), ${movidos} mudado(s) de pasta e ${repetidos} já existente(s)${falhas.length ? `; ${falhas.length} não subiram` : ''}.`
     if (falhas.length) console.warn('MP4 com erro:', falhas)
-    showToast(`Biblioteca de MP4 atualizada (${enviados} novos).`)
+    showToast(`Biblioteca de MP4 atualizada: ${enviados} novo(s), ${movidos} movido(s), ${repetidos} já existente(s).`)
     window.dispatchEvent(new Event('farisa:remote-refresh'))
   }
   // Usado também pelo botão "+ Enviar vídeos aqui" de cada pasta.
@@ -1547,9 +1552,18 @@ function createExerciseVideoLibraryPanel() {
     button.textContent = 'Enviando vídeo…'
     status.textContent = ''
     try {
-      await uploadExerciseVideo(new FormData(form))
+      const payload = new FormData(form)
+      payload.append('move', '1')
+      const saved = await uploadExerciseVideo(payload)
+      const chosenGroup = form.elements.group.value
       form.reset()
-      showToast('Vídeo enviado para a biblioteca.')
+      showToast(
+        saved?.moved
+          ? `Esse vídeo já existia e foi movido para ${chosenGroup}.`
+          : saved?.alreadyStored
+            ? 'Esse vídeo já estava na biblioteca e não foi duplicado.'
+            : `Vídeo enviado para a pasta ${chosenGroup}.`,
+      )
       window.dispatchEvent(new Event('farisa:remote-refresh'))
     } catch (error) {
       status.textContent = error.message
@@ -1670,15 +1684,9 @@ function renderExerciseVideoLibrary() {
   if (!groups) return
   const videos = getData().exerciseVideos || []
   groups.replaceChildren()
-  // Só aparecem as pastas que já têm vídeo ou que você criou. As pastas fixas
-  // do catálogo (Peitoral, Costas…) surgem quando o primeiro MP4 é enviado.
-  const customNames = new Set((getData().customGroups || []).map((item) => item.name))
-  const exactNames = [
-    ...new Set([
-      ...videos.map((video) => video.group),
-      ...customNames,
-    ].filter(Boolean)),
-  ]
+  // Nesta aba aparecem somente pastas que realmente contêm vídeos. Pastas
+  // exclusivas de GIFs não surgem vazias nem podem ser apagadas por engano.
+  const exactNames = [...new Set(videos.map((video) => video.group).filter(Boolean))]
   const visibleGroups = exactNames.map((name) => ({
     id: name,
     name,
