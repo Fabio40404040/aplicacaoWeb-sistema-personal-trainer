@@ -49,6 +49,9 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
       error: "Preencha nome, grupo muscular e dificuldade.",
       status: 400,
     };
+  // No envio em lote o vídeo entra só no acervo: criar um exercício por
+  // arquivo enchia a biblioteca de nomes soltos vindos do nome do arquivo.
+  const catalogar = form.get("catalog") !== "0";
 
   // O mesmo MP4 não ocupa espaço duas vezes. Se o usuário escolheu outra
   // pasta, move o registro existente e o exercício vinculado para ela.
@@ -61,20 +64,41 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
   ).rows[0];
   if (existing) {
     const wantsMove = String(form.get("move") || "") === "1";
-    if (wantsMove && existing.group !== group) {
+    const nextGroup = wantsMove ? group : existing.group;
+    const moved = nextGroup !== existing.group;
+    const renamed = catalogar && name !== existing.name;
+    if (moved || renamed) {
       await db.batch([
         {
-          sql: "UPDATE exercise_videos SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
-          values: [group, existing.id, trainerId],
+          sql: `UPDATE exercise_videos SET name=$1,muscle_group=$2,equipment=$3,difficulty=$4,instructions=$5
+                WHERE id=$6 AND trainer_id=$7`,
+          values: [
+            catalogar ? name : existing.name,
+            nextGroup,
+            catalogar ? equipment || null : existing.equipment,
+            catalogar ? difficulty : existing.difficulty,
+            catalogar ? instructions || null : existing.instructions,
+            existing.id,
+            trainerId,
+          ],
         },
         {
-          sql: `UPDATE exercises SET muscle_group=$1
-                WHERE trainer_id=$2 AND (video_id=$3 OR id=$3)`,
-          values: [group, trainerId, existing.id],
+          sql: `UPDATE exercises SET
+                  name=CASE WHEN name=$1 THEN $2 ELSE name END,
+                  muscle_group=CASE WHEN muscle_group=$3 THEN $4 ELSE muscle_group END
+                WHERE trainer_id=$5 AND (video_id=$6 OR id=$6)`,
+          values: [existing.name, catalogar ? name : existing.name, existing.group, nextGroup, trainerId, existing.id],
         },
       ]);
-      await ensureMuscleGroup(db, trainerId, group).catch(() => {});
-      return { ...existing, group, alreadyStored: true, moved: true };
+      await ensureMuscleGroup(db, trainerId, nextGroup).catch(() => {});
+      return {
+        ...existing,
+        name: catalogar ? name : existing.name,
+        group: nextGroup,
+        alreadyStored: true,
+        moved,
+        renamed,
+      };
     }
     return { ...existing, alreadyStored: true };
   }
@@ -82,9 +106,6 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
   const noSpace = await mediaQuotaProblem(db, trainerId, file.size);
   if (noSpace) return { error: noSpace, status: 403 };
 
-  // No envio em lote o vídeo entra só no acervo: criar um exercício por
-  // arquivo enchia a biblioteca de nomes soltos vindos do nome do arquivo.
-  const catalogar = form.get("catalog") !== "0";
   const bytes = await file.arrayBuffer();
   const signature = new TextDecoder().decode(bytes.slice(4, 8));
   if (signature !== "ftyp")

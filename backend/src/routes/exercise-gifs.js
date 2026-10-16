@@ -75,13 +75,27 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
     // em vez de ignorar, muda o GIF de pasta. Só quando o navegador pede
     // ("move=1"), para um arquivo solto não mudar de grupo sem querer.
     const wantsMove = String(form.get("move") || "") === "1";
-    if (wantsMove && existing.group !== group) {
-      await db.query(
-        "UPDATE exercise_gifs SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
-        [group, existing.id, trainerId],
-      );
-      await ensureMuscleGroup(db, trainerId, group).catch(() => {});
-      return { ...existing, group, alreadyStored: true, moved: true };
+    const nextGroup = wantsMove ? group : existing.group;
+    const moved = nextGroup !== existing.group;
+    const renamed = name !== existing.name;
+    if (moved || renamed) {
+      await db.batch([
+        {
+          sql: "UPDATE exercise_gifs SET name=$1,muscle_group=$2 WHERE id=$3 AND trainer_id=$4",
+          values: [name, nextGroup, existing.id, trainerId],
+        },
+        {
+          // Atualiza somente o exercício que ainda conservava os dados antigos;
+          // uma edição feita manualmente pelo personal continua preservada.
+          sql: `UPDATE exercises SET
+                  name=CASE WHEN name=$1 THEN $2 ELSE name END,
+                  muscle_group=CASE WHEN muscle_group=$3 THEN $4 ELSE muscle_group END
+                WHERE trainer_id=$5 AND gif_id=$6`,
+          values: [existing.name, name, existing.group, nextGroup, trainerId, existing.id],
+        },
+      ]);
+      await ensureMuscleGroup(db, trainerId, nextGroup).catch(() => {});
+      return { ...existing, name, group: nextGroup, alreadyStored: true, moved, renamed };
     }
     return { ...existing, alreadyStored: true };
   }

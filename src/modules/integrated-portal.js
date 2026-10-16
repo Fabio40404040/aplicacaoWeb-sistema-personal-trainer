@@ -1601,8 +1601,12 @@ function createExerciseVideoLibraryPanel() {
       const chosenGroup = form.elements.group.value
       form.reset()
       showToast(
-        saved?.moved
+        saved?.moved && saved?.renamed
+          ? `Esse vídeo já existia, foi atualizado para “${saved.name}” e movido para ${chosenGroup}.`
+          : saved?.moved
           ? `Esse vídeo já existia e foi movido para ${chosenGroup}.`
+          : saved?.renamed
+            ? `Esse vídeo já existia e foi atualizado para “${saved.name}”.`
           : saved?.alreadyStored
             ? 'Esse vídeo já estava na biblioteca e não foi duplicado.'
             : `Vídeo enviado para a pasta ${chosenGroup}.`,

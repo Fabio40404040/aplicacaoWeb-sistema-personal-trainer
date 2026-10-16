@@ -169,42 +169,67 @@ export async function copyFromLibrary(db, trainerId, body) {
 
   const personal = (
     await db.query(
-      `SELECT id,name,equipment,gif_id,video_id,media_url,source_id AS "sourceId"
-       FROM exercises WHERE trainer_id=$1`,
-      [trainerId],
+      `SELECT e.id,e.name,e.equipment,e.gif_id,e.video_id,e.media_url,e.source_id AS "sourceId",
+         CASE WHEN e.source_id IS NOT NULL AND EXISTS (
+           SELECT 1 FROM exercises source WHERE source.trainer_id=$2 AND source.id=e.source_id
+         ) THEN 1 ELSE 0 END AS "sourceExists"
+       FROM exercises e WHERE e.trainer_id=$1`,
+      [trainerId, LIBRARY_ID],
     )
   ).rows
   const bySource = new Map(personal.filter((item) => item.sourceId).map((item) => [String(item.sourceId), item]))
   const byKey = new Map()
+  const byMedia = new Map()
   const withoutMediaByBaseKey = new Map()
   personal.forEach((item) => {
     const key = exerciseKey(item)
     if (!byKey.has(key)) byKey.set(key, item)
-    if (exerciseMediaKey(item) === 'sem-midia' && !withoutMediaByBaseKey.has(exerciseBaseKey(item)))
+    const mediaKey = exerciseMediaKey(item)
+    if (mediaKey !== 'sem-midia' && !byMedia.has(mediaKey)) byMedia.set(mediaKey, item)
+    if (mediaKey === 'sem-midia' && !withoutMediaByBaseKey.has(exerciseBaseKey(item)))
       withoutMediaByBaseKey.set(exerciseBaseKey(item), item)
   })
 
   const copies = []
   const missingByKey = new Map()
   const adoptions = []
+  const replacements = []
   const adoptedIds = new Set()
   sources.forEach((source) => {
     const linked = bySource.get(String(source.id))
+    const mediaKey = exerciseMediaKey(source)
+    const sameMedia = mediaKey === 'sem-midia' ? null : byMedia.get(mediaKey)
     // Um exercício manual sem mídia ainda pode representar o mesmo movimento.
     // Quando ambos têm mídia, GIFs/vídeos diferentes permanecem separados.
-    const equal = linked || byKey.get(exerciseKey(source)) || withoutMediaByBaseKey.get(exerciseBaseKey(source))
+    const equal = linked || byKey.get(exerciseKey(source)) || sameMedia || withoutMediaByBaseKey.get(exerciseBaseKey(source))
     if (equal) {
       copies.push({ id: equal.id, sourceId: source.id })
-      if (!linked && !equal.sourceId && !adoptedIds.has(String(equal.id))) {
+      if (!linked && sameMedia === equal && equal.sourceId && !Number(equal.sourceExists) && !adoptedIds.has(String(equal.id))) {
+        adoptedIds.add(String(equal.id))
+        replacements.push({ id: equal.id, source })
+      } else if (!linked && !equal.sourceId && !adoptedIds.has(String(equal.id))) {
         adoptedIds.add(String(equal.id))
         adoptions.push({ id: equal.id, sourceId: source.id })
       }
       return
     }
-    const key = exerciseKey(source)
+    // Dois registros históricos com a mesma mídia representam um único item.
+    // Para exercícios sem mídia, continua valendo nome + equipamento.
+    const key = mediaKey === 'sem-midia' ? exerciseKey(source) : mediaKey
     if (!missingByKey.has(key)) missingByKey.set(key, [])
     missingByKey.get(key).push(source)
   })
+
+  // Se o admin apagou e recriou um exercício usando o mesmo GIF/MP4, a cópia
+  // antiga do personal aponta para uma origem que não existe mais. Religa essa
+  // cópia e atualiza nome/pasta, em vez de criar uma segunda representação.
+  for (const replacement of replacements) {
+    await db.query(
+      `UPDATE exercises SET source_id=$3,name=$4,muscle_group=$5
+       WHERE trainer_id=$1 AND id=$2`,
+      [trainerId, replacement.id, replacement.source.id, replacement.source.name, replacement.source.muscle_group],
+    )
+  }
 
   // Associa os exercícios iguais que já existiam para as próximas consultas
   // reconhecerem a origem sem alterar o conteúdo editado pelo personal.
@@ -248,6 +273,7 @@ export async function copyFromLibrary(db, trainerId, body) {
   return {
     data: {
       created: created.length,
+      updated: replacements.length,
       existing: sources.length - created.length,
       skipped: sources.length - created.length,
       items: copies,

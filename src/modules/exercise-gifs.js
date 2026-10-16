@@ -1044,8 +1044,12 @@ function createGifLibraryPanel() {
       singleForm.reset()
       paintLooseGroups()
       showToast(
-        saved?.moved
+        saved?.moved && saved?.renamed
+          ? `Esse GIF já existia, foi atualizado para “${saved.name}” e movido para ${chosenGroup}.`
+          : saved?.moved
           ? `Esse GIF já estava na biblioteca — foi mudado para ${chosenGroup}.`
+          : saved?.renamed
+            ? `Esse GIF já existia e foi atualizado para “${saved.name}”.`
           : saved?.alreadyStored
             ? 'Esse arquivo já estava na biblioteca.'
             : 'GIF enviado para a biblioteca.',

@@ -24,6 +24,38 @@ const exerciseMediaKey = (exercise) => {
 }
 const exerciseKey = (exercise) => `${exerciseBaseKey(exercise)}|${exerciseMediaKey(exercise)}`
 
+function distinctLibraryExercises(exercises) {
+  const seen = new Set()
+  return exercises.filter((item) => {
+    if (!item.library) return false
+    const mediaKey = exerciseMediaKey(item)
+    const key = mediaKey === 'sem-midia' ? `exercise:${item.id}` : mediaKey
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+// Se a falha antiga já chegou a criar duas cópias da mesma mídia, mantém na
+// tela a cópia ligada à origem atual e oculta somente a ligação órfã antiga.
+export function personalExercisesForDisplay(exercises = getData().exercises || []) {
+  const personal = exercises.filter((item) => !item.library)
+  const currentMedia = new Set(
+    personal
+      .filter((item) => item.sourceExists && exerciseMediaKey(item) !== 'sem-midia')
+      .map(exerciseMediaKey),
+  )
+  return personal.filter(
+    (item) =>
+      !(
+        item.sourceId &&
+        !item.sourceExists &&
+        exerciseMediaKey(item) !== 'sem-midia' &&
+        currentMedia.has(exerciseMediaKey(item))
+      ),
+  )
+}
+
 const el = (tag, className = '', text) => {
   const node = document.createElement(tag)
   if (className) node.className = className
@@ -36,9 +68,13 @@ export function copiedMap() {
   const map = new Map()
   const exercises = getData().exercises || []
   const personalByKey = new Map()
+  const personalByCurrentMedia = new Map()
   const personalWithoutMediaByBaseKey = new Map()
   exercises.forEach((item) => {
     if (!item.library && !personalByKey.has(exerciseKey(item))) personalByKey.set(exerciseKey(item), item.id)
+    const mediaKey = exerciseMediaKey(item)
+    if (!item.library && item.sourceExists && mediaKey !== 'sem-midia' && !personalByCurrentMedia.has(mediaKey))
+      personalByCurrentMedia.set(mediaKey, item.id)
     if (
       !item.library &&
       exerciseMediaKey(item) === 'sem-midia' &&
@@ -52,7 +88,9 @@ export function copiedMap() {
   exercises.forEach((item) => {
     if (!item.library || map.has(String(item.id))) return
     const personalId =
-      personalByKey.get(exerciseKey(item)) || personalWithoutMediaByBaseKey.get(exerciseBaseKey(item))
+      personalByKey.get(exerciseKey(item)) ||
+      personalByCurrentMedia.get(exerciseMediaKey(item)) ||
+      personalWithoutMediaByBaseKey.get(exerciseBaseKey(item))
     if (personalId) map.set(String(item.id), personalId)
   })
   return map
@@ -62,7 +100,11 @@ export function copiedMap() {
 // copiou (o copiado aparece uma vez só, como a sua cópia).
 export function exercisesForWorkouts() {
   const copied = copiedMap()
-  return (getData().exercises || []).filter((item) => !item.library || !copied.has(String(item.id)))
+  const exercises = getData().exercises || []
+  return [
+    ...personalExercisesForDisplay(exercises),
+    ...distinctLibraryExercises(exercises).filter((item) => !copied.has(String(item.id))),
+  ]
 }
 
 let view = 'exercicios'
@@ -72,7 +114,7 @@ const openFolders = new Set()
 export function libraryData() {
   const data = getData()
   return {
-    exercises: (data.exercises || []).filter((item) => item.library),
+    exercises: distinctLibraryExercises(data.exercises || []),
     gifs: data.libraryGifs || [],
     videos: data.libraryVideos || [],
     order: data.libraryFolderOrder || [],
@@ -123,13 +165,15 @@ async function copyExercises(items, button, label, targetGroup = '') {
       showToast(
         result.created
           ? `“${items[0].name}” foi copiado para Meus exercícios. Agora você pode editar a sua cópia.`
+          : result.updated
+            ? `A cópia antiga foi atualizada para “${items[0].name}”, sem duplicar o exercício.`
           : `“${items[0].name}” já estava em Meus exercícios.`,
       )
       const mine = copiedMap().get(String(ids[0]))
       if (mine) window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: mine }))
     } else {
       showToast(
-        `${result.created} exercício(s) copiado(s) para Meus exercícios${result.existing ? ` · ${result.existing} já existente(s)` : ''}.`,
+        `${result.created} exercício(s) copiado(s)${result.updated ? ` · ${result.updated} cópia(s) antiga(s) atualizada(s)` : ''}${result.existing - (result.updated || 0) ? ` · ${result.existing - (result.updated || 0)} já existente(s)` : ''}.`,
       )
       // Depois de copiar uma pasta inteira, mostra o resultado no lugar certo
       // em vez de deixar o usuário olhando a pasta original da FARISA.

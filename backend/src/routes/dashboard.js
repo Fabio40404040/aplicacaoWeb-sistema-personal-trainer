@@ -156,7 +156,10 @@ export async function dashboard(db, trainerId) {
       `SELECT id, name, muscle_group AS "group", equipment, instructions, difficulty,
        media_type AS "mediaType", media_url AS "mediaUrl", thumbnail_url AS "thumbnailUrl",
        animation_clip AS "animationClip", is_active AS "isActive", created_at AS "createdAt",
-       (trainer_id<>$1) AS "library"${withSource ? ', source_id AS "sourceId"' : ""}${gifColumn}
+       (trainer_id<>$1) AS "library"${withSource ? `, source_id AS "sourceId",
+       CASE WHEN source_id IS NOT NULL AND EXISTS (
+         SELECT 1 FROM exercises source WHERE source.trainer_id='farisa-library' AND source.id=exercises.source_id
+       ) THEN 1 ELSE 0 END AS "sourceExists"` : ""}${gifColumn}
        FROM exercises WHERE trainer_id IN ($1,'farisa-library') ORDER BY created_at DESC`,
       [trainerId],
     ),

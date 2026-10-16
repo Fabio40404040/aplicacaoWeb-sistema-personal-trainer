@@ -1,5 +1,5 @@
 import { SEX_LABELS, fatClass } from './body-composition.js'
-import { exercisesForWorkouts } from './farisa-library-tab.js'
+import { exercisesForWorkouts, personalExercisesForDisplay } from './farisa-library-tab.js'
 import { folderSorter } from './folder-order.js'
 import { showPaidDialog } from './paid-dialog.js'
 import { getData, updateData } from './state.js'
@@ -571,8 +571,7 @@ function renderExercises() {
   // Busca, mídia e equipamento valem para as pastinhas e para a lista; o
   // grupo escolhido só filtra a lista.
   // A Biblioteca FARISA tem aba própria; aqui ficam só os seus exercícios.
-  const matching = getData().exercises.filter((e) => {
-    if (e.library) return false
+  const matching = personalExercisesForDisplay().filter((e) => {
     if (!e.name.toLocaleLowerCase('pt-BR').includes(query)) return false
     if (mediaFilter === 'gif' && !exerciseHasGif(e)) return false
     if (mediaFilter === 'no-gif' && exerciseHasGif(e)) return false
