@@ -1184,11 +1184,13 @@ td {
 .ready-exercise-option {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 9px;
-  padding: 9px;
-  border-radius: 9px;
-  background: #f3f6fb;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid #e5ebf4;
+  border-radius: 11px;
+  background: #f7f9fc;
   cursor: pointer;
 }
 .ready-exercise-option[hidden] {
@@ -1203,36 +1205,48 @@ td {
 }
 .catalog-exercise-delete {
   position: absolute;
-  top: 50%;
-  right: 7px;
+  top: 8px;
+  right: 8px;
   z-index: 1;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   min-height: 0;
   padding: 0;
-  transform: translateY(-50%);
-  border: 1px solid #f1b8b4;
-  border-radius: 50%;
-  color: #a52620;
-  background: #fff7f6;
-  font: inherit;
-  font-size: 1.25rem;
-  line-height: 1;
-  font-weight: 700;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #a84b46;
+  background: transparent;
   cursor: pointer;
+}
+.catalog-exercise-delete svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
 }
 .ready-exercise-option-row .ready-exercise-option {
   width: 100%;
   min-width: 0;
-  padding-right: 48px;
+  padding-right: 44px;
 }
 .ready-exercise-option-row .ready-exercise-option > span {
-  overflow-wrap: break-word;
+  min-width: 0;
+  overflow-wrap: normal;
   word-break: normal;
 }
+.ready-exercise-option strong {
+  color: var(--ink-900);
+  font-size: 0.84rem;
+  line-height: 1.3;
+  font-weight: 750;
+  text-align: left;
+}
 .catalog-exercise-delete:hover {
-  border-color: #d65b54;
-  background: #ffebe9;
+  border-color: #efc8c5;
+  color: #9f241e;
+  background: #fff0ef;
 }
 .catalog-exercise-delete:disabled {
   cursor: wait;
@@ -1250,8 +1264,37 @@ td {
   display: block;
 }
 .ready-exercise-option small {
-  margin-top: 2px;
+  margin-top: 3px;
   color: #68758a;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-align: left;
+}
+@media (max-width: 520px) {
+  .ready-exercise-options {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .ready-exercise-option {
+    gap: 7px;
+    min-height: 56px;
+    padding: 8px;
+  }
+  .ready-exercise-option-row .ready-exercise-option {
+    padding-right: 36px;
+  }
+  .catalog-exercise-delete {
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+  }
+  .ready-exercise-option strong {
+    font-size: 0.78rem;
+  }
+  .ready-exercise-option small {
+    font-size: 0.66rem;
+  }
 }
 .ready-next-button {
   justify-self: end;
@@ -2328,6 +2371,15 @@ td {
 }
 .ready-exercise-options {
   overflow-x: hidden;
+}
+@media (max-width: 520px) {
+  .ready-exercise-option-row .ready-exercise-option:has(.exercise-pick-gif) {
+    grid-template-columns: 16px 36px minmax(0, 1fr);
+  }
+  .ready-exercise-option-row .exercise-pick-gif {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 /* Biblioteca de MP4: vídeo aberto no cartão, com "×" para fechar. */
