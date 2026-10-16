@@ -12,6 +12,7 @@ initClientErrors()
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const TOKEN_KEY = 'farisa-admin-token'
+const DEMO_TRAINER_ID = 'demo-trainer'
 let trainers = []
 
 const getToken = () => {
@@ -134,6 +135,7 @@ function render() {
   $('[data-admin-table]').hidden = !open
   $('[data-admin-trainers]').replaceChildren(
     ...list.map((trainer) => {
+      const isDemo = trainer.id === DEMO_TRAINER_ID
       const row = document.createElement('tr')
       if (trainer.status === 'blocked') row.className = 'is-blocked'
       const person = el('td')
@@ -143,6 +145,7 @@ function render() {
       const info = el('div')
       const name = el('strong', '', trainer.name)
       if (trainer.isOwner) name.append(' ', el('span', 'admin-badge', 'Dono do site'))
+      if (isDemo) name.append(' ', el('span', 'admin-badge admin-badge--protected', 'Demonstração protegida'))
       info.append(name, el('small', '', trainer.email))
       if (trainer.planName) info.append(el('small', 'admin-muted', trainer.planName))
       cell.append(avatar, info)
@@ -233,7 +236,11 @@ function render() {
       action('Marcar e-mail como confirmado', confirmEmail)
       action('Gerar nova senha', resetPassword)
       action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
-      action('Excluir personal…', deleteTrainer, 'is-danger')
+      if (isDemo) {
+        const protectedDelete = el('div', 'admin-menu-protected', '🔒 Exclusão protegida')
+        protectedDelete.title = 'A demonstração pode ser editada, mas não pode ser excluída.'
+        items.append(protectedDelete)
+      } else action('Excluir personal…', deleteTrainer, 'is-danger')
       menu.append(summary, items)
       actions.append(menu)
       row.append(
@@ -354,10 +361,19 @@ async function reload() {
 
 function openTrainerForm(trainer = null) {
   const editing = Boolean(trainer?.id)
+  const isDemo = trainer?.id === DEMO_TRAINER_ID
+  const emailField = field('E-mail de acesso', 'email', { type: 'email', value: trainer?.email, required: true })
+  if (isDemo) {
+    const email = emailField.querySelector('input')
+    email.disabled = true
+    email.title = 'O e-mail da demonstração é fixo para manter os acessos públicos funcionando.'
+  }
   const body = [
     field('Nome completo', 'name', { value: trainer?.name, required: true }),
-    field('E-mail de acesso', 'email', { type: 'email', value: trainer?.email, required: true }),
+    emailField,
   ]
+  if (isDemo)
+    body.push(el('p', 'admin-protected-note', '🔒 Esta conta não pode ser excluída. Você pode editar nome, telefone, CREF e anotações. O e-mail permanece fixo para a demonstração pública continuar funcionando.'))
   const grid = el('div', 'field-grid')
   grid.append(
     field('Telefone / WhatsApp', 'phone', { value: trainer?.phone }),

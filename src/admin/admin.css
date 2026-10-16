@@ -200,6 +200,10 @@
   background: #ede9fe;
   color: var(--admin-accent);
 }
+.admin-body .admin-badge--protected {
+  background: #dcfce7;
+  color: #166534;
+}
 .admin-install-button {
   width: 100%;
 }
@@ -325,6 +329,23 @@
 }
 .admin-menu-list button.is-danger:hover {
   background: #fef2f2;
+}
+.admin-menu-protected {
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.admin-protected-note {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.88rem;
 }
 .admin-dialog {
   width: min(94vw, 560px);

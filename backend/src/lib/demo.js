@@ -2,6 +2,7 @@
 // Qualquer visitante entra nelas, então algumas ações ficam bloqueadas no
 // servidor: recuperar/trocar senha e fazer pagamentos. O envio de arquivos é
 // livre; o que a demo enviar é apagado na restauração diária (demo-reset).
+export const DEMO_TRAINER_ID = 'demo-trainer'
 export const DEMO_TRAINER_EMAIL = 'demo@farisa.example'
 export const DEMO_STUDENT_EMAIL = 'aluno.demo@farisa.example'
 export const DEMO_READY_STUDENT_EMAIL = 'aluno.pronto@farisa.example'

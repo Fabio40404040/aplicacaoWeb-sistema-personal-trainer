@@ -8,6 +8,7 @@ import { createSession, hashPassword, verifyPassword } from '../lib/session.js'
 import { hasRecoveryEmailProvider, sendNoticeEmail } from '../lib/recovery-email.js'
 import { readJson } from '../lib/http.js'
 import { sendTrainerWelcome } from './account-emails.js'
+import { DEMO_TRAINER_ID } from '../lib/demo.js'
 
 // Segunda etapa do login: código de 6 dígitos enviado ao e-mail do administrador.
 const CODE_MINUTES = 10
@@ -339,7 +340,11 @@ export async function adminConfirmTrainerEmail(db, admin, id) {
 export async function adminUpdateTrainer(db, admin, id, body) {
   const trainer = await trainerById(db, id)
   if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
-  const email = String(body?.email || trainer.email).trim().toLowerCase()
+  // O e-mail identifica a demonstração pública. Os demais dados continuam
+  // editáveis pelo admin, mas este endereço fixo não pode ser trocado.
+  const email = id === DEMO_TRAINER_ID
+    ? trainer.email
+    : String(body?.email || trainer.email).trim().toLowerCase()
   if (!validEmail(email)) return { error: 'Informe um e-mail válido.', status: 400 }
   const clash = (
     await db.query('SELECT id FROM trainers WHERE lower(email)=$1 AND id<>$2', [email, id])
@@ -472,6 +477,11 @@ export async function removeTrainer(env, db, id) {
 export async function adminDeleteTrainer(env, db, admin, id, body) {
   const trainer = await trainerById(db, id)
   if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
+  if (id === DEMO_TRAINER_ID)
+    return {
+      error: 'A conta de demonstração é protegida e não pode ser excluída. Você ainda pode editar seus dados.',
+      status: 403,
+    }
   if (String(body?.confirmEmail || '').trim().toLowerCase() !== trainer.email.toLowerCase())
     return { error: 'Digite o e-mail do personal para confirmar a exclusão.', status: 400 }
   const { removedFiles, removedAccounts } = await removeTrainer(env, db, id)
