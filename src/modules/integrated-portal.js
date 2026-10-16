@@ -356,6 +356,41 @@ function catalogAddButton(groupName) {
   return button
 }
 
+const catalogSearchText = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/gu, '')
+    .toLocaleLowerCase('pt-BR')
+    .trim()
+
+function catalogSearch(groupName, total) {
+  const fragment = document.createDocumentFragment()
+  const holder = document.createElement('label')
+  holder.className = 'exercise-group-search'
+  const input = document.createElement('input')
+  input.type = 'search'
+  input.placeholder = `Buscar entre ${total} exercício${total === 1 ? '' : 's'} de ${groupName}`
+  input.setAttribute('aria-label', `Buscar exercícios na pasta ${groupName}`)
+  const empty = document.createElement('p')
+  empty.className = 'exercise-group-search-empty'
+  empty.textContent = 'Nenhum exercício encontrado nesta pasta.'
+  empty.hidden = true
+  holder.append(input)
+  input.addEventListener('input', () => {
+    const query = catalogSearchText(input.value)
+    const rows = [...input.closest('.ready-exercise-options').querySelectorAll('.ready-exercise-option')]
+    let visible = 0
+    rows.forEach((row) => {
+      const matches = !query || row.dataset.search.includes(query)
+      row.hidden = !matches
+      if (matches) visible += 1
+    })
+    empty.hidden = !query || visible > 0
+  })
+  fragment.append(holder, empty)
+  return fragment
+}
+
 function renderWorkoutExerciseCatalog(form) {
   const catalog = form.querySelector('[data-workout-exercise-catalog]')
   const exercises = exercisesForWorkouts()
@@ -384,6 +419,7 @@ function renderWorkoutExerciseCatalog(form) {
         `selecionado${selectedCount === 1 ? '' : 's'}`,
       )
       const options = details.querySelector('.ready-exercise-options')
+      if (items.length) options.append(catalogSearch(group.name, items.length))
       if (!items.length) options.textContent = 'Nenhum exercício cadastrado neste grupo.'
       options.append(catalogAddButton(group.name))
       items.forEach((exercise) => {
@@ -391,6 +427,9 @@ function renderWorkoutExerciseCatalog(form) {
         const assignment = form.workoutPrescriptionMap.get(exerciseId)
         const label = document.createElement('label')
         label.className = 'ready-exercise-option'
+        label.dataset.search = catalogSearchText(
+          [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
+        )
         label.innerHTML = `<input type="checkbox"><span><strong></strong><small></small></span>`
         const checkbox = label.querySelector('input')
         const thumb = exerciseGifThumb(exercise)
@@ -946,6 +985,7 @@ function renderReadyExerciseCatalog(form) {
         'neste treino',
       )
       const options = details.querySelector('.ready-exercise-options')
+      if (items.length) options.append(catalogSearch(group.name, items.length))
       options.append(catalogAddButton(group.name))
       if (!items.length) {
         options.append(
@@ -958,6 +998,9 @@ function renderReadyExerciseCatalog(form) {
         const assignment = form.readyPrescriptionMap.get(String(exercise.id))
         const label = document.createElement('label')
         label.className = 'ready-exercise-option'
+        label.dataset.search = catalogSearchText(
+          [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
+        )
         label.innerHTML = `<input type="checkbox"><span><strong></strong><small></small></span>`
         const checkbox = label.querySelector('input')
         const thumb = exerciseGifThumb(exercise)
