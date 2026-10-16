@@ -175,6 +175,19 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
 
 export async function deleteExerciseVideo(env, db, trainerId, id) {
   if (!env.MEDIA) return storageUnavailable();
+  const shared = Number(
+    (
+      await db.query(
+        "SELECT COUNT(*) AS n FROM exercises WHERE video_id=$1 AND trainer_id<>$2",
+        [id, trainerId],
+      )
+    ).rows[0]?.n || 0,
+  );
+  if (shared)
+    return {
+      error: `Este vídeo está sendo usado por ${shared} exercício(s) de personal(is). Remova essas cópias antes de apagar o arquivo.`,
+      status: 409,
+    };
   const row = (
     await db.query(
       'SELECT object_key AS "objectKey" FROM exercise_videos WHERE id=$1 AND trainer_id=$2 LIMIT 1',
@@ -188,9 +201,15 @@ export async function deleteExerciseVideo(env, db, trainerId, id) {
     console.error("[exercise-videos] falha ao excluir no R2", error?.message);
     return { error: "A Cloudflare não conseguiu excluir o vídeo agora. Tente novamente em instantes.", status: 503 };
   }
-  await db.query("DELETE FROM exercise_videos WHERE id=$1 AND trainer_id=$2", [
-    id,
-    trainerId,
+  await db.batch([
+    {
+      sql: "UPDATE exercises SET video_id=NULL WHERE video_id=$1 AND trainer_id=$2",
+      values: [id, trainerId],
+    },
+    {
+      sql: "DELETE FROM exercise_videos WHERE id=$1 AND trainer_id=$2",
+      values: [id, trainerId],
+    },
   ]);
   return null;
 }

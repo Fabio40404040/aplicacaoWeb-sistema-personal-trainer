@@ -1459,7 +1459,7 @@ export function initDashboard() {
       eyebrow: 'Biblioteca de exercícios',
       title: 'Excluir exercício?',
       message: `O exercício “${exercise.name}” será removido da biblioteca.`,
-      note: 'Esta ação não pode ser desfeita.',
+      note: 'O GIF e o vídeo continuam guardados nas respectivas abas. Para apagar uma pasta completa, use “Excluir pasta”.',
     })
     if (!ok) return
     remove.disabled = true

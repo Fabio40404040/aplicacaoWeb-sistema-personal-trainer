@@ -11,7 +11,6 @@ import { getData } from './state.js'
 import {
   persistRecord,
   saveFolderOrder,
-  syncFarisaLibraryFiles,
   syncRemoteData,
   uploadExerciseGif,
   uploadExerciseVideo,
@@ -147,9 +146,9 @@ function paintLibraryPending() {
   const videoIds = new Set(
     (data.exercises || []).flatMap((item) => [item.videoId, item.id]).filter(Boolean),
   )
-  const looseGifs = (data.exerciseGifs || []).filter((item) => !gifIds.has(item.id)).length
-  const looseVideos = (data.exerciseVideos || []).filter((item) => !videoIds.has(item.id)).length
-  const total = looseGifs + looseVideos
+  const looseGifs = (data.exerciseGifs || []).filter((item) => !gifIds.has(item.id))
+  const looseVideos = (data.exerciseVideos || []).filter((item) => !videoIds.has(item.id))
+  const total = looseGifs.length + looseVideos.length
   if (!total) {
     current?.remove()
     return
@@ -160,22 +159,51 @@ function paintLibraryPending() {
   alert.innerHTML = `
     <div>
       <strong>⚠️ ${total} arquivo(s) ainda não aparecem para os personais</strong>
-      <p>${looseGifs} GIF(s) e ${looseVideos} vídeo(s) ainda precisam virar exercícios.</p>
+      <p>${looseGifs.length} GIF(s) e ${looseVideos.length} vídeo(s) ainda precisam virar exercícios.</p>
     </div>
     <button class="button button--primary" type="button">Transformar em exercícios</button>`
   alert.querySelector('button').addEventListener('click', async (event) => {
     const button = event.currentTarget
     button.disabled = true
     button.textContent = 'Criando exercícios…'
-    try {
-      const result = await syncFarisaLibraryFiles()
-      await syncRemoteData()
-      showToast(`${Number(result?.created || 0)} exercício(s) criado(s). Já aparecem para os personais.`)
-    } catch (error) {
-      button.disabled = false
-      button.textContent = 'Transformar em exercícios'
-      showToast(error.message)
+    const pending = [
+      ...looseGifs.map((gif) => ({
+        name: gif.name,
+        group: gif.group,
+        equipment: 'Sem equipamento',
+        instructions: '',
+        difficulty: 'Intermediário',
+        mediaType: 'gif',
+        gifId: gif.id,
+        videoId: '',
+      })),
+      ...looseVideos.map((video) => ({
+        name: video.name,
+        group: video.group,
+        equipment: video.equipment || 'Sem equipamento',
+        instructions: video.instructions || '',
+        difficulty: video.difficulty || 'Intermediário',
+        mediaType: 'video',
+        gifId: '',
+        videoId: video.id,
+      })),
+    ]
+    let created = 0
+    const failures = []
+    for (const record of pending) {
+      try {
+        await persistRecord('exercises', record)
+        created += 1
+      } catch (error) {
+        failures.push(`${record.name}: ${error.message}`)
+      }
     }
+    await syncRemoteData().catch(() => {})
+    if (failures.length)
+      showToast(`${created} exercício(s) criado(s). ${failures.length} não foram criados: ${failures[0]}`)
+    else showToast(`${created} exercício(s) criado(s). Já aparecem para os personais.`)
+    button.disabled = false
+    button.textContent = 'Transformar em exercícios'
   })
   if (!current) {
     const header = page.querySelector('.library-header')

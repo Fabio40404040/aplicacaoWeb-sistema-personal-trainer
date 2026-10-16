@@ -154,6 +154,19 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
 
 export async function deleteExerciseGif(env, db, trainerId, id) {
   if (!env.MEDIA) return storageUnavailable();
+  const shared = Number(
+    (
+      await db.query(
+        "SELECT COUNT(*) AS n FROM exercises WHERE gif_id=$1 AND trainer_id<>$2",
+        [id, trainerId],
+      )
+    ).rows[0]?.n || 0,
+  );
+  if (shared)
+    return {
+      error: `Este GIF está sendo usado por ${shared} exercício(s) de personal(is). Remova essas cópias antes de apagar o arquivo.`,
+      status: 409,
+    };
   const row = (
     await db.query(
       `SELECT object_key AS "objectKey",frame_key AS "frameKey"
