@@ -83,6 +83,8 @@ function setView(page, view) {
 function createTabs(page) {
   if (page.querySelector('.library-tabs')) return
   const heading = page.querySelector('.page-heading')
+  const header = document.createElement('div')
+  header.className = 'library-header'
   const tabs = document.createElement('div')
   tabs.className = 'library-tabs'
   tabs.setAttribute('role', 'tablist')
@@ -95,7 +97,10 @@ function createTabs(page) {
     const tab = event.target.closest('[data-library-tab]')
     if (tab) setView(page, tab.dataset.libraryTab)
   })
-  heading?.after(tabs)
+  if (heading) {
+    heading.before(header)
+    header.append(heading, tabs)
+  } else page.prepend(tabs)
   setView(page, readView())
   paintCounts()
   window.addEventListener('farisa:data-changed', paintCounts)

@@ -267,7 +267,7 @@ function supportBanner() {
   const exit = el('button', `button ${library ? 'library-exit-button' : 'button--secondary'}`, library ? '' : 'Encerrar acesso')
   exit.type = 'button'
   if (library) {
-    exit.replaceChildren(document.createTextNode('← Sair'), el('span', 'library-exit-label', ' da Biblioteca'))
+    exit.replaceChildren(document.createTextNode('📚 Sair'), el('span', 'library-exit-label', ' da Biblioteca'))
     exit.setAttribute('aria-label', 'Sair da Biblioteca FARISA')
     exit.title = 'Fechar a Biblioteca FARISA e voltar ao acesso do personal'
   }
@@ -280,10 +280,11 @@ function supportBanner() {
   })
   bar.append(exit)
   if (library) {
-    // No modo Biblioteca FARISA o identificador fica no cabeçalho da própria
-    // página. Assim não cobre os avisos exibidos no canto inferior da tela.
+    // Fica junto das outras ações da biblioteca: não disputa largura com o
+    // título e não cobre os avisos exibidos no canto inferior da tela.
     const heading = document.querySelector('[data-route="exercicios"] .page-heading')
-    ;(heading || document.body).append(bar)
+    const actions = heading?.querySelector('.library-heading-actions')
+    ;(actions || heading || document.body).append(bar)
   } else {
     document.body.prepend(bar)
     document.body.classList.add('has-support-banner')
