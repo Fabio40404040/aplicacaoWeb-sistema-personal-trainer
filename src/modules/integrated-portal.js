@@ -6,6 +6,7 @@ import {
   loadExerciseGifFrame,
   loadExerciseVideo,
   persistReadyProgram,
+  removeRecord,
   setReadyProgramSitePreview,
   persistRecord,
   removeReadyProgram,
@@ -396,7 +397,9 @@ function catalogSearch(groupName, total) {
   holder.append(input)
   input.addEventListener('input', () => {
     const query = catalogSearchText(input.value)
-    const rows = [...input.closest('.ready-exercise-options').querySelectorAll('.ready-exercise-option')]
+    const rows = [
+      ...input.closest('.ready-exercise-options').querySelectorAll('[data-search]'),
+    ]
     let visible = 0
     rows.forEach((row) => {
       const matches = !query || row.dataset.search.includes(query)
@@ -407,6 +410,38 @@ function catalogSearch(groupName, total) {
   })
   fragment.append(holder, empty)
   return fragment
+}
+
+function catalogDeleteButton(exercise, form, mapName, rerender) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'catalog-exercise-delete'
+  button.textContent = 'Apagar'
+  button.setAttribute('aria-label', `Apagar ${exercise.name}`)
+  button.title = `Apagar o exercício próprio ${exercise.name}`
+  button.addEventListener('click', async () => {
+    const ok = await askConfirm({
+      eyebrow: 'Criador de ficha',
+      title: 'Apagar exercício repetido?',
+      message: `O exercício “${exercise.name}” será removido das suas pastas.`,
+      note: 'O GIF e o MP4 continuam guardados. Se o exercício já estiver em uma ficha salva, o sistema impedirá a exclusão.',
+      confirmLabel: 'Apagar exercício',
+      danger: true,
+    })
+    if (!ok) return
+    button.disabled = true
+    try {
+      await removeRecord('exercises', exercise.id)
+      form[mapName]?.delete(String(exercise.id))
+      await syncRemoteData()
+      showToast('Exercício apagado. O GIF e o MP4 foram preservados.')
+      rerender()
+    } catch (error) {
+      button.disabled = false
+      showToast(error.message)
+    }
+  })
+  return button
 }
 
 function renderWorkoutExerciseCatalog(form) {
@@ -445,9 +480,6 @@ function renderWorkoutExerciseCatalog(form) {
         const assignment = form.workoutPrescriptionMap.get(exerciseId)
         const label = document.createElement('label')
         label.className = 'ready-exercise-option'
-        label.dataset.search = catalogSearchText(
-          [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
-        )
         label.innerHTML = `<input type="checkbox"><span><strong></strong><small></small></span>`
         const checkbox = label.querySelector('input')
         const thumb = exerciseGifThumb(exercise)
@@ -504,7 +536,25 @@ function renderWorkoutExerciseCatalog(form) {
           )
           renderWorkoutPrescriptionBuilder(form)
         })
-        options.append(label)
+        if (exercise.library) options.append(label)
+        else {
+          const row = document.createElement('div')
+          row.className = 'ready-exercise-option-row'
+          row.dataset.search = catalogSearchText(
+            [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
+          )
+          row.append(
+            label,
+            catalogDeleteButton(exercise, form, 'workoutPrescriptionMap', () =>
+              renderWorkoutWizard(form),
+            ),
+          )
+          options.append(row)
+        }
+        if (exercise.library)
+          label.dataset.search = catalogSearchText(
+            [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
+          )
       })
       return details
     }),
@@ -1048,9 +1098,6 @@ function renderReadyExerciseCatalog(form) {
         const assignment = form.readyPrescriptionMap.get(String(exercise.id))
         const label = document.createElement('label')
         label.className = 'ready-exercise-option'
-        label.dataset.search = catalogSearchText(
-          [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
-        )
         label.innerHTML = `<input type="checkbox"><span><strong></strong><small></small></span>`
         const checkbox = label.querySelector('input')
         const thumb = exerciseGifThumb(exercise)
@@ -1107,7 +1154,25 @@ function renderReadyExerciseCatalog(form) {
           )
           renderReadyPrescriptionBuilder(form)
         })
-        options.append(label)
+        if (exercise.library) options.append(label)
+        else {
+          const row = document.createElement('div')
+          row.className = 'ready-exercise-option-row'
+          row.dataset.search = catalogSearchText(
+            [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
+          )
+          row.append(
+            label,
+            catalogDeleteButton(exercise, form, 'readyPrescriptionMap', () =>
+              renderReadyWizard(form),
+            ),
+          )
+          options.append(row)
+        }
+        if (exercise.library)
+          label.dataset.search = catalogSearchText(
+            [exercise.name, exercise.equipment, exercise.difficulty].filter(Boolean).join(' '),
+          )
       })
       return details
     }),

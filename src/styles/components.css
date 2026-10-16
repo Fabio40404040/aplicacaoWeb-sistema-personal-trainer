@@ -1194,6 +1194,35 @@ td {
 .ready-exercise-option[hidden] {
   display: none;
 }
+.ready-exercise-option-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 6px;
+}
+.ready-exercise-option-row[hidden] {
+  display: none;
+}
+.catalog-exercise-delete {
+  align-self: stretch;
+  padding: 7px 10px;
+  border: 1px solid #f1b8b4;
+  border-radius: 9px;
+  color: #a52620;
+  background: #fff7f6;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.catalog-exercise-delete:hover {
+  border-color: #d65b54;
+  background: #ffebe9;
+}
+.catalog-exercise-delete:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
 .ready-exercise-option input {
   margin-top: 3px;
 }
