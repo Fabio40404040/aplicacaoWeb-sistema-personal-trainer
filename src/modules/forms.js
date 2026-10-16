@@ -580,9 +580,14 @@ export function initForms() {
     const group = event.detail
     if (group) {
       // form.reset() já desmarcou tudo; só marca a caixinha desta pasta.
+      const cleanGroup = String(group).trim()
+      form.querySelectorAll('input[name="group"]').forEach((input) => {
+        input.checked = input.value.trim() === cleanGroup
+      })
+      // Atualiza o seletor de MP4 com o grupo que acabou de ser marcado.
       form
-        .querySelectorAll('input[name="group"]')
-        .forEach((input) => (input.checked = input.value === group))
+        .querySelector('input[name="group"]:checked')
+        ?.dispatchEvent(new Event('change', { bubbles: true }))
     }
     openModal('exercise')
   })

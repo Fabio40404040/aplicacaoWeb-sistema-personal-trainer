@@ -857,8 +857,12 @@ function paintGroupCount(target, total, selected, label) {
   target.append(document.createTextNode(' · '), mark)
 }
 
-function configureMuscleGroupFields() {
+function configureMuscleGroupFields(preferredGroup = '') {
   const values = allGroupNames()
+  const requested = String(preferredGroup || '').trim()
+  // A pasta clicada no montador precisa aparecer mesmo quando os dados
+  // remotos acabaram de chegar e a lista de caixas ainda estava antiga.
+  if (requested && !values.includes(requested)) values.push(requested)
   // Um exercício pode trabalhar mais de um grupo (ex.: afundo no smith =
   // quadríceps e glúteos), então isto é uma lista de caixas de marcar, não
   // um select de escolha única.
@@ -877,6 +881,10 @@ function configureMuscleGroupFields() {
         input.name = 'group'
         input.value = value
         input.checked = previouslyChecked.has(value)
+        input.addEventListener('change', () => {
+          const form = input.closest('form')
+          if (form) exerciseVideoSelect(form)
+        })
         option.append(input, document.createTextNode(value))
         return option
       }),
@@ -2091,6 +2099,12 @@ export function initIntegratedPortal() {
   enhanceWorkout()
   enhanceExercise()
   configureMuscleGroupFields()
+  // Este listener é registrado antes do módulo de formulários. Portanto,
+  // garante primeiro que a caixa da pasta existe; em seguida o formulário
+  // consegue marcá-la ao abrir o cadastro pelo montador de fichas.
+  window.addEventListener('farisa:new-exercise', (event) =>
+    configureMuscleGroupFields(event.detail),
+  )
   createReadyWorkoutLibraryPanel()
   createExerciseVideoLibraryPanel()
   enhanceAssessment()
@@ -2122,6 +2136,7 @@ export function initIntegratedPortal() {
     })
   })
   window.addEventListener('farisa:data-changed', () => {
+    configureMuscleGroupFields()
     renderOperations()
     renderReadyWorkoutLibrary()
     renderExerciseVideoLibrary()
