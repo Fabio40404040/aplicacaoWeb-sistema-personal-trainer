@@ -198,8 +198,17 @@ function paintLibraryPending() {
         failures.push(`${record.name}: ${error.message}`)
       }
     }
-    await syncRemoteData().catch(() => {})
-    if (failures.length)
+    let refreshFailure = ''
+    try {
+      await syncRemoteData()
+    } catch (error) {
+      refreshFailure = error.message
+    }
+    if (refreshFailure)
+      showToast(
+        `${created} exercício(s) criado(s)${failures.length ? ` e ${failures.length} não criado(s)` : ''}, mas a tela não atualizou: ${refreshFailure}. Recarregue a página.`,
+      )
+    else if (failures.length)
       showToast(`${created} exercício(s) criado(s). ${failures.length} não foram criados: ${failures[0]}`)
     else showToast(`${created} exercício(s) criado(s). Já aparecem para os personais.`)
     button.disabled = false
@@ -504,17 +513,27 @@ async function reviewAndSave(files, fallbackGroup) {
       }
       bar.value += 1
     }
-    await rememberFolderOrder(chosen).catch(() => {})
-    await syncRemoteData().catch(() => {})
+    const warnings = []
+    try {
+      await rememberFolderOrder(chosen)
+    } catch (error) {
+      warnings.push(`a ordem das pastas não foi salva: ${error.message}`)
+    }
+    try {
+      await syncRemoteData()
+    } catch (error) {
+      warnings.push(`a tela não atualizou: ${error.message}. Recarregue a página`)
+    }
     delete dialog.dataset.busy
     save.disabled = false
     const parts = []
     if (created) parts.push(`${created} exercício(s) criado(s)`)
     if (updated) parts.push(`${updated} atualizado(s) com a nova mídia`)
     if (failures.length) parts.push(`${failures.length} com erro: ${failures.slice(0, 2).join(' | ')}`)
+    if (warnings.length) parts.push(...warnings)
     status.textContent = `${parts.join('. ')}.`
     showToast(parts[0] ? `${parts.join('. ')}.` : 'Nada foi salvo.')
-    if (!failures.length) dialog.close()
+    if (!failures.length && !warnings.length) dialog.close()
   }
   dialog.showModal()
 }

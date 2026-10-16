@@ -21,52 +21,46 @@ export async function ensureLibraryTrainer(db) {
   await db.query('UPDATE trainers SET email_verified_at=COALESCE(email_verified_at, CURRENT_TIMESTAMP) WHERE id=$1', [LIBRARY_ID]).catch(() => {})
 }
 
-// GIF ou MP4 enviado sozinho na Biblioteca FARISA (aba GIFs/Vídeos) ainda
-// não é um exercício — e os personais só veem exercícios. Este botão do admin
-// cria um exercício para cada arquivo solto, com o nome e a pasta do arquivo.
-// Não mexe no que já existe.
+// Reparo para arquivos antigos que ainda estejam soltos. As três operações
+// seguem no mesmo lote do D1: se uma falhar, a sincronização não informa
+// sucesso parcial nem esconde o erro que precisa ser investigado.
 export async function syncLibraryExercises(db) {
-  try {
-    await db.query(
-      `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,difficulty,media_type,gif_id)
-       SELECT g.trainer_id, g.name, g.muscle_group, 'Sem equipamento', 'Intermediário', 'gif', g.id
-       FROM exercise_gifs g
-       WHERE g.trainer_id=$1
-         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND e.gif_id=g.id)`,
-      [LIBRARY_ID],
-    )
-  } catch {
-    /* sem a tabela de GIFs */
-  }
-  try {
-    // Vídeo enviado pela aba Vídeos: o exercício nasce com o mesmo id do vídeo.
-    await db.query(
-      `UPDATE exercises SET video_id=id
-       WHERE trainer_id=$1 AND video_id IS NULL AND id IN (SELECT id FROM exercise_videos WHERE trainer_id=$1)`,
-      [LIBRARY_ID],
-    )
-    await db.query(
-      `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,video_id)
-       SELECT v.trainer_id, v.name, v.muscle_group, COALESCE(NULLIF(trim(v.equipment),''),'Sem equipamento'),
-         v.instructions, COALESCE(NULLIF(trim(v.difficulty),''),'Intermediário'), 'video', v.id
-       FROM exercise_videos v
-       WHERE v.trainer_id=$1
-         AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
-      [LIBRARY_ID],
-    )
-  } catch {
-    /* sem a coluna video_id */
-  }
+  await db.batch([
+    {
+      sql: `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,difficulty,media_type,gif_id)
+        SELECT g.trainer_id, g.name, g.muscle_group, 'Sem equipamento', 'Intermediário', 'gif', g.id
+        FROM exercise_gifs g
+        WHERE g.trainer_id=$1
+          AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND e.gif_id=g.id)`,
+      values: [LIBRARY_ID],
+    },
+    {
+      sql: `UPDATE exercises SET video_id=id
+        WHERE trainer_id=$1 AND video_id IS NULL
+          AND id IN (SELECT id FROM exercise_videos WHERE trainer_id=$1)
+          AND NOT EXISTS (
+            SELECT 1 FROM exercises linked
+            WHERE linked.trainer_id=exercises.trainer_id
+              AND linked.video_id=exercises.id AND linked.id<>exercises.id
+          )`,
+      values: [LIBRARY_ID],
+    },
+    {
+      sql: `INSERT INTO exercises (trainer_id,name,muscle_group,equipment,instructions,difficulty,media_type,video_id)
+        SELECT v.trainer_id, v.name, v.muscle_group, COALESCE(NULLIF(trim(v.equipment),''),'Sem equipamento'),
+          v.instructions, COALESCE(NULLIF(trim(v.difficulty),''),'Intermediário'), 'video', v.id
+        FROM exercise_videos v
+        WHERE v.trainer_id=$1
+          AND NOT EXISTS (SELECT 1 FROM exercises e WHERE e.trainer_id=$1 AND (e.video_id=v.id OR e.id=v.id))`,
+      values: [LIBRARY_ID],
+    },
+  ])
 }
 
 // Números para a aba do admin.
 export async function libraryOverview(db) {
   const count = async (sql) => {
-    try {
-      return Number((await db.query(sql, [LIBRARY_ID])).rows[0]?.n || 0)
-    } catch {
-      return 0
-    }
+    return Number((await db.query(sql, [LIBRARY_ID])).rows[0]?.n || 0)
   }
   const [exercises, gifs, videos, folders, looseGifs, looseVideos] = await Promise.all([
     count('SELECT COUNT(*) AS n FROM exercises WHERE trainer_id=$1'),
@@ -109,11 +103,49 @@ export async function adminOpenLibrary(env, db, admin) {
 }
 
 export async function adminSyncLibrary(db, admin) {
-  const before = await libraryOverview(db)
-  await syncLibraryExercises(db)
-  const after = await libraryOverview(db)
-  await audit(db, admin, 'library_synced', { type: 'library', id: LIBRARY_ID, label: LIBRARY_NAME }, `${after.exercises - before.exercises} exercício(s) criados`)
-  return { data: { created: after.exercises - before.exercises, ...after } }
+  let before
+  try {
+    before = await libraryOverview(db)
+  } catch (error) {
+    console.error('[farisa-library] falha ao conferir biblioteca antes da sincronização', error?.message)
+    return {
+      error: 'Não foi possível conferir a Biblioteca FARISA antes da sincronização. Tente novamente em instantes.',
+      status: 503,
+    }
+  }
+  try {
+    await syncLibraryExercises(db)
+  } catch (error) {
+    console.error('[farisa-library] falha ao sincronizar exercícios', error?.message)
+    return {
+      error: 'A Biblioteca FARISA não conseguiu transformar os arquivos em exercícios. O lote foi interrompido; tente novamente em instantes.',
+      status: 503,
+    }
+  }
+  let after
+  try {
+    after = await libraryOverview(db)
+  } catch (error) {
+    console.error('[farisa-library] sincronizou, mas falhou ao conferir o resultado', error?.message)
+    return {
+      error: 'A sincronização foi executada, mas o sistema não conseguiu conferir o resultado. Atualize a página antes de tentar novamente.',
+      status: 503,
+    }
+  }
+  if (after.looseGifs || after.looseVideos)
+    return {
+      error: `A sincronização terminou, mas ainda restaram ${after.looseGifs} GIF(s) e ${after.looseVideos} vídeo(s) sem exercício. Tente novamente ou consulte os erros do sistema.`,
+      status: 409,
+    }
+  const created = after.exercises - before.exercises
+  await audit(
+    db,
+    admin,
+    'library_synced',
+    { type: 'library', id: LIBRARY_ID, label: LIBRARY_NAME },
+    `${created} exercício(s) criados`,
+  ).catch((error) => console.error('[farisa-library] sincronizou, mas falhou ao registrar auditoria', error?.message))
+  return { data: { created, ...after } }
 }
 
 const exerciseKeyPart = (value) =>
