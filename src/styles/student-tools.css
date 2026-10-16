@@ -1024,6 +1024,7 @@
 }
 .student-timer-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
   width: 100%;
@@ -1034,6 +1035,11 @@
 .student-timer-main {
   flex: 1;
   max-width: 220px;
+}
+.student-timer-silence {
+  width: 100%;
+  border-color: #f59e0b;
+  color: #fbbf24;
 }
 
 /* Composição corporal (principal) e IMC (referência) */
