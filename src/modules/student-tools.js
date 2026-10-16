@@ -50,7 +50,7 @@ let beepAudio = null;
 let beepEndTimer = 0;
 let beepEnded = null;
 let webBeepTones = [];
-const BEEP_STARTS = [0, 0.5, 1, 1.5, 2, 2.5];
+const BEEP_STARTS = [0, 0.9, 1.8, 2.7, 3.6, 4.5];
 const BEEP_LENGTH = 0.24;
 const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
 function beepWav() {
@@ -173,7 +173,7 @@ function beep(onEnd) {
   }
   if (!viaAudio) webBeep();
   try {
-    navigator.vibrate?.([220, 280, 220, 280, 220, 280, 220, 280, 220, 280, 220]);
+    navigator.vibrate?.([220, 680, 220, 680, 220, 680, 220, 680, 220, 680, 220]);
   } catch {
     /* sem vibração (o iPhone não vibra pelo navegador) */
   }
