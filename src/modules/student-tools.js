@@ -55,10 +55,12 @@ let beepRunId = 0;
 // O pequeno silêncio inicial permite autorizar o <audio> no toque em Iniciar
 // sem soltar um bipe naquele momento. No iPhone, reproduzir o elemento como
 // "muted" não garante que ele poderá tocar com som quando o tempo acabar.
-const BEEP_LEAD = 0.18;
-const BEEP_STARTS = [0, 0.9, 1.8, 2.7, 3.6, 4.5].map((start) => start + BEEP_LEAD);
+const BEEP_LEAD = 0.8;
+const BEEP_OFFSETS = [0, 0.9, 1.8, 2.7, 3.6, 4.5];
+const BEEP_STARTS = BEEP_OFFSETS.map((start) => start + BEEP_LEAD);
 const BEEP_LENGTH = 0.24;
 const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
+const BEEP_SPAN = BEEP_OFFSETS.at(-1) + BEEP_LENGTH;
 function beepWav() {
   const rate = 8000;
   const samples = Math.round(rate * BEEP_DURATION);
@@ -107,6 +109,9 @@ export function unlockSound() {
       beepAudio.pause();
       beepAudio.currentTime = 0;
     };
+    // Não depende apenas da Promise do Safari: em aparelhos mais lentos ela
+    // pode resolver tarde demais. Esta trava encerra a liberação antes do tom.
+    window.setTimeout(release, 120);
     if (playing?.then) playing.then(release, () => {});
     else release();
   } catch {
@@ -128,7 +133,8 @@ function playHtmlBeep(runId) {
   if (!beepAudio || runId !== beepRunId) return false;
   try {
     beepAudio.muted = false;
-    beepAudio.currentTime = 0;
+    // O alarme real pula o trecho silencioso usado somente na autorização.
+    beepAudio.currentTime = BEEP_LEAD;
     const playing = beepAudio.play();
     // Se o iOS negar o elemento de mídia, tenta o segundo mecanismo.
     playing?.catch?.(() => {
@@ -145,7 +151,7 @@ function scheduleWebBeep(runId) {
     if (!audioContext && Context) audioContext = new Context();
     const context = audioContext;
     if (!context || context.state !== "running" || runId !== beepRunId) return false;
-    webBeepTones = BEEP_STARTS.map((start) => {
+    webBeepTones = BEEP_OFFSETS.map((start) => {
       const tone = context.createOscillator();
       const gain = context.createGain();
       const begins = context.currentTime + 0.03 + start;
@@ -227,7 +233,7 @@ function beep(onEnd) {
     () => {
       if (runId === beepRunId) stopBeep();
     },
-    BEEP_DURATION * 1000 + 250,
+    BEEP_SPAN * 1000 + 250,
   );
 }
 
@@ -257,10 +263,10 @@ export function restTimer(exercise) {
     idle();
   };
   const start = () => {
+    stopRunningTimer?.();
     // Nunca deixa o alarme anterior continuar sobre uma nova contagem.
     stopBeep();
     unlockSound();
-    stopRunningTimer?.();
     stopRunningTimer = stop;
     // Conta pelo relógio: continua certo mesmo se a aba ficar em segundo plano.
     const endsAt = Date.now() + total * 1000;
@@ -297,7 +303,17 @@ export function restTimer(exercise) {
 const TIMER_KEY = "farisa-student-timer";
 const TIMER_PRESETS = [30, 45, 60, 90, 120, 180];
 // Estado fora do cartão: a área do aluno se redesenha e o tempo continua.
-const freeTimer = { total: 60, endsAt: 0, left: 0, done: false, zeroed: false, ringing: false, paint: null, interval: 0 };
+const freeTimer = {
+  total: 60,
+  endsAt: 0,
+  left: 0,
+  done: false,
+  zeroed: false,
+  ringing: false,
+  paint: null,
+  stop: null,
+  interval: 0,
+};
 try {
   const saved = Number(localStorage.getItem(TIMER_KEY));
   if (saved >= 5 && saved <= 3600) freeTimer.total = saved;
@@ -317,6 +333,7 @@ function timerTick() {
     freeTimer.ringing = true;
     window.clearInterval(freeTimer.interval);
     freeTimer.interval = 0;
+    if (stopRunningTimer === freeTimer.stop) stopRunningTimer = null;
     beep(() => {
       freeTimer.ringing = false;
       freeTimer.paint?.();
@@ -380,6 +397,17 @@ export function freeTimerCard() {
   card.append(adjust, presets, actions);
 
   const running = () => Boolean(freeTimer.endsAt);
+  const stopFreeTimer = () => {
+    if (running()) freeTimer.left = timerLeft();
+    freeTimer.endsAt = 0;
+    window.clearInterval(freeTimer.interval);
+    freeTimer.interval = 0;
+    if (freeTimer.ringing) stopBeep();
+    freeTimer.ringing = false;
+    if (stopRunningTimer === stopFreeTimer) stopRunningTimer = null;
+    freeTimer.paint?.();
+  };
+  freeTimer.stop = stopFreeTimer;
   const choose = (seconds) => {
     freeTimer.total = Math.max(5, Math.min(3600, seconds));
     freeTimer.endsAt = 0;
@@ -390,6 +418,7 @@ export function freeTimerCard() {
     stopBeep();
     window.clearInterval(freeTimer.interval);
     freeTimer.interval = 0;
+    if (stopRunningTimer === stopFreeTimer) stopRunningTimer = null;
     try {
       localStorage.setItem(TIMER_KEY, String(freeTimer.total));
     } catch {
@@ -413,12 +442,12 @@ export function freeTimerCard() {
     stopBeep();
     freeTimer.ringing = false;
     if (running()) {
-      freeTimer.left = timerLeft();
-      freeTimer.endsAt = 0;
-      window.clearInterval(freeTimer.interval);
-      freeTimer.interval = 0;
+      stopFreeTimer();
     } else {
+      stopRunningTimer?.();
+      stopBeep();
       unlockSound();
+      stopRunningTimer = stopFreeTimer;
       if (freeTimer.done) freeTimer.left = 0;
       freeTimer.done = false;
       freeTimer.zeroed = false;
@@ -465,7 +494,10 @@ export function freeTimerCard() {
     );
   }
   freeTimer.paint = paint;
-  if (running() && !freeTimer.interval) freeTimer.interval = window.setInterval(timerTick, 250);
+  if (running()) {
+    stopRunningTimer = stopFreeTimer;
+    if (!freeTimer.interval) freeTimer.interval = window.setInterval(timerTick, 250);
+  }
   paint();
   return card;
 }
