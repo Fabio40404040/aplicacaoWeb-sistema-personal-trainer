@@ -320,9 +320,12 @@
 }
 .student-access {
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
   background: #18212d;
   color: #f5f7fb;
-  padding: 28px clamp(16px, 5vw, 70px);
+  padding: 28px clamp(16px, 5vw, 70px) max(28px, env(safe-area-inset-bottom));
 }
 .student-access > .brand {
   color: #f5f7fb;
@@ -331,12 +334,17 @@
 .student-access-card {
   display: grid;
   gap: 20px;
+  min-width: 0;
   width: min(100%, 510px);
   margin: 42px auto;
   padding: clamp(22px, 5vw, 42px);
   background: #243244;
   border: 1px solid #40546e;
   border-radius: 20px;
+}
+.student-access-card > *,
+.student-access-features > * {
+  min-width: 0;
 }
 .student-access-card fieldset {
   display: grid;
@@ -564,11 +572,28 @@
   margin-top: 18px;
 }
 @media (max-width: 600px) {
+  .student-access {
+    padding-inline: 12px;
+  }
+
+  .student-access > .brand {
+    max-width: 100%;
+  }
+
+  .student-access-card {
+    margin-block: 24px;
+    padding: 20px 16px;
+  }
+
   .student-access-features {
     grid-template-columns: 1fr;
   }
   .student-payment-actions {
     grid-template-columns: 1fr;
+  }
+
+  [data-student-logout] {
+    width: 100%;
   }
 }
 

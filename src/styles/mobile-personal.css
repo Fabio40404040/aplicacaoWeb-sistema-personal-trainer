@@ -14,16 +14,36 @@
   }
 
   .sidebar {
+    bottom: auto;
+    height: calc(100vh - var(--header-height));
+    height: calc(100dvh - var(--header-height));
+    max-height: calc(100dvh - var(--header-height));
+    min-height: 0;
     justify-content: flex-start;
     gap: 18px;
-    overflow-y: auto;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y;
     padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .sidebar nav,
+  .sidebar-footer {
+    flex: 0 0 auto;
+    min-width: 0;
   }
 
   .sidebar-footer {
     gap: 12px;
     margin-top: 0;
+    padding-bottom: 8px;
+  }
+
+  .main-content {
+    min-height: 100dvh;
+    overflow: visible;
   }
 }
 

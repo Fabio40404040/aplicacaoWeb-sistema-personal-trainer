@@ -75,6 +75,37 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+
+  .admin-topbar {
+    align-items: stretch;
+  }
+
+  .admin-topbar-brand,
+  .admin-topbar-user {
+    min-width: 0;
+  }
+
+  .admin-topbar-user {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .admin-topbar-user span {
+    flex: 1 1 150px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-topbar-user [data-admin-logout] {
+    flex: none;
+  }
+
+  .admin-main {
+    width: 100%;
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
 }
 
 /* Celular: sem rolagem lateral da página; só a tabela rola. */
@@ -414,6 +445,8 @@
   }
   .admin-tabs {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
     flex-wrap: nowrap;
   }
   .admin-tabs button {
