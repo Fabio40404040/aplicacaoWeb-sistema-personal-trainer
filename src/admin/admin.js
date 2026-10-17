@@ -1134,6 +1134,153 @@ function showTab(name) {
   if (name === 'planos') void renderPlans()
   if (name === 'faturamento') void renderBilling()
   if (name === 'biblioteca') void renderLibrary()
+  if (name === 'avisos') void renderBroadcast()
+}
+
+// Avisos por e-mail: para um personal, todos os personais ativos, ou teste
+// para o próprio administrador. Envia em partes e mostra o andamento.
+async function renderBroadcast() {
+  const root = $('[data-admin-broadcast]')
+  if (!root || root.dataset.ready) return
+  root.dataset.ready = '1'
+  if (!trainers.length) trainers = (await api('/admin/trainers').catch(() => null)) || []
+  const form = el('form', 'admin-broadcast')
+  const field = (label, control) => {
+    const wrap = el('label', 'field')
+    wrap.append(el('span', '', label), control)
+    return wrap
+  }
+  const audience = el('select')
+  audience.name = 'audience'
+  ;[
+    ['all', 'Todos os personais ativos'],
+    ['one', 'Um personal'],
+  ].forEach(([value, label]) => audience.append(Object.assign(el('option', '', label), { value })))
+  const who = el('select')
+  who.name = 'trainerId'
+  trainers
+    .filter((trainer) => trainer.id !== 'demo-trainer')
+    .slice()
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'))
+    .forEach((trainer) =>
+      who.append(Object.assign(el('option', '', `${trainer.name} — ${trainer.email}`), { value: trainer.id })),
+    )
+  const whoField = field('Personal', who)
+  whoField.hidden = true
+  const subject = el('input')
+  Object.assign(subject, { name: 'subject', required: true, maxLength: 150, placeholder: 'Ex.: Manutenção programada no domingo' })
+  const message = el('textarea')
+  Object.assign(message, {
+    name: 'message',
+    required: true,
+    rows: 8,
+    maxLength: 5000,
+    placeholder: 'Escreva o aviso. Deixe uma linha em branco para começar outro parágrafo.',
+  })
+  const count = el('p', 'admin-muted')
+  const status = el('p', 'admin-billing-note')
+  status.setAttribute('role', 'status')
+  const actions = el('div', 'admin-broadcast-actions')
+  const test = el('button', 'button button--secondary', 'Enviar teste para mim')
+  test.type = 'button'
+  const send = el('button', 'button button--primary', 'Enviar aviso')
+  send.type = 'submit'
+  actions.append(test, send)
+  form.append(field('Enviar para', audience), whoField, field('Assunto', subject), field('Mensagem', message), count, actions, status)
+  root.replaceChildren(form)
+
+  const payload = (extra = {}) => ({
+    audience: audience.value,
+    trainerId: who.value,
+    subject: subject.value,
+    message: message.value,
+    ...extra,
+  })
+  let total = 0
+  const refreshCount = async () => {
+    whoField.hidden = audience.value !== 'one'
+    count.textContent = 'Contando destinatários…'
+    try {
+      const data = await api('/admin/broadcast', { method: 'POST', body: JSON.stringify(payload({ preview: true })) })
+      total = data.total
+      count.textContent = `Será enviado para ${total} personal(is).`
+      send.disabled = false
+    } catch (error) {
+      total = 0
+      count.textContent = error.message
+      send.disabled = true
+    }
+  }
+  audience.addEventListener('change', refreshCount)
+  who.addEventListener('change', refreshCount)
+  void refreshCount()
+
+  // Envia todas as partes até acabar. Devolve quantos saíram e falharam.
+  const deliver = async (body) => {
+    let offset = 0
+    let sent = 0
+    let failed = 0
+    let all
+    do {
+      const data = await api('/admin/broadcast', { method: 'POST', body: JSON.stringify({ ...body, offset }) })
+      sent += data.sent
+      failed += data.failed
+      all = data.total
+      status.textContent = `Enviando… ${sent + failed} de ${all}`
+      offset = data.next
+    } while (offset !== null && offset !== undefined)
+    return { sent, failed, all }
+  }
+  const busy = (on) => {
+    test.disabled = on
+    send.disabled = on
+    audience.disabled = on
+    who.disabled = on
+  }
+  test.addEventListener('click', async () => {
+    if (!subject.reportValidity() || !message.reportValidity()) return
+    busy(true)
+    status.textContent = 'Enviando o teste…'
+    try {
+      const result = await deliver(payload({ audience: 'me' }))
+      status.textContent = result.sent
+        ? '✅ Teste enviado para o seu e-mail de administrador. Confira como ficou antes do envio.'
+        : '❌ O teste não saiu. Veja o motivo em Registro de ações → Erros do sistema.'
+    } catch (error) {
+      status.textContent = error.message
+    } finally {
+      busy(false)
+    }
+  })
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    if (!form.reportValidity() || !total) return
+    const target =
+      audience.value === 'one' ? who.selectedOptions[0]?.textContent || 'o personal escolhido' : `${total} personal(is) ativos`
+    const { box, form: confirmForm, status: confirmStatus, ok } = dialog({
+      title: 'Enviar aviso por e-mail?',
+      body: [
+        el('p', '', `Assunto: “${subject.value.trim()}”.`),
+        el('p', '', `Vai para: ${target}. Depois de enviado não dá para desfazer.`),
+      ],
+      confirmLabel: 'Enviar agora',
+    })
+    run(confirmForm, ok, confirmStatus, async () => {
+      box.close()
+      busy(true)
+      try {
+        const result = await deliver(payload())
+        status.textContent = result.failed
+          ? `Enviado para ${result.sent} de ${result.all}. ${result.failed} não saíram — veja em Registro de ações → Erros do sistema.`
+          : `✅ Aviso enviado para ${result.sent} personal(is).`
+      } catch (error) {
+        status.textContent = error.message
+      } finally {
+        busy(false)
+      }
+    })
+    box.showModal()
+  })
 }
 
 // Biblioteca FARISA: o admin abre a biblioteca no painel (mesmas ferramentas

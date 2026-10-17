@@ -803,3 +803,18 @@
 .admin-screen-error {
   white-space: pre-line;
 }
+
+/* Avisos por e-mail */
+.admin-broadcast {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+}
+.admin-broadcast textarea {
+  resize: vertical;
+}
+.admin-broadcast-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

@@ -47,6 +47,7 @@ import {
   startSaasCheckout,
 } from "./routes/saas.js";
 import { adminRecovery } from "./routes/admin-recovery.js";
+import { adminBroadcast } from "./routes/admin-broadcast.js";
 import { login } from "./routes/auth.js";
 import { personalRecovery } from "./routes/personal-recovery.js";
 import { studentAuth } from "./routes/student-auth.js";
@@ -452,6 +453,9 @@ async function handleRoutes(request, env) {
         const body = (await response.text().catch(() => "")).slice(0, 400);
         return { data: { ok: Boolean(response.ok), configured: true, status: response.status, from: env.EMAIL_FROM || env.BREVO_FROM_EMAIL || "", detail: body } };
       }
+      // Avisos por e-mail para os personais (um, todos ou teste para o admin).
+      if (request.method === "POST" && route === "admin/broadcast")
+        return adminBroadcast(db, admin, await readJson(request));
       if (request.method === "GET" && route === "admin/errors")
         return {
           data: (
