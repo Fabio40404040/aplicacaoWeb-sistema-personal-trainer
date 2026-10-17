@@ -4,6 +4,7 @@
 import "../styles/student-tools.css";
 import { FAT_BANDS, FAT_SCALE, bmiNote, fatClass } from "./body-composition.js";
 import { PHOTO_TIPS, framePhoto, poseModel, posesFor } from "./photo-poses.js";
+import { askConfirm } from "./utils.js";
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -491,7 +492,7 @@ function sparkline(values) {
 }
 
 // Devolve o bloco e uma função para acrescentar a carga recém-salva.
-export function loadTrend(exercise, tools) {
+export function loadTrend(exercise, tools, request) {
   const node = el("div", "student-trend");
   const key = `${exercise.workoutId}:${exercise.id}`;
   const history = [...(tools?.loadHistory?.[key] || [])];
@@ -520,6 +521,7 @@ export function loadTrend(exercise, tools) {
     if (numeric && history.length >= 3) head.append(sparkline(numbers));
     node.append(head);
     const details = el("div", "student-trend-list");
+    const actions = el("div", "student-trend-actions");
     const toggle = el("button", "student-link-button", "Ver histórico");
     toggle.type = "button";
     const list = el("ul");
@@ -530,7 +532,35 @@ export function loadTrend(exercise, tools) {
       list.hidden = !listOpen;
       toggle.textContent = listOpen ? "Ocultar histórico" : "Ver histórico";
     });
-    details.append(toggle);
+    const clear = el("button", "student-link-button student-trend-clear", "Limpar histórico");
+    clear.type = "button";
+    clear.addEventListener("click", async () => {
+      const confirmed = await askConfirm({
+        eyebrow: "Histórico de carga",
+        title: `Limpar histórico de ${exercise.name}?`,
+        message: "As cargas antigas deste exercício serão apagadas.",
+        note: "A carga atual continuará salva na ficha.",
+        confirmLabel: "Limpar histórico",
+      });
+      if (!confirmed) return;
+      clear.disabled = true;
+      clear.textContent = "Limpando…";
+      try {
+        await request(`workouts/${exercise.workoutId}/load-history`, { exerciseId: exercise.id }, "DELETE");
+        history.length = 0;
+        if (tools?.loadHistory) delete tools.loadHistory[key];
+        listOpen = false;
+        render();
+      } catch (error) {
+        clear.disabled = false;
+        clear.textContent = "Limpar histórico";
+        const failure = el("small", "student-trend-error", error.message);
+        failure.setAttribute("role", "alert");
+        details.append(failure);
+      }
+    });
+    actions.append(toggle, clear);
+    details.append(actions);
     [...history].reverse().forEach((item) => {
       const row = el("li");
       row.append(

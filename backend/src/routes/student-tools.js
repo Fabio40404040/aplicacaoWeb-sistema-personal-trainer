@@ -46,6 +46,32 @@ export async function recordLoad(db, workoutId, exerciseId, load, by, before) {
   }
 }
 
+// Apaga somente a evolução antiga de um exercício. A carga atual continua em
+// workout_exercises e, na próxima mudança, passa a ser o início do novo histórico.
+export async function clearLoadHistory(db, accountId, workoutId, body) {
+  if (!(await toolsReady(db))) return { error: "O histórico de carga ainda não está disponível.", status: 503 };
+  const exerciseId = String(body?.exerciseId || "");
+  if (!exerciseId) return { error: "Exercício inválido.", status: 400 };
+  const exercise = (
+    await db.query(
+      `SELECT 1 AS found
+       FROM workout_exercises we
+       JOIN workouts w ON w.id=we.workout_id
+       JOIN student_accounts a ON a.student_id=w.student_id
+       WHERE we.workout_id=$1 AND we.exercise_id=$2 AND a.id=$3
+         AND w.published_at IS NOT NULL
+       LIMIT 1`,
+      [workoutId, exerciseId, accountId],
+    )
+  ).rows[0];
+  if (!exercise) return { error: "Exercício não encontrado na sua ficha.", status: 404 };
+  const deleted = await db.query(
+    "DELETE FROM exercise_load_history WHERE workout_id=$1 AND exercise_id=$2 RETURNING id",
+    [workoutId, exerciseId],
+  );
+  return { data: { cleared: deleted.rows.length } };
+}
+
 const DAY = /^\d{4}-\d{2}-\d{2}$/u;
 const dayOffset = (days) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 // O dia vem do relógio do aluno (fuso dele): aceita até amanhã no horário do

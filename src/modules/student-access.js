@@ -655,7 +655,7 @@ function exerciseCard(exercise, uploadedVideos) {
   if (timer) body.append(timer);
   let trend = null;
   if (exercise.loadEditable && exercise.workoutId) {
-    trend = loadTrend(exercise, studentTools);
+    trend = loadTrend(exercise, studentTools, studentRequest);
     body.append(loadEditor(exercise, trend.add));
   }
 
