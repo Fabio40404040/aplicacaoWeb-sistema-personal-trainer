@@ -5785,3 +5785,48 @@ body.has-support-banner .main-content {
   justify-self: stretch;
   text-align: left;
 }
+
+/* Janela "Escolher vídeo" do montador de ficha: pastas começam fechadas */
+.video-folder-list {
+  display: grid;
+  gap: 8px;
+}
+.video-folder {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.video-folder summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+.video-folder-items {
+  display: grid;
+  gap: 4px;
+  padding: 0 8px 10px;
+}
+.video-folder-item {
+  text-align: left;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.video-folder-item:hover,
+.video-folder-item:focus-visible {
+  background: var(--blue-50);
+}
+.video-folder-item.is-current {
+  font-weight: 700;
+  color: var(--blue-700);
+}
+.video-folder-empty {
+  color: var(--muted, #667085);
+}
+.prescription-media-video {
+  font-size: 0.85rem;
+  font-weight: 600;
+}

@@ -298,6 +298,136 @@ function videoPickerSelect(exercise, { separateFolders = false } = {}) {
   return select
 }
 
+// Janela "Escolher vídeo" dos montadores de ficha: as pastas começam
+// fechadas; clicar na pasta abre a lista. A busca abre só as pastas que têm
+// o vídeo procurado. Devolve o id escolhido, null (sem vídeo) ou undefined
+// (cancelou).
+function videoNameById(id) {
+  if (!id) return ''
+  const all = [...(getData().exerciseVideos || []), ...(getData().libraryVideos || [])]
+  return all.find((video) => String(video.id) === String(id))?.name || ''
+}
+
+function openVideoFolderPicker(exercise) {
+  const dialog = document.createElement('dialog')
+  dialog.className = 'modal gif-picker video-folder-picker'
+  dialog.innerHTML = `<form method="dialog">
+    <header>
+      <div>
+        <span class="eyebrow eyebrow--blue">Vídeos MP4</span>
+        <h2>Escolher o vídeo do exercício</h2>
+      </div>
+      <button class="icon-button" type="button" data-video-close aria-label="Fechar">×</button>
+    </header>
+    <div class="modal-body">
+      <label class="field">
+        <span>Buscar vídeo</span>
+        <input type="search" data-video-search placeholder="Ex.: supino, agachamento">
+      </label>
+      <p class="video-folder-empty" data-video-empty hidden>Nenhum vídeo encontrado.</p>
+      <div class="video-folder-list" data-video-folders></div>
+    </div>
+    <footer>
+      <button class="button button--secondary" type="button" data-video-clear>Deixar sem vídeo</button>
+      <button class="button button--secondary" type="button" data-video-close>Cancelar</button>
+    </footer>
+  </form>`
+  const list = dialog.querySelector('[data-video-folders]')
+  const search = dialog.querySelector('[data-video-search]')
+  const empty = dialog.querySelector('[data-video-empty]')
+  const current = exercise.videoId ? String(exercise.videoId) : ''
+  const exerciseFolders = new Set(exerciseGroups(exercise))
+  const folders = []
+  const addFolders = (videos, prefix) => {
+    const groups = [...new Set(videos.map((video) => video.group || 'Outros'))]
+    groups.sort(
+      (a, b) =>
+        Number(!exerciseFolders.has(a)) - Number(!exerciseFolders.has(b)) ||
+        a.localeCompare(b, 'pt-BR'),
+    )
+    groups.forEach((groupName) => {
+      const items = videos
+        .filter((video) => (video.group || 'Outros') === groupName)
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
+      if (items.length) folders.push({ label: `${prefix} · ${groupName}`, items })
+    })
+  }
+  addFolders(getData().exerciseVideos || [], 'Meus vídeos')
+  addFolders(getData().libraryVideos || [], '📚 FARISA')
+
+  const folderNodes = folders.map((folder) => {
+    const details = document.createElement('details')
+    details.className = 'video-folder'
+    const summary = document.createElement('summary')
+    summary.textContent = `${folder.label} (${folder.items.length})`
+    const items = document.createElement('div')
+    items.className = 'video-folder-items'
+    const buttons = folder.items.map((video) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'video-folder-item'
+      button.dataset.videoId = String(video.id)
+      button.dataset.search = catalogSearchText(video.name)
+      button.textContent = video.name
+      if (String(video.id) === current) {
+        button.classList.add('is-current')
+        button.textContent = `${video.name} (atual)`
+      }
+      return button
+    })
+    items.append(...buttons)
+    details.append(summary, items)
+    list.append(details)
+    return { details, summary, buttons, folder }
+  })
+  if (!folders.length) {
+    empty.textContent = 'Nenhum vídeo MP4 enviado ainda.'
+    empty.hidden = false
+  }
+  document.body.append(dialog)
+
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (value) => {
+      if (settled) return
+      settled = true
+      dialog.close()
+      dialog.remove()
+      resolve(value)
+    }
+    dialog.addEventListener('close', () => finish(undefined))
+    dialog
+      .querySelectorAll('[data-video-close]')
+      .forEach((button) => button.addEventListener('click', () => finish(undefined)))
+    dialog.querySelector('[data-video-clear]').addEventListener('click', () => finish(null))
+    list.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-video-id]')
+      if (button) finish(button.dataset.videoId)
+    })
+    search.addEventListener('input', () => {
+      const query = catalogSearchText(search.value)
+      let visible = 0
+      folderNodes.forEach(({ details, summary, buttons, folder }) => {
+        let shown = 0
+        buttons.forEach((button) => {
+          const matches = !query || button.dataset.search.includes(query)
+          button.hidden = !matches
+          if (matches) shown += 1
+        })
+        details.hidden = shown === 0
+        details.open = Boolean(query) && shown > 0
+        summary.textContent = query
+          ? `${folder.label} (${shown} de ${folder.items.length})`
+          : `${folder.label} (${folder.items.length})`
+        visible += shown
+      })
+      empty.hidden = visible > 0 || !folders.length
+      if (folders.length) empty.textContent = 'Nenhum vídeo encontrado.'
+    })
+    dialog.showModal()
+  })
+}
+
 // Linha de mídia usada pelos dois montadores. `rerender` redesenha o
 // assistente depois de salvar, para a miniatura/seleção aparecer na hora.
 // O tipo ativo (GIF ou Vídeo) começa de acordo com o que o exercício já tem
@@ -343,24 +473,30 @@ function prescriptionMediaRow(exerciseId, rerender) {
   const videoLabel = document.createElement('span')
   videoLabel.className = 'prescription-media-label'
   videoLabel.textContent = 'Vídeo MP4 (área do aluno)'
-  // Nos montadores de ficha, os vídeos aparecem separados pela pasta/grupo.
-  // Os demais formulários que reutilizam o seletor mantêm o formato próprio.
-  const select = videoPickerSelect(exercise, { separateFolders: true })
-  select.addEventListener('change', async () => {
-    const value = select.value
-    if (!(await saveExerciseMedia(exercise, { videoId: value || null }, select)))
-      select.value = exercise.videoId ? String(exercise.videoId) : ''
-    else rerender()
+  // Nos montadores de ficha, os vídeos ficam numa janela com as pastas
+  // fechadas. Os demais formulários continuam com o seletor próprio.
+  const videoName = videoNameById(exercise.videoId)
+  const videoNow = document.createElement('span')
+  videoNow.className = videoName ? 'prescription-media-video' : 'prescription-media-empty'
+  videoNow.textContent = videoName || 'Sem vídeo MP4'
+  const chooseVideo = document.createElement('button')
+  chooseVideo.type = 'button'
+  chooseVideo.className = 'button button--secondary prescription-media-button'
+  chooseVideo.textContent = videoName ? 'Trocar vídeo' : 'Escolher vídeo'
+  chooseVideo.addEventListener('click', async () => {
+    const chosen = await openVideoFolderPicker(exercise)
+    if (chosen === undefined) return
+    if (await saveExerciseMedia(exercise, { videoId: chosen || null }, chooseVideo)) rerender()
   })
   const watch = document.createElement('button')
   watch.type = 'button'
   watch.className = 'button button--secondary prescription-media-button'
   watch.textContent = '▶ Ver'
-  watch.disabled = !select.value
+  watch.disabled = !videoName
   watch.addEventListener('click', () => {
-    if (select.value) void openVideoLightbox(select.value, exercise.name)
+    if (videoName) void openVideoLightbox(exercise.videoId, exercise.name)
   })
-  videoPart.append(videoLabel, select, watch)
+  videoPart.append(videoLabel, videoNow, chooseVideo, watch)
 
   row.append(gifPart, videoPart)
   return row
