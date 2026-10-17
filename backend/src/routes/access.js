@@ -108,7 +108,14 @@ export async function updateStudentAccess(db, trainerId, studentId, body) {
       ],
     },
   ]
-  if (paymentStatus === 'paid') {
+  // Recebimento novo só quando o personal confirma (caixinha "Registrar este
+  // recebimento"). Antes, cada vez que salvava com "Confirmado" — até ao
+  // pausar — gravava outro pagamento e inflava os Recebimentos.
+  const record =
+    body?.recordPayment === undefined
+      ? currentStudent.paymentStatus !== 'paid'
+      : ['1', 1, true, 'true'].includes(body.recordPayment)
+  if (paymentStatus === 'paid' && active && record) {
     queries.push({
       sql: `INSERT INTO payments (trainer_id, student_id, plan_code, amount_cents, status, method, provider, paid_at, billing_cycle)
             VALUES ($1,$2,$3,$4,'paid',$5,'manual',CURRENT_TIMESTAMP,$6)`,

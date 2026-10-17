@@ -6,6 +6,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
 import { withDb } from '../backend/src/lib/db.js'
+import { updateStudentAccess } from '../backend/src/routes/access.js'
 import { createCardPayment, mercadoPagoWebhook, trainerRefundStudent } from '../backend/src/routes/payments.js'
 import { payoutDisconnect, payoutSetMode, seal } from '../backend/src/routes/payout.js'
 import { approveSaasPayment, saasWebhook } from '../backend/src/routes/saas.js'
@@ -272,4 +273,23 @@ test('aluno: personal troca para Pix com cartão em análise e o aluno é libera
   assert.equal(one(sqlite, "SELECT access_status FROM students WHERE id='s1'").access_status, 'active')
   // Sem cobrança em aberto, desconectar funciona.
   assert.deepEqual((await run((db) => payoutDisconnect(db, 't1'))).data, { ok: true })
+})
+
+// "Gerenciar acesso": só grava recebimento novo quando o personal marca a caixinha.
+test('gerenciar acesso: salvar de novo ou pausar não grava outro recebimento', async () => {
+  const { sqlite, run } = newDatabase()
+  seedStudent(sqlite)
+  const save = (extra) =>
+    run((db) => updateStudentAccess(db, 't1', 's1', { planCode: 'basic', billingCycle: 'monthly', accessStatus: 'active', paymentStatus: 'paid', paymentMethod: 'pix', ...extra }))
+  const count = () => one(sqlite, "SELECT COUNT(*) AS n FROM payments WHERE status='paid'").n
+  assert.ok((await save({ recordPayment: '1' })).data)
+  assert.equal(count(), 1, 'confirmou o pagamento: grava')
+  await save({ recordPayment: '0' })
+  assert.equal(count(), 1, 'salvou de novo sem marcar: não grava')
+  await save({ accessStatus: 'paused', recordPayment: '1' })
+  assert.equal(count(), 1, 'pausar nunca grava')
+  await save({ recordPayment: '1' })
+  assert.equal(count(), 2, 'renovação marcada: grava')
+  await save({})
+  assert.equal(count(), 2, 'tela antiga (sem a caixinha) com pagamento já confirmado: não grava')
 })

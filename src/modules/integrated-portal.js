@@ -2172,7 +2172,7 @@ function createAccessDialog() {
   const dialog = document.createElement('dialog')
   dialog.className = 'modal'
   dialog.dataset.accessDialog = ''
-  dialog.innerHTML = `<form method="dialog" data-access-form><header><div><span class="eyebrow eyebrow--blue">Plano e pagamento</span><h2>Liberar acesso do aluno</h2></div><button class="icon-button" type="button" data-access-close aria-label="Fechar">×</button></header><div class="modal-body"><p data-access-student></p><label class="field"><span>Plano</span><select name="planCode"><option value="ready">Treinos Prontos — permanente</option><option value="basic">Consultoria Básica</option><option value="premium">Consultoria Premium</option><option value="athlete">Performance Atleta</option></select></label><label class="field" data-access-billing-field><span>Período</span><select name="billingCycle"><option value="monthly">Mensal — 30 dias</option><option value="quarterly">Trimestral — 90 dias, recomendado</option><option value="semiannual">Semestral — 180 dias</option><option value="annual">Anual — 365 dias</option></select></label><div class="field-grid"><label class="field"><span>Situação</span><select name="accessStatus"><option value="active">Liberar acesso</option><option value="pending">Aguardando</option><option value="paused">Pausar</option><option value="cancelled">Cancelar</option></select></label><label class="field"><span>Pagamento</span><select name="paymentStatus"><option value="paid">Confirmado</option><option value="waived">Liberado sem pagamento</option><option value="pending">Pendente</option><option value="refunded">Estornado</option></select></label></div><label class="field"><span>Forma de pagamento</span><select name="paymentMethod"><option value="whatsapp">WhatsApp / pessoalmente</option><option value="pix">PIX manual</option><option value="cash">Dinheiro</option><option value="webapp">WebApp</option><option value="courtesy">Cortesia / sem cobrança</option></select></label><label class="field"><span>Validade personalizada (opcional)</span><input name="expiresAt" type="date"></label><p class="password-requirements">A validade é calculada pelo período: 30, 90, 180 ou 365 dias. Treinos Prontos não expiram. Com "Liberar acesso", o aluno entra tanto com pagamento confirmado quanto com "Liberado sem pagamento".</p><p role="status"></p></div><footer><button class="button button--secondary" type="button" data-access-close>Cancelar</button><button class="button button--primary" type="submit">Salvar acesso</button></footer></form>`
+  dialog.innerHTML = `<form method="dialog" data-access-form><header><div><span class="eyebrow eyebrow--blue">Plano e pagamento</span><h2>Liberar acesso do aluno</h2></div><button class="icon-button" type="button" data-access-close aria-label="Fechar">×</button></header><div class="modal-body"><p data-access-student></p><label class="field"><span>Plano</span><select name="planCode"><option value="ready">Treinos Prontos — permanente</option><option value="basic">Consultoria Básica</option><option value="premium">Consultoria Premium</option><option value="athlete">Performance Atleta</option></select></label><label class="field" data-access-billing-field><span>Período</span><select name="billingCycle"><option value="monthly">Mensal — 30 dias</option><option value="quarterly">Trimestral — 90 dias, recomendado</option><option value="semiannual">Semestral — 180 dias</option><option value="annual">Anual — 365 dias</option></select></label><div class="field-grid"><label class="field"><span>Situação</span><select name="accessStatus"><option value="active">Liberar acesso</option><option value="pending">Aguardando</option><option value="paused">Pausar</option><option value="cancelled">Cancelar</option></select></label><label class="field"><span>Pagamento</span><select name="paymentStatus"><option value="paid">Confirmado</option><option value="waived">Liberado sem pagamento</option><option value="pending">Pendente</option><option value="refunded">Estornado</option></select></label></div><label class="field"><span>Forma de pagamento</span><select name="paymentMethod"><option value="whatsapp">WhatsApp / pessoalmente</option><option value="pix">PIX manual</option><option value="cash">Dinheiro</option><option value="webapp">WebApp</option><option value="courtesy">Cortesia / sem cobrança</option></select></label><label class="check-field" data-access-record><input type="checkbox" name="recordPayment" value="1"><span>Registrar este recebimento em Pagamentos recebidos (marque ao receber um pagamento novo, como a renovação do mês)</span></label><label class="field"><span>Validade personalizada (opcional)</span><input name="expiresAt" type="date"></label><p class="password-requirements">A validade é calculada pelo período: 30, 90, 180 ou 365 dias. Treinos Prontos não expiram. Com "Liberar acesso", o aluno entra tanto com pagamento confirmado quanto com "Liberado sem pagamento".</p><p role="status"></p></div><footer><button class="button button--secondary" type="button" data-access-close>Cancelar</button><button class="button button--primary" type="submit">Salvar acesso</button></footer></form>`
   document.body.append(dialog)
   const accessForm = dialog.querySelector('form')
   const syncAccessPeriod = () => {
@@ -2181,6 +2181,14 @@ function createAccessDialog() {
     if (permanent) accessForm.elements.billingCycle.value = 'monthly'
   }
   accessForm.elements.planCode.addEventListener('change', syncAccessPeriod)
+  // A caixinha do recebimento só aparece com acesso liberado e pagamento confirmado.
+  const syncAccessRecord = () => {
+    accessForm.querySelector('[data-access-record]').hidden = !(
+      accessForm.elements.accessStatus.value === 'active' && accessForm.elements.paymentStatus.value === 'paid'
+    )
+  }
+  accessForm.elements.accessStatus.addEventListener('change', syncAccessRecord)
+  accessForm.elements.paymentStatus.addEventListener('change', syncAccessRecord)
   dialog
     .querySelectorAll('[data-access-close]')
     .forEach((button) => button.addEventListener('click', () => dialog.close()))
@@ -2192,7 +2200,10 @@ function createAccessDialog() {
     button.disabled = true
     status.textContent = 'Salvando…'
     try {
-      await updateStudentAccess(form.dataset.studentId, Object.fromEntries(new FormData(form)))
+      await updateStudentAccess(form.dataset.studentId, {
+        ...Object.fromEntries(new FormData(form)),
+        recordPayment: form.elements.recordPayment.checked && !form.querySelector('[data-access-record]').hidden ? '1' : '0',
+      })
       dialog.close()
       showToast('Acesso do aluno atualizado.')
       window.dispatchEvent(new Event('farisa:remote-refresh'))
@@ -2221,6 +2232,9 @@ function createAccessDialog() {
     form.elements.paymentStatus.value = student.paymentStatus || 'pending'
     form.elements.paymentMethod.value = student.paymentMethod || 'whatsapp'
     form.elements.expiresAt.value = student.accessExpiresAt?.slice(0, 10) || ''
+    // Já estava confirmado: salvar de novo não grava outro recebimento, a não ser que você marque.
+    form.elements.recordPayment.checked = student.paymentStatus !== 'paid'
+    syncAccessRecord()
     form.querySelector('[role="status"]').textContent = ''
     dialog.showModal()
   })
