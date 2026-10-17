@@ -912,7 +912,9 @@ function exerciseVideoSelect(form) {
     wrapper.dataset.mediaVideo = ''
     wrapper.innerHTML = `<span>Vídeo MP4</span>
       <div class="exercise-video-row">
-        <select name="videoId"></select>
+        <select name="videoId" class="exercise-video-store" aria-hidden="true" tabindex="-1"></select>
+        <span class="exercise-video-name" data-exercise-video-name>Sem vídeo MP4</span>
+        <button class="button button--secondary" type="button" data-exercise-video-choose>Escolher vídeo</button>
         <button class="button button--secondary" type="button" data-exercise-video-preview>▶ Ver vídeo</button>
         <label class="button button--secondary exercise-video-upload">Enviar MP4 do computador<input type="file" accept=".mp4,video/mp4" hidden data-exercise-video-file></label>
       </div>
@@ -933,7 +935,17 @@ function exerciseVideoSelect(form) {
       const label = selectElement.selectedOptions[0]?.textContent || form.elements.name.value
       void openVideoLightbox(chosen, label)
     })
+    // Escolher o vídeo numa janela com as pastas fechadas (igual à ficha).
+    // O select continua guardando o valor que o formulário salva.
+    wrapper.querySelector('[data-exercise-video-choose]').addEventListener('click', async () => {
+      const checked = [...form.querySelectorAll('input[name="group"]:checked')].map((input) => input.value)
+      const chosen = await openVideoFolderPicker({ group: checked.join(', '), videoId: selectElement.value })
+      if (chosen === undefined) return
+      selectElement.value = chosen || ''
+      selectElement.dispatchEvent(new Event('change'))
+    })
     selectElement.addEventListener('change', () => {
+      paintExerciseVideoName(wrapper)
       previewButton.disabled = !selectElement.value
       if (
         form.dataset.uploadedVideoId &&
@@ -964,8 +976,19 @@ function exerciseVideoSelect(form) {
     previewButton.disabled = !select.value
     previewButton.hidden = form.dataset.exerciseOrigin === 'workout'
   }
-  select.hidden = form.dataset.exerciseOrigin === 'workout'
+  const chooseButton = wrapper.querySelector('[data-exercise-video-choose]')
+  if (chooseButton) chooseButton.hidden = form.dataset.exerciseOrigin === 'workout'
+  paintExerciseVideoName(wrapper)
   return wrapper
+}
+
+function paintExerciseVideoName(wrapper) {
+  const select = wrapper.querySelector('select')
+  const label = wrapper.querySelector('[data-exercise-video-name]')
+  if (!label) return
+  const name = select.value ? select.selectedOptions[0]?.textContent || '' : ''
+  label.textContent = name || 'Sem vídeo MP4'
+  label.hidden = wrapper.closest('form')?.dataset.exerciseOrigin === 'workout'
 }
 
 // Envia um MP4 direto do formulário do exercício. O vídeo vai para a
