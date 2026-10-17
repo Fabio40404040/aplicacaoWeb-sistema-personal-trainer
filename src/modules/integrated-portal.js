@@ -238,44 +238,50 @@ async function saveExerciseMedia(exercise, patch, control) {
   }
 }
 
-function videoPickerSelect(exercise) {
+function videoPickerSelect(exercise, { separateFolders = false } = {}) {
   const select = document.createElement('select')
   select.className = 'prescription-media-select'
   const none = document.createElement('option')
   none.value = ''
   none.textContent = 'Sem vídeo MP4'
   select.append(none)
-  const videos = getData().exerciseVideos || []
-  const groups = [...new Set(videos.map((video) => video.group || 'Outros'))].sort(
-    (a, b) => a.localeCompare(b, 'pt-BR'),
-  )
-  // O grupo do próprio exercício vem primeiro, que é onde você vai olhar.
-  groups.sort((a, b) => {
-    const mine = (name) => (exerciseGroups(exercise).includes(name) ? 0 : 1)
-    return mine(a) - mine(b)
-  })
-  groups.forEach((groupName) => {
-    const optgroup = document.createElement('optgroup')
-    optgroup.label = groupName
-    videos
-      .filter((video) => (video.group || 'Outros') === groupName)
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-      .forEach((video) => {
+  const exerciseFolders = new Set(exerciseGroups(exercise))
+  const appendFolders = (videos, prefix) => {
+    const groups = [...new Set(videos.map((video) => video.group || 'Outros'))]
+    groups.sort(
+      (a, b) =>
+        Number(!exerciseFolders.has(a)) - Number(!exerciseFolders.has(b)) ||
+        a.localeCompare(b, 'pt-BR'),
+    )
+    groups.forEach((groupName) => {
+      const items = videos
+        .filter((video) => (video.group || 'Outros') === groupName)
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
+      if (!items.length) return
+      const optgroup = document.createElement('optgroup')
+      optgroup.label = prefix
+        ? `${prefix} · ${groupName} (${items.length})`
+        : groupName
+      items.forEach((video) => {
         const option = document.createElement('option')
         option.value = String(video.id)
         option.textContent = video.name
         optgroup.append(option)
       })
-    if (optgroup.children.length) select.append(optgroup)
-  })
-  // Vídeos da Biblioteca FARISA (ex.: cópia de um exercício da FARISA).
+      select.append(optgroup)
+    })
+  }
+
+  appendFolders(getData().exerciseVideos || [], separateFolders ? 'Meus vídeos' : '')
   const libraryVideos = getData().libraryVideos || []
-  if (libraryVideos.length) {
+  if (separateFolders) {
+    appendFolders(libraryVideos, '📚 FARISA')
+  } else if (libraryVideos.length) {
     const optgroup = document.createElement('optgroup')
     optgroup.label = '📚 Biblioteca FARISA'
     libraryVideos
       .slice()
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
       .forEach((video) => {
         const option = document.createElement('option')
         option.value = String(video.id)
@@ -337,7 +343,9 @@ function prescriptionMediaRow(exerciseId, rerender) {
   const videoLabel = document.createElement('span')
   videoLabel.className = 'prescription-media-label'
   videoLabel.textContent = 'Vídeo MP4 (área do aluno)'
-  const select = videoPickerSelect(exercise)
+  // Nos montadores de ficha, os vídeos aparecem separados pela pasta/grupo.
+  // Os demais formulários que reutilizam o seletor mantêm o formato próprio.
+  const select = videoPickerSelect(exercise, { separateFolders: true })
   select.addEventListener('change', async () => {
     const value = select.value
     if (!(await saveExerciseMedia(exercise, { videoId: value || null }, select)))
