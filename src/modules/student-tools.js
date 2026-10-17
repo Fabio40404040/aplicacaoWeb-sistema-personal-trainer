@@ -50,6 +50,7 @@ let beepAudio = null;
 let beepEndTimer = 0;
 let beepEnded = null;
 let webBeepTones = [];
+let beepRunId = 0;
 const BEEP_STARTS = [0, 0.9, 1.8, 2.7, 3.6, 4.5];
 const BEEP_LENGTH = 0.24;
 const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
@@ -74,7 +75,7 @@ function beepWav() {
   for (let index = 0; index < samples; index += 1) {
     const time = index / rate;
     const inTone = BEEP_STARTS.some((start) => time >= start && time < start + BEEP_LENGTH);
-    const value = inTone ? Math.sin(2 * Math.PI * 880 * time) * 0.95 : 0;
+    const value = inTone ? Math.sin(2 * Math.PI * 760 * time) * 0.42 : 0;
     view.setInt16(44 + index * 2, Math.round(value * 32767), true);
   }
   let binary = "";
@@ -88,6 +89,8 @@ export function unlockSound() {
     if (!beepAudio) {
       beepAudio = new Audio(beepWav());
       beepAudio.preload = "auto";
+      beepAudio.setAttribute("playsinline", "");
+      beepAudio.volume = 0.72;
     }
     beepAudio.muted = true;
     const playing = beepAudio.play();
@@ -109,28 +112,66 @@ export function unlockSound() {
     /* sem som */
   }
 }
-function webBeep() {
+function playHtmlBeep(runId) {
+  if (!beepAudio || runId !== beepRunId) return false;
+  try {
+    beepAudio.muted = false;
+    beepAudio.currentTime = 0;
+    const playing = beepAudio.play();
+    playing?.catch?.(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+function scheduleWebBeep(runId) {
   try {
     const Context = window.AudioContext || window.webkitAudioContext;
     if (!audioContext && Context) audioContext = new Context();
     const context = audioContext;
-    if (!context) return;
-    if (context.state === "suspended") void context.resume();
+    if (!context || context.state !== "running" || runId !== beepRunId) return false;
     webBeepTones = BEEP_STARTS.map((start) => {
       const tone = context.createOscillator();
       const gain = context.createGain();
-      tone.frequency.value = 880;
-      gain.gain.value = 0.45;
+      const begins = context.currentTime + 0.03 + start;
+      const ends = begins + BEEP_LENGTH;
+      tone.frequency.value = 760;
+      // Entrada e saída suaves evitam estalo e deixam o aviso menos agressivo
+      // quando o aluno está ouvindo música em outro aplicativo.
+      gain.gain.setValueAtTime(0.0001, begins);
+      gain.gain.linearRampToValueAtTime(0.28, begins + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ends);
       tone.connect(gain).connect(context.destination);
-      tone.start(context.currentTime + start);
-      tone.stop(context.currentTime + start + BEEP_LENGTH);
+      tone.start(begins);
+      tone.stop(ends + 0.01);
       return tone;
     });
+    return true;
   } catch {
-    /* sem som: fica o aviso na tela */
+    return false;
   }
 }
+function webBeep(runId) {
+  const Context = window.AudioContext || window.webkitAudioContext;
+  try {
+    if (!audioContext && Context) audioContext = new Context();
+  } catch {
+    return false;
+  }
+  if (!audioContext) return false;
+  if (audioContext.state === "running") return scheduleWebBeep(runId);
+  // No iPhone a música pode suspender o contexto. Tenta retomá-lo; se o
+  // Safari negar, usa o <audio> que foi liberado no toque em Iniciar.
+  void audioContext.resume().then(
+    () => {
+      if (!scheduleWebBeep(runId)) playHtmlBeep(runId);
+    },
+    () => playHtmlBeep(runId),
+  );
+  return true;
+}
 function stopBeep() {
+  beepRunId += 1;
   window.clearTimeout(beepEndTimer);
   beepEndTimer = 0;
   try {
@@ -159,25 +200,21 @@ function stopBeep() {
 function beep(onEnd) {
   stopBeep();
   beepEnded = onEnd || null;
-  let viaAudio = false;
-  if (beepAudio) {
-    try {
-      beepAudio.muted = false;
-      beepAudio.currentTime = 0;
-      const playing = beepAudio.play();
-      viaAudio = true;
-      playing?.catch?.(() => webBeep());
-    } catch {
-      viaAudio = false;
-    }
-  }
-  if (!viaAudio) webBeep();
+  const runId = beepRunId;
+  // Web Audio é usado primeiro porque se mistura melhor com música. O WAV
+  // longo fica apenas como reserva para versões antigas do Safari.
+  if (!webBeep(runId)) playHtmlBeep(runId);
   try {
     navigator.vibrate?.([220, 680, 220, 680, 220, 680, 220, 680, 220, 680, 220]);
   } catch {
     /* sem vibração (o iPhone não vibra pelo navegador) */
   }
-  beepEndTimer = window.setTimeout(stopBeep, BEEP_DURATION * 1000 + 150);
+  beepEndTimer = window.setTimeout(
+    () => {
+      if (runId === beepRunId) stopBeep();
+    },
+    BEEP_DURATION * 1000 + 250,
+  );
 }
 
 export function restTimer(exercise) {
@@ -206,6 +243,8 @@ export function restTimer(exercise) {
     idle();
   };
   const start = () => {
+    // Nunca deixa o alarme anterior continuar sobre uma nova contagem.
+    stopBeep();
     unlockSound();
     stopRunningTimer?.();
     stopRunningTimer = stop;
@@ -275,7 +314,7 @@ function timerTick() {
 export function freeTimerCard() {
   const card = el("article", "student-tool student-timer");
   card.append(el("h2", "", "⏱ Cronômetro"));
-  card.append(el("p", "student-timer-hint", "Escolha o tempo e toque em Iniciar. Ao terminar, tocam seis bipes fortes."));
+  card.append(el("p", "student-timer-hint", "Escolha o tempo e toque em Iniciar. Ao terminar, tocam seis bipes de aviso."));
 
   const RADIUS = 88;
   const LENGTH = 2 * Math.PI * RADIUS;
@@ -355,7 +394,10 @@ export function freeTimerCard() {
   minus.addEventListener("click", () => step(-15));
   plus.addEventListener("click", () => step(15));
   main.addEventListener("click", () => {
-    if (freeTimer.ringing) stopBeep();
+    // Cancela o áudio mesmo se o Safari já tiver mudado o estado visual. Isso
+    // impede bipes antigos no começo da próxima contagem.
+    stopBeep();
+    freeTimer.ringing = false;
     if (running()) {
       freeTimer.left = timerLeft();
       freeTimer.endsAt = 0;
