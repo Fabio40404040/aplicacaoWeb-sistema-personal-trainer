@@ -4580,6 +4580,38 @@ dialog.confirm-dialog::backdrop {
   justify-content: flex-end;
 }
 
+.payout-history-adjust {
+  border-style: dashed;
+  background: #f8fafc;
+}
+.payout-history-adjust-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.payout-history-adjust-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+}
+.payout-history-adjust-field .field,
+.payout-history-adjust-field input,
+.payout-history-adjust-field select {
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 700px) {
+  .payout-history-adjust-form,
+  .payout-history-adjust-field {
+    grid-template-columns: 1fr;
+  }
+  .payout-history-adjust-field .button {
+    width: 100%;
+  }
+}
+
 .payout-steps {
   display: grid;
   gap: 6px;

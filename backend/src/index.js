@@ -109,6 +109,7 @@ import {
   payoutRemovePix,
   payoutSavePix,
   payoutSetMode,
+  payoutVoidManualPeriod,
 } from "./routes/payout.js";
 import {
   deleteReadyWorkout,
@@ -742,6 +743,8 @@ async function handleRoutes(request, env) {
       if (request.method === "DELETE" && route === "payout/pix") return payoutRemovePix(db, session.sub);
       if (request.method === "PUT" && route === "payout/mode")
         return payoutSetMode(db, session.sub, await readJson(request));
+      if (request.method === "POST" && route === "payout/history/void")
+        return payoutVoidManualPeriod(db, session.sub, await readJson(request));
       if (request.method === "POST" && segments[1] === "manual" && ["confirm", "reject"].includes(segments[3]))
         return manualPixDecision(db, session.sub, segments[2], segments[3]);
       if (request.method === "POST" && segments[1] === "refund" && segments[2] && segments.length === 3)

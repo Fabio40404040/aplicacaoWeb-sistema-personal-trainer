@@ -261,6 +261,53 @@ export async function payoutInfo(db, env, trainerId) {
   }
 }
 
+// Ajuste de histórico: registros criados manualmente pelo personal podem ser
+// desconsiderados dos relatórios por mês ou ano. O registro não é apagado e
+// pagamentos confirmados por Mercado Pago/Pix permanecem intocáveis.
+export async function payoutVoidManualPeriod(db, trainerId, body) {
+  const scope = String(body?.scope || '')
+  const value = String(body?.value || '')
+  let bounds
+  if (scope === 'month' && /^\d{4}-(0[1-9]|1[0-2])$/u.test(value)) {
+    const [year, month] = value.split('-').map(Number)
+    const next = new Date(Date.UTC(year, month, 1))
+    bounds = [
+      `${value}-01 00:00:00`,
+      `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-01 00:00:00`,
+    ]
+  } else if (scope === 'year' && /^\d{4}$/u.test(value)) {
+    const year = Number(value)
+    if (year < 2020 || year > new Date().getUTCFullYear())
+      return { error: 'Escolha um ano válido.', status: 400 }
+    bounds = [`${value}-01-01 00:00:00`, `${year + 1}-01-01 00:00:00`]
+  } else return { error: 'Escolha um mês ou ano válido.', status: 400 }
+  const [from, to] = bounds
+
+  const rows = (
+    await db.query(
+      `UPDATE payments SET status='voided'
+       WHERE trainer_id=$1 AND status='paid' AND provider_reference IS NULL
+         AND COALESCE(provider,'manual')='manual' AND paid_at >= $2 AND paid_at < $3
+       RETURNING id, student_id AS "studentId", plan_code AS "planCode", amount_cents AS "amountCents"`,
+      [trainerId, from, to],
+    )
+  ).rows
+  if (rows.length)
+    await db.batch(
+      rows.map((row) => ({
+        sql: `INSERT INTO access_history (trainer_id,student_id,action,plan_code,details)
+              VALUES ($1,$2,'manual_payment_voided',$3,$4)`,
+        values: [trainerId, row.studentId, row.planCode, `${scope}:${value}:${row.id}`],
+      })),
+    )
+  return {
+    data: {
+      count: rows.length,
+      amountCents: rows.reduce((sum, row) => sum + Number(row.amountCents || 0), 0),
+    },
+  }
+}
+
 export async function payoutConnectUrl(env, trainerId, db) {
   if (db && !(await trainerEmailVerified(db, trainerId))) return { error: EMAIL_PENDING, status: 403 }
   if (!mpConnectAvailable(env))

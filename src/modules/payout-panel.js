@@ -267,6 +267,72 @@ function pixCard() {
   return card
 }
 
+function historyAdjustmentCard() {
+  const manual = (info.history || []).filter(
+    (item) => !item.refunded && (!item.provider || item.provider === 'manual'),
+  )
+  if (!manual.length) return null
+  const now = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const card = el('section', 'panel payout-card payout-history-adjust')
+  const head = el('div', 'payout-card-head')
+  head.append(el('h2', '', 'Ajustar registros manuais'), el('span', 'payout-badge', 'Histórico financeiro'))
+  card.append(
+    head,
+    el(
+      'p',
+      '',
+      'Desconsidere lançamentos manuais de teste ou cadastrados por engano. O acesso dos alunos não muda e pagamentos confirmados por Mercado Pago ou Pix permanecem protegidos.',
+    ),
+  )
+
+  const form = el('div', 'payout-history-adjust-form')
+  const monthLabel = el('label', 'field')
+  const month = el('input')
+  month.type = 'month'
+  month.value = currentMonth
+  month.max = currentMonth
+  monthLabel.append(el('span', '', 'Mês'), month)
+
+  const yearLabel = el('label', 'field')
+  const year = el('select')
+  for (let value = now.getFullYear(); value >= 2020; value -= 1) {
+    const option = el('option', '', String(value))
+    option.value = String(value)
+    year.append(option)
+  }
+  yearLabel.append(el('span', '', 'Ano'), year)
+
+  const run = async (scope, value, label) => {
+    if (!value) return
+    const ok = await confirmCard(
+      `Desconsiderar registros de ${label}?`,
+      'Somente lançamentos manuais serão retirados dos totais do personal e do Admin. Os registros permanecem guardados para auditoria e o acesso dos alunos não será alterado.',
+      'Desconsiderar',
+    )
+    if (!ok) return
+    const result = await payoutAction('history/void', 'POST', { scope, value })
+    showToast(
+      result.count
+        ? `${result.count} registro(s), no total de ${money(result.amountCents)}, foram desconsiderados.`
+        : `Nenhum lançamento manual encontrado em ${label}.`,
+    )
+    await load()
+  }
+
+  const monthButton = button('Desconsiderar mês', 'secondary', () =>
+    run('month', month.value, month.value.split('-').reverse().join('/')),
+  )
+  const yearButton = button('Desconsiderar ano', 'secondary', () => run('year', year.value, year.value))
+  const monthAction = el('div', 'payout-history-adjust-field')
+  const yearAction = el('div', 'payout-history-adjust-field')
+  monthAction.append(monthLabel, monthButton)
+  yearAction.append(yearLabel, yearButton)
+  form.append(monthAction, yearAction)
+  card.append(form)
+  return card
+}
+
 function render() {
   const root = document.querySelector('[data-payout-root]')
   if (!root || !info) return
@@ -301,6 +367,8 @@ function render() {
     },
   })
   if (history) root.append(history)
+  const adjustment = historyAdjustmentCard()
+  if (adjustment) root.append(adjustment)
 }
 
 async function refundStudent(item) {
