@@ -236,11 +236,17 @@ export async function studentPortal(db, accountId, version, studentId = null) {
   }
 
   if (features.includes("exercises")) {
+    // Vídeos do personal e os da Biblioteca FARISA que ele escolheu nos exercícios.
     response.exerciseVideos = (
       await db.query(
         `SELECT id,name,muscle_group AS "group",equipment,difficulty,instructions,
          original_filename AS "originalFilename",size_bytes AS "sizeBytes",created_at AS "createdAt"
-         FROM exercise_videos WHERE trainer_id=$1 AND published=1 ORDER BY muscle_group,name`,
+         FROM exercise_videos
+         WHERE published=1 AND (
+           trainer_id=$1
+           OR (trainer_id='farisa-library' AND id IN (SELECT video_id FROM exercises WHERE trainer_id=$1 AND video_id IS NOT NULL))
+         )
+         ORDER BY muscle_group,name`,
         [account.trainerId],
       )
     ).rows;
