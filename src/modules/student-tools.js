@@ -42,18 +42,14 @@ const numberBr = (value, digits = 1) =>
 
 let stopRunningTimer = null;
 
-// Som do fim do descanso. No iPhone o som só sai se for "liberado" num toque
-// do aluno: unlockSound() roda ao tocar em Iniciar e deixa o áudio pronto.
-// Usa um <audio> com o bipe (toca mesmo com o Safari em modo silencioso de
-// Web Audio) e, se ele falhar, o Web Audio.
-let audioContext = null;
+// Um único <audio> controla todo o alarme. Misturar <audio> e Web Audio fazia
+// o iPhone guardar uma segunda tentativa suspensa enquanto a música tocava;
+// ao parar a música, essa tentativa antiga disparava fora de hora.
 let beepAudio = null;
 let beepEndTimer = 0;
 let beepEnded = null;
-let webBeepTones = [];
 let beepRunId = 0;
-let armedBeepTones = [];
-let armedBeepId = 0;
+let activeHtmlRunId = 0;
 // O pequeno silêncio inicial permite autorizar o <audio> no toque em Iniciar
 // sem soltar um bipe naquele momento. No iPhone, reproduzir o elemento como
 // "muted" não garante que ele poderá tocar com som quando o tempo acabar.
@@ -65,7 +61,6 @@ const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
 const BEEP_SPAN = BEEP_OFFSETS.at(-1) + BEEP_LENGTH;
 const BEEP_FREQUENCY = 900;
 const BEEP_LEVEL = 0.82;
-const WEB_BEEP_LEVEL = 0.58;
 function beepWav() {
   const rate = 8000;
   const samples = Math.round(rate * BEEP_DURATION);
@@ -96,153 +91,87 @@ function beepWav() {
   });
   return `data:audio/wav;base64,${btoa(binary)}`;
 }
-export function unlockSound() {
+function requestPlaybackSession() {
+  // Safari 17+: "playback" pede uma sessão de mídia que não mistura com a
+  // música de outro aplicativo. Em versões anteriores, o <audio> já usa a
+  // categoria de reprodução padrão do iOS.
   try {
-    if (!beepAudio) {
-      beepAudio = new Audio(beepWav());
-      beepAudio.preload = "auto";
-      beepAudio.setAttribute("playsinline", "");
-      beepAudio.volume = 1;
-    }
-    beepAudio.pause();
-    beepAudio.currentTime = 0;
-    beepAudio.muted = false;
-    const playing = beepAudio.play();
-    // play() precisa acontecer dentro do toque. O WAV começa com silêncio,
-    // então pode ser pausado assim que o Safari confirmar a reprodução.
-    const release = () => {
+    if (navigator.audioSession && "type" in navigator.audioSession) navigator.audioSession.type = "playback";
+  } catch {
+    /* versão sem Audio Session API */
+  }
+}
+function ensureBeepAudio() {
+  if (beepAudio) return beepAudio;
+  beepAudio = new Audio(beepWav());
+  beepAudio.preload = "auto";
+  beepAudio.setAttribute("playsinline", "");
+  beepAudio.volume = 1;
+  beepAudio.addEventListener("playing", () => {
+    // Uma Promise antiga pode acordar quando a música é encerrada. Se a
+    // execução já mudou, corta o som antes que o primeiro bipe seja emitido.
+    if (!activeHtmlRunId || activeHtmlRunId !== beepRunId) {
       beepAudio.pause();
       beepAudio.currentTime = 0;
-    };
-    // Não depende apenas da Promise do Safari: em aparelhos mais lentos ela
-    // pode resolver tarde demais. Esta trava encerra a liberação antes do tom.
-    window.setTimeout(release, 120);
-    if (playing?.then) playing.then(release, () => {});
-    else release();
-  } catch {
-    /* sem <audio>: fica o Web Audio */
-  }
+    }
+  });
+  beepAudio.addEventListener("ended", () => {
+    if (activeHtmlRunId && activeHtmlRunId === beepRunId) stopBeep();
+  });
+  return beepAudio;
+}
+export function unlockSound() {
+  requestPlaybackSession();
   try {
-    const Context = window.AudioContext || window.webkitAudioContext;
-    // O Safari também expõe o estado não padronizado "interrupted" quando
-    // outro aplicativo está usando áudio. Um contexto novo evita reutilizar
-    // uma instância que aparenta estar ativa, mas deixou de produzir som.
-    if ((!audioContext || ["closed", "interrupted"].includes(audioContext.state)) && Context)
-      audioContext = new Context();
-    if (audioContext?.state !== "running") void audioContext.resume().catch(() => {});
+    const audio = ensureBeepAudio();
+    const unlockId = beepRunId;
+    activeHtmlRunId = 0;
+    audio.pause();
+    audio.currentTime = 0;
+    audio.muted = true;
+    const playing = audio.play();
+    const release = () => {
+      // Se o alarme verdadeiro já começou, esta liberação perdeu a validade.
+      if (unlockId !== beepRunId || activeHtmlRunId) return;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+    };
+    playing?.then?.(release, release);
+    window.setTimeout(release, 180);
   } catch {
-    /* sem som */
+    /* o aviso visual continua disponível */
   }
 }
 function playHtmlBeep(runId) {
-  if (!beepAudio || runId !== beepRunId) return false;
+  if (runId !== beepRunId) return false;
   try {
-    beepAudio.muted = false;
+    const audio = ensureBeepAudio();
+    requestPlaybackSession();
+    activeHtmlRunId = runId;
+    audio.pause();
+    audio.muted = false;
     // O alarme real pula o trecho silencioso usado somente na autorização.
-    beepAudio.currentTime = BEEP_LEAD;
-    const playing = beepAudio.play();
-    // Se o iOS negar o elemento de mídia, tenta o segundo mecanismo.
+    audio.currentTime = BEEP_LEAD;
+    const playing = audio.play();
     playing?.catch?.(() => {
-      if (runId === beepRunId) webBeep(runId);
+      if (runId === beepRunId) activeHtmlRunId = 0;
+    });
+    playing?.then?.(() => {
+      if (runId !== beepRunId || activeHtmlRunId !== runId) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
     });
     return true;
   } catch {
+    activeHtmlRunId = 0;
     return false;
   }
 }
-function scheduleWebBeep(runId) {
-  try {
-    const Context = window.AudioContext || window.webkitAudioContext;
-    if (!audioContext && Context) audioContext = new Context();
-    const context = audioContext;
-    if (!context || context.state !== "running" || runId !== beepRunId) return false;
-    webBeepTones = BEEP_OFFSETS.map((start) => {
-      const tone = context.createOscillator();
-      const gain = context.createGain();
-      const begins = context.currentTime + 0.03 + start;
-      const ends = begins + BEEP_LENGTH;
-      tone.frequency.value = BEEP_FREQUENCY;
-      // Entrada e saída suaves evitam estalo e deixam o aviso menos agressivo
-      // quando o aluno está ouvindo música em outro aplicativo.
-      gain.gain.setValueAtTime(0.0001, begins);
-      gain.gain.linearRampToValueAtTime(WEB_BEEP_LEVEL, begins + 0.018);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ends);
-      tone.connect(gain).connect(context.destination);
-      tone.start(begins);
-      tone.stop(ends + 0.01);
-      return tone;
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-function stopArmedBeep() {
-  armedBeepId += 1;
-  armedBeepTones.forEach((tone) => {
-    try {
-      tone.stop();
-    } catch {
-      /* o tom ainda não começou ou já terminou */
-    }
-  });
-  armedBeepTones = [];
-}
-// Agenda o alarme enquanto o toque em "Iniciar" ainda é a ação ativa. Isso
-// contorna o bloqueio do Safari ao tentar começar um som vários segundos
-// depois, sem um novo toque do usuário.
-function armWebBeep(endsAt) {
-  stopArmedBeep();
-  const armId = armedBeepId;
-  const Context = window.AudioContext || window.webkitAudioContext;
-  try {
-    if ((!audioContext || ["closed", "interrupted"].includes(audioContext.state)) && Context)
-      audioContext = new Context();
-  } catch {
-    return;
-  }
-  const schedule = () => {
-    const context = audioContext;
-    if (!context || context.state !== "running" || armId !== armedBeepId) return;
-    const delay = Math.max(0.02, (endsAt - Date.now()) / 1000);
-    armedBeepTones = BEEP_OFFSETS.map((start) => {
-      const tone = context.createOscillator();
-      const gain = context.createGain();
-      const begins = context.currentTime + delay + start;
-      const ends = begins + BEEP_LENGTH;
-      tone.frequency.value = BEEP_FREQUENCY;
-      gain.gain.setValueAtTime(0.0001, begins);
-      gain.gain.linearRampToValueAtTime(WEB_BEEP_LEVEL, begins + 0.018);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ends);
-      tone.connect(gain).connect(context.destination);
-      tone.start(begins);
-      tone.stop(ends + 0.01);
-      return tone;
-    });
-  };
-  if (audioContext?.state === "running") schedule();
-  else void audioContext?.resume().then(schedule, () => {});
-}
-function webBeep(runId) {
-  const Context = window.AudioContext || window.webkitAudioContext;
-  try {
-    if ((!audioContext || ["closed", "interrupted"].includes(audioContext.state)) && Context)
-      audioContext = new Context();
-  } catch {
-    return false;
-  }
-  if (!audioContext) return false;
-  if (audioContext.state === "running") return scheduleWebBeep(runId);
-  // No iPhone a música pode suspender o contexto. Esta é apenas a reserva do
-  // <audio>; se não retomar, o aviso visual continua disponível.
-  void audioContext.resume().then(
-    () => scheduleWebBeep(runId),
-    () => {},
-  );
-  return true;
-}
-function stopBeep(keepArmed = false) {
+function stopBeep() {
   beepRunId += 1;
+  activeHtmlRunId = 0;
   window.clearTimeout(beepEndTimer);
   beepEndTimer = 0;
   try {
@@ -251,15 +180,6 @@ function stopBeep(keepArmed = false) {
   } catch {
     /* o áudio já terminou */
   }
-  webBeepTones.forEach((tone) => {
-    try {
-      tone.stop();
-    } catch {
-      /* o tom já terminou */
-    }
-  });
-  webBeepTones = [];
-  if (!keepArmed) stopArmedBeep();
   try {
     navigator.vibrate?.(0);
   } catch {
@@ -269,13 +189,11 @@ function stopBeep(keepArmed = false) {
   beepEnded = null;
   ended?.();
 }
-function beep(onEnd, prearmed = false) {
-  stopBeep(prearmed);
+function beep(onEnd) {
+  stopBeep();
   beepEnded = onEnd || null;
   const runId = beepRunId;
-  // O elemento autorizado no toque é mais confiável no iPhone quando outro
-  // aplicativo está tocando música. Web Audio fica como segunda tentativa.
-  if (!playHtmlBeep(runId)) webBeep(runId);
+  playHtmlBeep(runId);
   try {
     navigator.vibrate?.([220, 680, 220, 680, 220, 680, 220, 680, 220, 680, 220]);
   } catch {
@@ -307,7 +225,6 @@ export function restTimer(exercise) {
   let doneTimeout = null;
   let ringing = false;
   const stop = () => {
-    stopArmedBeep();
     if (ringing) stopBeep();
     window.clearInterval(interval);
     window.clearTimeout(doneTimeout);
@@ -323,7 +240,6 @@ export function restTimer(exercise) {
     stopRunningTimer = stop;
     // Conta pelo relógio: continua certo mesmo se a aba ficar em segundo plano.
     const endsAt = Date.now() + total * 1000;
-    armWebBeep(endsAt);
     button.classList.add("is-running");
     const tick = () => {
       const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -336,13 +252,10 @@ export function restTimer(exercise) {
       button.classList.add("is-done");
       ringing = true;
       label.textContent = "🔊 Próxima série! · parar som";
-      beep(
-        () => {
-          ringing = false;
-          if (button.classList.contains("is-done")) label.textContent = "✓ Próxima série!";
-        },
-        true,
-      );
+      beep(() => {
+        ringing = false;
+        if (button.classList.contains("is-done")) label.textContent = "✓ Próxima série!";
+      });
       doneTimeout = window.setTimeout(stop, 6000);
     };
     tick();
@@ -391,13 +304,10 @@ function timerTick() {
     window.clearInterval(freeTimer.interval);
     freeTimer.interval = 0;
     if (stopRunningTimer === freeTimer.stop) stopRunningTimer = null;
-    beep(
-      () => {
-        freeTimer.ringing = false;
-        freeTimer.paint?.();
-      },
-      true,
-    );
+    beep(() => {
+      freeTimer.ringing = false;
+      freeTimer.paint?.();
+    });
   }
   freeTimer.paint?.();
 }
@@ -462,7 +372,6 @@ export function freeTimerCard() {
     freeTimer.endsAt = 0;
     window.clearInterval(freeTimer.interval);
     freeTimer.interval = 0;
-    stopArmedBeep();
     if (freeTimer.ringing) stopBeep();
     freeTimer.ringing = false;
     if (stopRunningTimer === stopFreeTimer) stopRunningTimer = null;
@@ -492,7 +401,6 @@ export function freeTimerCard() {
       // Contando: soma/tira do tempo que falta.
       freeTimer.endsAt = Math.max(Date.now() + 1000, freeTimer.endsAt + delta * 1000);
       freeTimer.total = Math.max(freeTimer.total, timerLeft());
-      armWebBeep(freeTimer.endsAt);
       paint();
     } else choose((freeTimer.left || freeTimer.total) + delta);
   };
@@ -514,7 +422,6 @@ export function freeTimerCard() {
       freeTimer.done = false;
       freeTimer.zeroed = false;
       freeTimer.endsAt = Date.now() + (freeTimer.left || freeTimer.total) * 1000;
-      armWebBeep(freeTimer.endsAt);
       freeTimer.left = 0;
       window.clearInterval(freeTimer.interval);
       freeTimer.interval = window.setInterval(timerTick, 250);
