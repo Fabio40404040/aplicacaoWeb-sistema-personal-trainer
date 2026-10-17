@@ -851,7 +851,7 @@ function enhanceExercise() {
   })
   body.append(list)
   const extra = document.createElement('div')
-  extra.innerHTML = `<div class="field-grid"><label class="field"><span>Dificuldade</span><select name="difficulty"><option>Iniciante</option><option selected>Intermediário</option><option>Avançado</option></select></label><label class="field"><span>Formato da mídia</span><select name="mediaType" data-media-type><option value="gif">GIF e vídeo MP4</option><option value="3d">Animação 3D</option></select></label></div><label class="field" data-media-3d><span>Arquivo 3D (URL)</span><input name="mediaUrl" placeholder="/models/exercises/exercicio.glb"></label><label class="field" data-media-3d><span>Nome da animação 3D</span><input name="animationClip" placeholder="Ex.: Squat"></label>`
+  extra.innerHTML = `<div class="field-grid"><label class="field"><span>Dificuldade</span><select name="difficulty"><option>Iniciante</option><option selected>Intermediário</option><option>Avançado</option></select></label><label class="field" hidden><span>Formato da mídia</span><select name="mediaType" data-media-type><option value="gif">GIF e vídeo MP4</option></select></label></div><label class="field" data-media-3d><span>Arquivo 3D (URL)</span><input name="mediaUrl" placeholder="/models/exercises/exercicio.glb"></label><label class="field" data-media-3d><span>Nome da animação 3D</span><input name="animationClip" placeholder="Ex.: Squat"></label>`
   body.append(...extra.children)
   const picker = field('Selecionar da biblioteca de vídeos', '<select data-video-picker></select>')
   const pickerSelect = picker.querySelector('select')
@@ -1028,14 +1028,17 @@ function syncExerciseMediaFields(form) {
   const type = form.elements.mediaType
   if (!type) return
   const video = exerciseVideoSelect(form)
-  // GIF e vídeo podem ficar juntos (GIF para a ficha/PDF, vídeo para a área
-  // do aluno). Exercícios antigos ("imagem", "vídeo" ou sem formato) abrem
-  // como "GIF e vídeo MP4"; os de 3D continuam 3D.
-  if (!['gif', '3d'].includes(type.value)) type.value = 'gif'
-  const mode = type.value
-  form.querySelectorAll('[data-media-3d]').forEach((element) => (element.hidden = mode !== '3d'))
+  // GIF e vídeo ficam em campos separados (GIF para a ficha/PDF, vídeo para
+  // a área do aluno). A opção Animação 3D foi retirada: todo exercício abre
+  // e é salvo como "gif", e os campos de 3D ficam escondidos.
+  type.value = 'gif'
+  form.querySelectorAll('[data-media-3d]').forEach((element) => (element.hidden = true))
   const gifField = form.querySelector('[data-gif-field]')
-  if (gifField) gifField.hidden = false
+  if (gifField) {
+    gifField.hidden = false
+    // O GIF vem primeiro e o vídeo logo abaixo dele.
+    if (gifField.nextElementSibling !== video) gifField.after(video)
+  }
   video.hidden = false
 }
 
@@ -1056,6 +1059,7 @@ function setupExerciseMediaFields(form) {
   form.addEventListener(
     'submit',
     () => {
+      form.elements.mediaType.value = 'gif'
       const mode = form.elements.mediaType.value
       if (mode !== '3d') {
         if (form.elements.mediaUrl) form.elements.mediaUrl.value = ''
