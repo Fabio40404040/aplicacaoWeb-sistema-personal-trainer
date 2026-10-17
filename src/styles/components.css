@@ -5830,3 +5830,34 @@ body.has-support-banner .main-content {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* Pastas fechadas na janela de escolher GIF */
+.gif-folder-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.gif-folder {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.gif-folder summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+.gif-folder .gif-grid {
+  margin-top: 0;
+  padding: 0 12px 12px;
+}
+.exercise-video-name {
+  flex: 1 1 220px;
+  align-self: center;
+  min-width: 0;
+  font-weight: 600;
+}
+/* O select só guarda o valor; a escolha é pela janela de pastas. */
+.exercise-video-row .exercise-video-store {
+  display: none;
+}

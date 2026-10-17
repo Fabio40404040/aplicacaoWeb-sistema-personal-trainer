@@ -150,16 +150,6 @@ function nameFromFile(filename) {
   return base.charAt(0).toLocaleUpperCase('pt-BR') + base.slice(1)
 }
 
-// Quanto dois nomes se parecem, contando palavras em comum. Serve apenas para
-// colocar o palpite na frente da lista — quem decide é o Fábio, olhando o GIF.
-function similarity(a, b) {
-  const first = new Set(normalized(a).split(' ').filter(Boolean))
-  const second = normalized(b).split(' ').filter(Boolean)
-  if (!first.size || !second.length) return 0
-  const shared = second.filter((word) => first.has(word)).length
-  return shared / Math.max(first.size, second.length)
-}
-
 function sameFamily(gifGroup, exerciseGroup) {
   if (!exerciseGroup || !gifGroup) return true
   if (gifGroup === exerciseGroup) return true
@@ -488,7 +478,7 @@ function buildPickerDialog() {
         <input type="search" data-gif-search placeholder="Ex.: supino, crossover, flexão">
       </label>
       <p class="password-requirements" data-gif-hint></p>
-      <div class="gif-grid" data-gif-grid></div>
+      <div class="gif-folder-list" data-gif-grid></div>
     </div>
     <footer>
       <button class="button button--secondary" type="button" data-gif-clear>Deixar sem GIF</button>
@@ -597,49 +587,74 @@ export function openGifPicker(exercise) {
       dropzone.removeEventListener('drop', onDrop)
     }
 
+    // GIFs separados em pastas (os seus e os da Biblioteca FARISA), todas
+    // fechadas. Clicar na pasta abre os GIFs dela; a busca abre só as pastas
+    // que têm o GIF procurado. Os enviados agora ficam numa pasta aberta no topo.
     function render() {
       const query = normalized(search.value)
-      const list = available
-        .filter((gif) => !query || normalized(gif.name).includes(query))
-        .map((gif) => ({
-          gif,
-          score: exercise?.name ? similarity(exercise.name, gif.name) : 0,
-        }))
-        .sort(
+      const matches = (gif) => !query || normalized(gif.name).includes(query)
+      const exerciseFolders = new Set(exerciseGroups(exercise))
+      const byName = (a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true })
+      const makeCard = (gif, isNew) => {
+        const card = document.createElement('button')
+        card.type = 'button'
+        card.className = 'gif-card'
+        card.dataset.gifId = gif.id
+        if (gif.id === exercise?.gifId) card.classList.add('is-current')
+        card.append(gifImage(gif.id, 'gif-card-image'))
+        const label = document.createElement('span')
+        label.className = 'gif-card-name'
+        label.textContent = gif.name
+        card.append(label)
+        const badgeText = isNew ? 'enviado agora' : gif.id === exercise?.gifId ? 'atual' : ''
+        if (badgeText) {
+          if (isNew) card.classList.add('is-new')
+          const badge = document.createElement('span')
+          badge.className = `gif-card-badge${isNew ? ' gif-card-badge--new' : ''}`
+          badge.textContent = badgeText
+          card.append(badge)
+        }
+        return card
+      }
+      const folders = []
+      const sent = justSent.map((id) => findGif(id)).filter(Boolean).filter(matches)
+      if (sent.length) folders.push({ label: 'Enviados agora', items: sent, open: true, isNew: true })
+      const addFolders = (gifs, prefix) => {
+        const groups = [...new Set(gifs.map((gif) => gif.group || 'Outros'))]
+        groups.sort(
           (a, b) =>
-            Number(justSent.includes(b.gif.id)) - Number(justSent.includes(a.gif.id)) ||
-            b.score - a.score ||
-            a.gif.name.localeCompare(b.gif.name, 'pt-BR'),
+            Number(!exerciseFolders.has(a)) - Number(!exerciseFolders.has(b)) ||
+            a.localeCompare(b, 'pt-BR'),
         )
+        groups.forEach((groupName) => {
+          const items = gifs
+            .filter((gif) => (gif.group || 'Outros') === groupName && matches(gif))
+            .sort(byName)
+          if (items.length)
+            folders.push({ label: `${prefix} · ${groupName}`, items, open: Boolean(query) })
+        })
+      }
+      addFolders(getData().exerciseGifs || [], 'Meus GIFs')
+      addFolders(getData().libraryGifs || [], '📚 FARISA')
       grid.replaceChildren(
-        ...list.map(({ gif, score }, index) => {
-          const card = document.createElement('button')
-          card.type = 'button'
-          card.className = 'gif-card'
-          card.dataset.gifId = gif.id
-          if (gif.id === exercise?.gifId) card.classList.add('is-current')
-          card.append(gifImage(gif.id, 'gif-card-image'))
-          const label = document.createElement('span')
-          label.className = 'gif-card-name'
-          label.textContent = gif.name
-          card.append(label)
-          if (justSent.includes(gif.id)) {
-            card.classList.add('is-new')
-            const badge = document.createElement('span')
-            badge.className = 'gif-card-badge gif-card-badge--new'
-            badge.textContent = 'enviado agora'
-            card.append(badge)
-          } else if (index === justSent.length && score > 0.34 && !query) {
-            const badge = document.createElement('span')
-            badge.className = 'gif-card-badge'
-            badge.textContent = 'sugestão'
-            card.append(badge)
-          }
-          return card
+        ...folders.map((folder) => {
+          const details = document.createElement('details')
+          details.className = 'gif-folder'
+          details.open = folder.open
+          const summary = document.createElement('summary')
+          summary.textContent = `${folder.label} (${folder.items.length})`
+          const cards = document.createElement('div')
+          cards.className = 'gif-grid'
+          cards.append(...folder.items.map((gif) => makeCard(gif, folder.isNew)))
+          details.append(summary, cards)
+          return details
         }),
       )
-      hint.textContent = list.length
-        ? `${list.length} GIF(s) disponíveis${exercise?.group ? ` para ${exercise.group}` : ''}. Clique no que mostrar o movimento certo.`
+      const total = folders
+        .filter((folder) => !folder.isNew)
+        .reduce((sum, folder) => sum + folder.items.length, 0)
+      hint.textContent = total
+        ? `${total} GIF(s) em ${folders.filter((folder) => !folder.isNew).length} pasta(s). Abra a pasta e clique no GIF certo.`
         : search.value.trim()
           ? 'Nenhum GIF com esse nome. Tente outra palavra.'
           : 'Não encontrei GIFs na biblioteca. Envie do computador aqui em cima — ou, se você já tinha GIFs, recarregue a página (F5) e confira se o servidor está rodando.'
