@@ -200,6 +200,28 @@ const configs = {
   },
 };
 
+async function alignExerciseMediaFolder(db, trainerId, body) {
+  const mediaGroup = String(body?.mediaGroup || "").trim();
+  const exerciseGroups = String(body?.group || "")
+    .split(",")
+    .map((group) => group.trim())
+    .filter(Boolean);
+  if (!mediaGroup || !exerciseGroups.includes(mediaGroup)) return;
+  const updates = [];
+  if (body.gifId)
+    updates.push({
+      sql: "UPDATE exercise_gifs SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
+      values: [mediaGroup, body.gifId, trainerId],
+    });
+  if (body.videoId)
+    updates.push({
+      sql: "UPDATE exercise_videos SET muscle_group=$1 WHERE id=$2 AND trainer_id=$3",
+      values: [mediaGroup, body.videoId, trainerId],
+    });
+  if (updates.length) await db.batch(updates);
+  await ensureExerciseGroups(db, trainerId, mediaGroup).catch(() => {});
+}
+
 // A coluna de carga existe? (migração 037). Sem ela, tudo segue como antes.
 export async function loadReady(db) {
   try {
@@ -403,8 +425,10 @@ export async function createResource(db, resource, trainerId, body) {
   }
   if (!config) return null;
   const row = (await db.query(config.insert, [trainerId, ...config.values(body)])).rows[0];
-  if (resource === "exercises" && row)
+  if (resource === "exercises" && row) {
     await ensureExerciseGroups(db, trainerId, body.group).catch(() => {});
+    await alignExerciseMediaFolder(db, trainerId, body);
+  }
   // Avaliação: sexo do aluno (migração 050), para classificar o % de gordura.
   if (resource === "assessments" && row?.id && ["M", "F"].includes(body?.sex))
     await db.query("UPDATE assessments SET sex=$2 WHERE id=$1 AND trainer_id=$3", [row.id, body.sex, trainerId]).catch(() => {});
@@ -512,8 +536,10 @@ export async function updateResource(db, resource, trainerId, id, body) {
       ...(config.updateValues?.(body) || config.values(body)),
     ])
   ).rows[0];
-  if (resource === "exercises" && row)
+  if (resource === "exercises" && row) {
     await ensureExerciseGroups(db, trainerId, body.group).catch(() => {});
+    await alignExerciseMediaFolder(db, trainerId, body);
+  }
   return row;
 }
 

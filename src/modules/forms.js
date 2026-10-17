@@ -23,6 +23,7 @@ function setExerciseFormOrigin(form, source = 'library') {
   const externalGif = form.querySelector('.exercise-gif-upload')
   const gifDescription = form.querySelector('[data-gif-description]')
   const gifStatus = form.querySelector('[data-exercise-gif-status]')
+  const mediaFolder = form.querySelector('[data-exercise-media-folder]')
   const videoSelect = form.elements.videoId
   const videoPreview = form.querySelector('[data-exercise-video-preview]')
   if (chooseGif) chooseGif.hidden = workout
@@ -32,6 +33,11 @@ function setExerciseFormOrigin(form, source = 'library') {
       ? 'Envie um GIF externo. O aluno vê o movimento e o PDF recebe um quadro dele.'
       : 'O aluno vê o GIF mexendo e o PDF recebe um quadro dele.'
   if (gifStatus) gifStatus.hidden = !workout
+  if (mediaFolder) {
+    mediaFolder.hidden = !workout
+    const select = mediaFolder.querySelector('select')
+    if (select) select.required = workout
+  }
   if (videoSelect) videoSelect.hidden = workout
   if (videoPreview) videoPreview.hidden = workout
   const submit = form.querySelector(':scope > footer [type="submit"]')
@@ -371,6 +377,13 @@ function handleExercise(form) {
     mediaUrl: value(form, 'mediaUrl'),
     animationClip: value(form, 'animationClip'),
     gifId: value(form, 'gifId'),
+    // Na ficha, o aluno escolhe explicitamente em qual pasta a mídia externa
+    // fica. Isso impede que o primeiro grupo marcado (antes, muitas vezes
+    // Costas) assuma a pasta sem o personal perceber.
+    mediaGroup:
+      form.dataset.exerciseOrigin === 'workout'
+        ? form.querySelector('[data-exercise-media-group]')?.value || groups[0]
+        : '',
     // Vídeo MP4 da biblioteca (formato "Vídeo MP4"). Antes não ia junto, e
     // editar o exercício apagava o vídeo ligado a ele.
     videoId: form.elements.videoId ? value(form, 'videoId') : undefined,

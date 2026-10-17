@@ -684,6 +684,25 @@ function currentExerciseFromForm(form) {
   }
 }
 
+function syncExternalMediaGroups(form, preferred = '') {
+  const field = form.querySelector('[data-exercise-media-folder]')
+  const select = form.querySelector('[data-exercise-media-group]')
+  if (!field || !select) return
+  const groups = [...form.querySelectorAll('input[name="group"]:checked')].map((input) => input.value)
+  const current = preferred || select.value
+  select.replaceChildren(
+    ...groups.map((group) => {
+      const option = document.createElement('option')
+      option.value = group
+      option.textContent = group
+      return option
+    }),
+  )
+  if (groups.includes(current)) select.value = current
+  field.hidden = form.dataset.exerciseOrigin !== 'workout'
+  select.required = !field.hidden
+}
+
 function paintGifField(form) {
   const preview = form.querySelector('[data-gif-preview]')
   const label = form.querySelector('[data-gif-label]')
@@ -730,6 +749,11 @@ function enhanceExerciseForm() {
       <label class="button button--secondary exercise-gif-upload" hidden>Enviar GIF do computador<input type="file" accept=".gif,image/gif" hidden data-exercise-gif-file></label>
       <button class="icon-button" type="button" data-gif-field-clear aria-label="Remover GIF" hidden>×</button>
     </div>
+    <label class="field exercise-media-folder" data-exercise-media-folder hidden>
+      <span>Pasta da mídia externa</span>
+      <select data-exercise-media-group></select>
+      <small>O GIF ou MP4 enviado pelo computador será guardado nesta pasta.</small>
+    </label>
     <progress data-exercise-gif-progress hidden></progress>
     <small class="field-hint" data-exercise-gif-status hidden>Escolha um arquivo .gif externo.</small>
     <input type="hidden" name="gifId">`
@@ -746,7 +770,7 @@ function enhanceExerciseForm() {
     if (!file) return
     const status = field.querySelector('[data-exercise-gif-status]')
     const bar = field.querySelector('[data-exercise-gif-progress]')
-    const group = form.querySelector('input[name="group"]:checked')?.value
+    const group = form.querySelector('[data-exercise-media-group]')?.value
     if (!group) {
       status.textContent = 'Marque o grupo muscular antes de enviar o GIF.'
       return
@@ -760,6 +784,7 @@ function enhanceExerciseForm() {
     payload.append('gif', file)
     payload.append('name', name)
     payload.append('group', group)
+    payload.append('move', '1')
     payload.append('catalog', '0')
     const frame = await firstFrameBlob(file)
     if (frame) payload.append('frame', frame, 'frame.jpg')
@@ -785,6 +810,12 @@ function enhanceExerciseForm() {
   field
     .querySelector('[data-gif-field-clear]')
     .addEventListener('click', () => setExerciseGifField(form, ''))
+  form.addEventListener('change', (event) => {
+    if (event.target.matches('input[name="group"]'))
+      syncExternalMediaGroups(form, event.target.checked ? event.target.value : '')
+  })
+  window.addEventListener('farisa:exercise-origin', () => syncExternalMediaGroups(form))
+  syncExternalMediaGroups(form)
   paintGifField(form)
 }
 

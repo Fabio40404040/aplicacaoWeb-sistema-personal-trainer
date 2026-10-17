@@ -825,14 +825,14 @@ function exerciseVideoSelect(form) {
 }
 
 // Envia um MP4 direto do formulário do exercício. O vídeo vai para a
-// Biblioteca de MP4 (no primeiro grupo marcado) e já fica escolhido aqui.
+// Biblioteca de MP4 (na pasta de mídia escolhida) e já fica escolhido aqui.
 async function uploadVideoFromExerciseForm(form, input) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
   const status = form.querySelector('[data-exercise-video-status]')
   const bar = form.querySelector('[data-exercise-video-progress]')
-  const group = form.querySelector('input[name="group"]:checked')?.value
+  const group = form.querySelector('[data-exercise-media-group]')?.value
   if (!group) {
     status.textContent = 'Marque o grupo muscular do exercício antes de enviar o vídeo.'
     return
@@ -849,6 +849,7 @@ async function uploadVideoFromExerciseForm(form, input) {
   payload.append('video', file)
   payload.append('name', name)
   payload.append('group', group)
+  payload.append('move', '1')
   payload.append('equipment', form.elements.equipment?.value || '')
   payload.append('difficulty', form.elements.difficulty?.value || 'Intermediário')
   payload.append('instructions', form.elements.instructions?.value || '')
