@@ -371,6 +371,9 @@ export async function adminSetTrainerStatus(db, admin, id, body) {
   const trainer = await trainerById(db, id)
   if (!trainer) return { error: 'Personal não encontrado.', status: 404 }
   const block = body?.status === 'blocked'
+  // Conta do dono: a página principal do site depende dela.
+  if (block && id === (await db.query(OWNER_SQL)).rows[0]?.id)
+    return { error: 'A conta do dono do site é protegida e não pode ser bloqueada.', status: 403 }
   const reason = text(body?.reason, 300)
   if (block && !reason) return { error: 'Informe o motivo do bloqueio.', status: 400 }
   await db.query(
@@ -482,6 +485,11 @@ export async function adminDeleteTrainer(env, db, admin, id, body) {
   if (id === DEMO_TRAINER_ID)
     return {
       error: 'A conta de demonstração é protegida e não pode ser excluída. Você ainda pode editar seus dados.',
+      status: 403,
+    }
+  if (id === (await db.query(OWNER_SQL)).rows[0]?.id)
+    return {
+      error: 'A conta do dono do site é protegida e não pode ser excluída: a página principal da FARISA depende dela.',
       status: 403,
     }
   if (String(body?.confirmEmail || '').trim().toLowerCase() !== trainer.email.toLowerCase())

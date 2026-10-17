@@ -235,8 +235,15 @@ function render() {
       if (!trainer.isOwner) action('Teste de 30 dias…', setTrial)
       action('Marcar e-mail como confirmado', confirmEmail)
       action('Gerar nova senha', resetPassword)
-      action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
-      if (isDemo) {
+      // Conta do dono: não bloqueia nem exclui (a página principal depende dela).
+      // Se já estiver bloqueada por algum motivo, ainda dá para desbloquear.
+      if (!trainer.isOwner || trainer.status === 'blocked')
+        action(trainer.status === 'blocked' ? 'Desbloquear' : 'Bloquear', toggleBlock)
+      if (trainer.isOwner) {
+        const protectedOwner = el('div', 'admin-menu-protected', '🔒 Conta do dono protegida')
+        protectedOwner.title = 'A conta do dono do site pode ser editada, mas não pode ser bloqueada nem excluída.'
+        items.append(protectedOwner)
+      } else if (isDemo) {
         const protectedDelete = el('div', 'admin-menu-protected', '🔒 Exclusão protegida')
         protectedDelete.title = 'A demonstração pode ser editada, mas não pode ser excluída.'
         items.append(protectedDelete)
