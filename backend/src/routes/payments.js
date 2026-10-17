@@ -492,6 +492,12 @@ async function validSignature(request, env, dataId) {
 
 async function approvePayment(db, intent, payment, paymentId, provider = 'mercadopago') {
   if (intent.status === 'approved') return
+  // Disputa no cartão que o personal ganhou: o pagamento só volta a constar
+  // como aprovado, sem somar o prazo de novo (ele já foi dado na 1ª aprovação).
+  if (intent.status === 'in_mediation') {
+    await db.query(`UPDATE payment_intents SET status='approved',updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [intent.id])
+    return
+  }
   const method = payment.payment_type_id === 'credit_card' ? 'credit_card' : 'pix'
   if (
     payment.currency_id !== 'BRL' ||
@@ -517,7 +523,7 @@ async function approvePayment(db, intent, payment, paymentId, provider = 'mercad
   // podem chegar juntos, e sem isto o prazo seria somado duas vezes.
   const claimed = (
     await db.query(
-      `UPDATE payment_intents SET status='approved',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status<>'approved' RETURNING id`,
+      `UPDATE payment_intents SET status='approved',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status NOT IN ('approved','in_mediation') RETURNING id`,
       [intent.id],
     )
   ).rows[0]
@@ -672,14 +678,22 @@ export async function mercadoPagoWebhook(request, env, db) {
 // Dinheiro devolvido ou contestado depois de aprovado: o acesso sai junto.
 // Usado pelo aviso do Mercado Pago e pelo estorno feito pelo personal no painel.
 async function reverseStudentPayment(db, intent, status, paymentRef) {
-  if (!['refunded', 'charged_back'].includes(status) || intent.status !== 'approved') {
-    await db.query(`UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, [intent.id, status])
+  // Já aprovado (ou com disputa aberta no cartão, status antigo "in_mediation"):
+  // só estorno ou contestação perdida desfazem. Disputa aberta e outros avisos
+  // não mexem — o aluno segue com acesso até o resultado.
+  const wasPaid = ['approved', 'in_mediation'].includes(intent.status)
+  if (!['refunded', 'charged_back'].includes(status) || !wasPaid) {
+    await db.query(
+      `UPDATE payment_intents SET status=CASE WHEN status IN ('approved','in_mediation') THEN 'approved' ELSE $2 END,
+         updated_at=CURRENT_TIMESTAMP WHERE id=$1`,
+      [intent.id, status],
+    )
     return
   }
   // Só uma execução desfaz: o estorno do painel e o aviso do Mercado Pago podem chegar juntos.
   const claimed = (
     await db.query(
-      `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status='approved' RETURNING id`,
+      `UPDATE payment_intents SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status IN ('approved','in_mediation') RETURNING id`,
       [intent.id, status],
     )
   ).rows[0]

@@ -171,3 +171,69 @@ test('assinatura: estorno tira só o mês estornado', async () => {
   await run((db) => saasWebhook(db, { status: 'refunded', external_reference: 'saas_3' }))
   assert.equal(one(sqlite, "SELECT saas_plan_code AS c FROM trainers WHERE id='t1'").c, 'free', 'sem prazo pago volta para o Grátis')
 })
+
+// Disputa no cartão (in_mediation): o acesso segue até o resultado. Ganhou →
+// continua com o mesmo prazo (não soma de novo); perdeu (charged_back) → sai.
+async function studentWebhook(run, paymentId = '777') {
+  const secret = 'segredo-webhook'
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const signature = Buffer.from(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`id:${paymentId};request-id:r1;ts:1;`))).toString('hex')
+  const request = new Request(`https://x/api/payments/mercadopago/webhook?data.id=${paymentId}`, {
+    method: 'POST',
+    body: '{}',
+    headers: { 'x-signature': `ts=1,v1=${signature}`, 'x-request-id': 'r1' },
+  })
+  return run((db) => mercadoPagoWebhook(request, { ...env, MERCADO_PAGO_WEBHOOK_SECRET: secret }, db))
+}
+const daysLeft = (sqlite) =>
+  Math.round((Date.parse(one(sqlite, "SELECT access_expires_at AS e FROM students WHERE id='s1'").e) - Date.now()) / DAY)
+
+test('aluno: disputa no cartão ganha não soma o prazo de novo', async () => {
+  const { sqlite, run } = newDatabase()
+  seedStudent(sqlite)
+  const payment = { status: 'approved', currency_id: 'BRL', transaction_amount: 99.9, payment_type_id: 'credit_card' }
+  fakeMercadoPago(payment)
+  await run((db) => createCardPayment(db, 'acc1', env, card))
+  payment.status = 'in_mediation'
+  await studentWebhook(run)
+  assert.equal(one(sqlite, "SELECT access_status FROM students WHERE id='s1'").access_status, 'active', 'segue com acesso na disputa')
+  assert.equal(one(sqlite, 'SELECT status FROM payment_intents').status, 'approved')
+  payment.status = 'approved'
+  await studentWebhook(run)
+  assert.equal(daysLeft(sqlite), 30, 'não somou outro mês')
+  assert.equal(one(sqlite, "SELECT COUNT(*) AS n FROM payments WHERE status='paid'").n, 1)
+})
+
+test('aluno: disputa no cartão perdida tira o acesso', async () => {
+  const { sqlite, run } = newDatabase()
+  seedStudent(sqlite)
+  const payment = { status: 'approved', currency_id: 'BRL', transaction_amount: 99.9, payment_type_id: 'credit_card' }
+  fakeMercadoPago(payment)
+  await run((db) => createCardPayment(db, 'acc1', env, card))
+  payment.status = 'in_mediation'
+  await studentWebhook(run)
+  payment.status = 'charged_back'
+  await studentWebhook(run)
+  assert.equal(one(sqlite, "SELECT access_status FROM students WHERE id='s1'").access_status, 'paused')
+  assert.equal(one(sqlite, 'SELECT status FROM payments').status, 'refunded')
+  // Registro antigo que ficou como "in_mediation" (antes da correção) também se resolve.
+  sqlite.exec("UPDATE payment_intents SET status='in_mediation'")
+  payment.status = 'approved'
+  await studentWebhook(run)
+  assert.equal(one(sqlite, 'SELECT status FROM payment_intents').status, 'approved')
+  assert.equal(one(sqlite, "SELECT COUNT(*) AS n FROM payments WHERE status='paid'").n, 0, 'não aprovou de novo')
+})
+
+test('assinatura: disputa no cartão ganha mantém o prazo; perdida volta para o Grátis', async () => {
+  const { sqlite, run } = newDatabase()
+  seedSaas(sqlite, 1)
+  await run((db) => approveSaasPayment(db, intentOf(sqlite, 'saas_1'), { status: 'approved', transaction_amount: 49.9 }))
+  await run((db) => saasWebhook(db, { status: 'in_mediation', external_reference: 'saas_1' }))
+  assert.equal(intentOf(sqlite, 'saas_1').status, 'approved')
+  assert.equal(one(sqlite, "SELECT saas_plan_code AS c FROM trainers WHERE id='t1'").c, 'unlimited')
+  await run((db) => saasWebhook(db, { status: 'approved', transaction_amount: 49.9, external_reference: 'saas_1' }))
+  assert.equal(monthsLeft(sqlite), 1, 'não somou outro mês')
+  await run((db) => saasWebhook(db, { status: 'in_mediation', external_reference: 'saas_1' }))
+  await run((db) => saasWebhook(db, { status: 'charged_back', external_reference: 'saas_1' }))
+  assert.equal(one(sqlite, "SELECT saas_plan_code AS c FROM trainers WHERE id='t1'").c, 'free')
+})

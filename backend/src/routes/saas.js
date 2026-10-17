@@ -420,6 +420,11 @@ function saasNotificationUrl(env) {
 // período ao vencimento atual.
 export async function approveSaasPayment(db, intent, payment, env = null) {
   if (intent.status === 'approved') return
+  // Disputa no cartão ganha: volta a constar como aprovado, sem somar o período de novo.
+  if (intent.status === 'in_mediation') {
+    await db.query("UPDATE saas_payment_intents SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=$1", [intent.id])
+    return
+  }
   if (Math.round(Number(payment.transaction_amount) * 100) !== Number(intent.amount_cents))
     throw new Error('Valor da cobrança não confere.')
   const current = (
@@ -436,7 +441,7 @@ export async function approveSaasPayment(db, intent, payment, env = null) {
   // somam o período duas vezes).
   const claimed = (
     await db.query(
-      "UPDATE saas_payment_intents SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status<>'approved' RETURNING id",
+      "UPDATE saas_payment_intents SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND status NOT IN ('approved','in_mediation') RETURNING id",
       [intent.id],
     )
   ).rows[0]
@@ -495,7 +500,7 @@ export async function saasWebhook(db, payment, env = null) {
     // estorno pelo Admin e o aviso do Mercado Pago chegam os dois).
     const reversed = (
       await db.query(
-        "UPDATE saas_payment_intents SET status=$2 WHERE id=$1 AND status='approved' RETURNING id",
+        "UPDATE saas_payment_intents SET status=$2 WHERE id=$1 AND status IN ('approved','in_mediation') RETURNING id",
         [intent.id, String(payment.status)],
       )
     ).rows[0]
@@ -523,7 +528,13 @@ export async function saasWebhook(db, payment, env = null) {
         `UPDATE trainers SET saas_plan_code=$2, saas_cycle=NULL, saas_expires_at=NULL WHERE id=$1 AND saas_plan_code=$3`,
         [intent.trainer_id, FREE_PLAN, intent.plan_code],
       )
-  } else await db.query('UPDATE saas_payment_intents SET status=$2 WHERE id=$1', [intent.id, String(payment.status || 'pending')])
+  } else
+    // Disputa aberta (in_mediation) ou outro aviso depois de aprovado: o
+    // pagamento continua aprovado e o plano segue até o resultado.
+    await db.query(
+      "UPDATE saas_payment_intents SET status=CASE WHEN status IN ('approved','in_mediation') THEN 'approved' ELSE $2 END WHERE id=$1",
+      [intent.id, String(payment.status || 'pending')],
+    )
   return true
 }
 
