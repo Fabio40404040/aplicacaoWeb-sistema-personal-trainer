@@ -1080,7 +1080,17 @@ function emailTester() {
   const send = el('button', 'button button--primary', 'Enviar teste')
   send.type = 'submit'
   const result = el('p', 'admin-billing-note')
-  form.append(input, send)
+  // Limpa o e-mail digitado e a resposta da Brevo.
+  const clear = el('button', 'button button--secondary', 'Limpar')
+  clear.type = 'button'
+  clear.hidden = true
+  clear.addEventListener('click', () => {
+    input.value = ''
+    result.textContent = ''
+    clear.hidden = true
+    input.focus()
+  })
+  form.append(input, send, clear)
   form.addEventListener('submit', async (event) => {
     event.preventDefault()
     if (!form.reportValidity()) return
@@ -1097,6 +1107,7 @@ function emailTester() {
       result.textContent = error.message
     } finally {
       send.disabled = false
+      clear.hidden = false
     }
   })
   wrap.append(summary, form, result)
