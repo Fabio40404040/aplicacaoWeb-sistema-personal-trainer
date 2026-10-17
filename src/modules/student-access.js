@@ -558,7 +558,11 @@ function loadEditor(exercise, onSaved) {
   const label = element("label", "");
   const input = element("input");
   input.type = "text";
-  input.inputMode = "decimal";
+  // No iPhone, "decimal" bloqueia letras. Carga aceita valor e unidade
+  // (20 kg, 15 lb, elástico médio ou peso corporal), então usa teclado comum.
+  input.inputMode = "text";
+  input.autocomplete = "off";
+  input.spellcheck = false;
   input.maxLength = 20;
   input.placeholder = "ex.: 20 kg";
   input.value = exercise.load || "";
