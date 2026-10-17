@@ -1,6 +1,6 @@
 import { mediaQuotaProblem } from "./account-self.js";
 import { deleteMedia, putMedia } from "../lib/media-storage.js";
-import { ensureMuscleGroup } from "./muscle-groups.js";
+import { ensureMuscleGroup, resolveMuscleGroupName } from "./muscle-groups.js";
 const MAX_VIDEO_BYTES = 90 * 1024 * 1024;
 
 const selectFields = `id,name,muscle_group AS "group",equipment,difficulty,instructions,
@@ -77,7 +77,8 @@ export async function uploadExerciseVideo(request, env, db, trainerId) {
     return { error: "O vídeo MP4 deve ter no máximo 90 MB.", status: 400 };
 
   const name = String(form.get("name") || "").trim();
-  const group = String(form.get("group") || "").trim();
+  const requestedGroup = String(form.get("group") || "").trim();
+  const group = await resolveMuscleGroupName(db, trainerId, requestedGroup);
   const equipment = String(form.get("equipment") || "").trim();
   const difficulty = String(form.get("difficulty") || "").trim();
   const instructions = String(form.get("instructions") || "").trim();

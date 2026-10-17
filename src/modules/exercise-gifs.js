@@ -89,11 +89,17 @@ export function groupFromFolder(folderName, { custom = true } = {}) {
 // Nome da pasta no computador exatamente como foi criado. Só retiramos
 // espaços externos/repetidos e limitamos ao tamanho aceito pelo banco.
 export function externalFolderName(folderName) {
-  return String(folderName || '')
+  const clean = String(folderName || '')
     .trim()
     .replace(/\s+/gu, ' ')
     .trim()
     .slice(0, 40)
+  const identity = (value) =>
+    accentless(value)
+      .replace(/^\d+\s*[-_.:)]*\s*/u, '')
+      .replace(/[^a-z0-9]+/gu, ' ')
+      .trim()
+  return allGroupNames().find((name) => identity(name) === identity(clean)) || clean
 }
 
 // Pastas reais para escolher na mão, na mesma ordem da biblioteca. Não cria

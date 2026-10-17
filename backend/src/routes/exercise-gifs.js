@@ -1,6 +1,6 @@
 import { mediaQuotaProblem } from "./account-self.js";
 import { deleteMedia, putMedia } from "../lib/media-storage.js";
-import { ensureMuscleGroup } from "./muscle-groups.js";
+import { ensureMuscleGroup, resolveMuscleGroupName } from "./muscle-groups.js";
 // Sem limite próprio de tamanho por arquivo: o teto é o do Cloudflare (100 MB
 // por envio). No plano Grátis o total entra na cota de espaço (account-self.js).
 const MAX_GIF_BYTES = 100 * 1024 * 1024;
@@ -81,7 +81,8 @@ export async function uploadExerciseGif(request, env, db, trainerId) {
     return { error: "Este GIF passa de 100 MB, o máximo aceito pelo Cloudflare.", status: 400 };
 
   const name = String(form.get("name") || "").trim();
-  const group = String(form.get("group") || "").trim();
+  const requestedGroup = String(form.get("group") || "").trim();
+  const group = await resolveMuscleGroupName(db, trainerId, requestedGroup);
   if (!name || !group)
     return { error: "Informe o nome e o grupo muscular do GIF.", status: 400 };
   const catalogar = form.get("catalog") !== "0";

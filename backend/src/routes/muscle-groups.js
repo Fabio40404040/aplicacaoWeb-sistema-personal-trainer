@@ -27,6 +27,33 @@ const cleanName = (value) =>
     .replace(/\s+/gu, " ")
     .slice(0, 40);
 
+const folderIdentity = (value) =>
+  cleanName(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/^\d+\s*[-_.:)]*\s*/u, "")
+    .replace(/[^a-z0-9]+/gu, " ")
+    .trim();
+
+// Mantém o nome da primeira pasta criada. Assim, se já existe "Peito",
+// enviar depois uma pasta "1-Peito" acrescenta o conteúdo em "Peito".
+export async function resolveMuscleGroupName(db, trainerId, value) {
+  const name = cleanName(value);
+  if (!name) return "";
+  try {
+    const groups = (
+      await db.query(
+        "SELECT name FROM trainer_muscle_groups WHERE trainer_id=$1 ORDER BY created_at,id",
+        [trainerId],
+      )
+    ).rows;
+    return groups.find((group) => folderIdentity(group.name) === folderIdentity(name))?.name || name;
+  } catch {
+    return name;
+  }
+}
+
 async function appendFolderOrder(db, trainerId, name) {
   try {
     const current = await folderOrder(db, trainerId);
@@ -42,7 +69,7 @@ async function appendFolderOrder(db, trainerId, name) {
 // pelo trainer_id (a Biblioteca FARISA usa o id próprio farisa-library).
 export async function ensureMuscleGroup(db, trainerId, value) {
   if (!(await schemaReady(db))) return null;
-  const name = cleanName(value);
+  const name = await resolveMuscleGroupName(db, trainerId, value);
   if (name.length < 2) return null;
   let row = (
     await db.query(
@@ -131,7 +158,7 @@ export async function deleteMuscleGroup(db, trainerId, id) {
     )
   ).rows[0];
   const videos = Number(uso?.videos) || 0;
-  let gifs = 0;
+  let gifs;
   try {
     gifs =
       Number(
