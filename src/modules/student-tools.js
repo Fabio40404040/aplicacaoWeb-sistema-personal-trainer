@@ -52,7 +52,11 @@ let beepEndTimer = 0;
 let beepEnded = null;
 let webBeepTones = [];
 let beepRunId = 0;
-const BEEP_STARTS = [0, 0.9, 1.8, 2.7, 3.6, 4.5];
+// O pequeno silêncio inicial permite autorizar o <audio> no toque em Iniciar
+// sem soltar um bipe naquele momento. No iPhone, reproduzir o elemento como
+// "muted" não garante que ele poderá tocar com som quando o tempo acabar.
+const BEEP_LEAD = 0.18;
+const BEEP_STARTS = [0, 0.9, 1.8, 2.7, 3.6, 4.5].map((start) => start + BEEP_LEAD);
 const BEEP_LENGTH = 0.24;
 const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
 function beepWav() {
@@ -91,24 +95,31 @@ export function unlockSound() {
       beepAudio = new Audio(beepWav());
       beepAudio.preload = "auto";
       beepAudio.setAttribute("playsinline", "");
-      beepAudio.volume = 0.72;
+      beepAudio.volume = 1;
     }
-    beepAudio.muted = true;
+    beepAudio.pause();
+    beepAudio.currentTime = 0;
+    beepAudio.muted = false;
     const playing = beepAudio.play();
+    // play() precisa acontecer dentro do toque. O WAV começa com silêncio,
+    // então pode ser pausado assim que o Safari confirmar a reprodução.
     const release = () => {
       beepAudio.pause();
       beepAudio.currentTime = 0;
-      beepAudio.muted = false;
     };
-    if (playing?.then) playing.then(release, () => (beepAudio.muted = false));
+    if (playing?.then) playing.then(release, () => {});
     else release();
   } catch {
     /* sem <audio>: fica o Web Audio */
   }
   try {
     const Context = window.AudioContext || window.webkitAudioContext;
-    if (!audioContext && Context) audioContext = new Context();
-    if (audioContext?.state === "suspended") void audioContext.resume();
+    // O Safari também expõe o estado não padronizado "interrupted" quando
+    // outro aplicativo está usando áudio. Um contexto novo evita reutilizar
+    // uma instância que aparenta estar ativa, mas deixou de produzir som.
+    if ((!audioContext || ["closed", "interrupted"].includes(audioContext.state)) && Context)
+      audioContext = new Context();
+    if (audioContext?.state !== "running") void audioContext.resume().catch(() => {});
   } catch {
     /* sem som */
   }
@@ -119,7 +130,10 @@ function playHtmlBeep(runId) {
     beepAudio.muted = false;
     beepAudio.currentTime = 0;
     const playing = beepAudio.play();
-    playing?.catch?.(() => {});
+    // Se o iOS negar o elemento de mídia, tenta o segundo mecanismo.
+    playing?.catch?.(() => {
+      if (runId === beepRunId) webBeep(runId);
+    });
     return true;
   } catch {
     return false;
@@ -155,19 +169,18 @@ function scheduleWebBeep(runId) {
 function webBeep(runId) {
   const Context = window.AudioContext || window.webkitAudioContext;
   try {
-    if (!audioContext && Context) audioContext = new Context();
+    if ((!audioContext || ["closed", "interrupted"].includes(audioContext.state)) && Context)
+      audioContext = new Context();
   } catch {
     return false;
   }
   if (!audioContext) return false;
   if (audioContext.state === "running") return scheduleWebBeep(runId);
-  // No iPhone a música pode suspender o contexto. Tenta retomá-lo; se o
-  // Safari negar, usa o <audio> que foi liberado no toque em Iniciar.
+  // No iPhone a música pode suspender o contexto. Esta é apenas a reserva do
+  // <audio>; se não retomar, o aviso visual continua disponível.
   void audioContext.resume().then(
-    () => {
-      if (!scheduleWebBeep(runId)) playHtmlBeep(runId);
-    },
-    () => playHtmlBeep(runId),
+    () => scheduleWebBeep(runId),
+    () => {},
   );
   return true;
 }
@@ -202,9 +215,9 @@ function beep(onEnd) {
   stopBeep();
   beepEnded = onEnd || null;
   const runId = beepRunId;
-  // Web Audio é usado primeiro porque se mistura melhor com música. O WAV
-  // longo fica apenas como reserva para versões antigas do Safari.
-  if (!webBeep(runId)) playHtmlBeep(runId);
+  // O elemento autorizado no toque é mais confiável no iPhone quando outro
+  // aplicativo está tocando música. Web Audio fica como segunda tentativa.
+  if (!playHtmlBeep(runId)) webBeep(runId);
   try {
     navigator.vibrate?.([220, 680, 220, 680, 220, 680, 220, 680, 220, 680, 220]);
   } catch {
