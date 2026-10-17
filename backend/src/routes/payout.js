@@ -100,7 +100,10 @@ async function saveTokens(env, db, trainerId, data, { activate = false } = {}) {
 
 // Com que conta este personal recebe. Devolve o "env" de pagamento a usar nas
 // chamadas ao Mercado Pago (o da plataforma ou o da conta conectada).
-export async function resolvePay(db, env, trainerId, { charge = false } = {}) {
+// existing: conferir ou estornar uma cobrança JÁ criada. Usa a conexão
+// Mercado Pago guardada mesmo que o personal tenha trocado para Pix depois
+// (senão o aluno pagava e não era liberado).
+export async function resolvePay(db, env, trainerId, { charge = false, existing = false } = {}) {
   // Cobrança nova para aluno: só com o e-mail do personal confirmado.
   // (Os avisos de pagamento do Mercado Pago não passam por aqui com charge.)
   if (charge && !(await trainerEmailVerified(db, trainerId)))
@@ -111,10 +114,13 @@ export async function resolvePay(db, env, trainerId, { charge = false } = {}) {
   } catch {
     return { mode: 'platform', env } // sem a migração 029: como era antes
   }
-  if (!row || row.mode === 'none') return { mode: 'none', env: null }
-  if (row.mode === 'platform') return { mode: 'platform', env }
-  if (row.mode === 'pix')
-    return row.pix_key ? { mode: 'pix', env: null, pix: row } : { mode: 'none', env: null }
+  const savedMp = existing && row?.mp_access_token && row.mode !== 'platform'
+  if (!savedMp) {
+    if (!row || row.mode === 'none') return { mode: 'none', env: null }
+    if (row.mode === 'platform') return { mode: 'platform', env }
+    if (row.mode === 'pix')
+      return row.pix_key ? { mode: 'pix', env: null, pix: row } : { mode: 'none', env: null }
+  }
   if (!row.mp_access_token) return { mode: 'none', env: null }
   try {
     let token = await unseal(env, row.mp_access_token)
@@ -345,6 +351,23 @@ export async function payoutOAuthCallback(request, env, db) {
 }
 
 export async function payoutDisconnect(db, trainerId) {
+  // Cobrança de aluno ainda em aberto (Pix/cartão gerado nas últimas 24 h):
+  // sem a conexão, o pagamento não seria conferido e o aluno não seria liberado.
+  const open = (
+    await db
+      .query(
+        `SELECT COUNT(*) AS n FROM payment_intents
+         WHERE trainer_id=$1 AND provider='mercadopago' AND status IN ('pending','in_process','authorized')
+           AND created_at > datetime('now','-1 day')`,
+        [trainerId],
+      )
+      .catch(() => ({ rows: [] }))
+  ).rows[0]
+  if (Number(open?.n) > 0)
+    return {
+      error: `Há ${open.n} cobrança(s) de aluno em aberto no seu Mercado Pago. Para não deixar ninguém sem liberação, espere até amanhã para desconectar — ou, se quiser receber por Pix agora, apenas troque a forma de recebimento para Pix (a conexão fica guardada só para conferir essas cobranças).`,
+      status: 409,
+    }
   await db.query(
     `UPDATE trainer_payout SET mp_user_id=NULL, mp_access_token=NULL, mp_refresh_token=NULL, mp_public_key=NULL,
        mp_expires_at=NULL, mp_connected_at=NULL,

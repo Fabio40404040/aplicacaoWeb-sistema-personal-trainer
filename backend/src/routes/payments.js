@@ -611,7 +611,7 @@ export async function reconcileStudentPayments(db, accountId, platformEnv) {
     )
   ).rows
   if (!intents.length) return { checked: true, updated: false }
-  const env = (await resolvePay(db, platformEnv, intents[0].trainer_id)).env
+  const env = (await resolvePay(db, platformEnv, intents[0].trainer_id, { existing: true })).env
   if (!env?.MERCADO_PAGO_ACCESS_TOKEN) return { checked: false, updated: false }
   let updated = false
   for (const intent of intents) {
@@ -648,7 +648,7 @@ export async function mercadoPagoWebhook(request, env, db) {
     return { error: 'Assinatura do pagamento inválida.', status: 401 }
   // Cobrança feita na conta conectada de um personal: consulta com a conta dele.
   const trainerId = String(url.searchParams.get('trainer') || '')
-  const payEnv = /^[\w-]{1,64}$/u.test(trainerId) ? (await resolvePay(db, env, trainerId)).env || env : env
+  const payEnv = /^[\w-]{1,64}$/u.test(trainerId) ? (await resolvePay(db, env, trainerId, { existing: true })).env || env : env
   const payment = await mercadoPago(`/v1/payments/${paymentId}`, payEnv)
   const intent = (
     await db.query(
@@ -759,7 +759,7 @@ export async function trainerRefundStudent(db, platformEnv, trainerId, paymentRo
   if (row.status !== 'paid') return { error: 'Este pagamento já foi estornado.', status: 400 }
   if (row.provider !== 'mercadopago' || !/^\d{1,30}$/u.test(String(row.ref || '')))
     return { error: 'Este pagamento não foi pelo Mercado Pago. Para devolver, faça um Pix de volta para o aluno pelo seu banco.', status: 400 }
-  const pay = await resolvePay(db, platformEnv, trainerId)
+  const pay = await resolvePay(db, platformEnv, trainerId, { existing: true })
   if (pay.mode !== 'mercadopago' || !pay.env?.MERCADO_PAGO_ACCESS_TOKEN)
     return { error: 'O estorno pelo painel funciona com o seu Mercado Pago conectado. Para outros pagamentos, fale com o Suporte.', status: 400 }
   const payment = await mercadoPago(`/v1/payments/${row.ref}`, pay.env).catch(() => null)

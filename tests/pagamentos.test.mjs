@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
 import { withDb } from '../backend/src/lib/db.js'
 import { createCardPayment, mercadoPagoWebhook, trainerRefundStudent } from '../backend/src/routes/payments.js'
-import { seal } from '../backend/src/routes/payout.js'
+import { payoutDisconnect, payoutSetMode, seal } from '../backend/src/routes/payout.js'
 import { approveSaasPayment, saasWebhook } from '../backend/src/routes/saas.js'
 
 const DAY = 86_400_000
@@ -236,4 +236,40 @@ test('assinatura: disputa no cartão ganha mantém o prazo; perdida volta para o
   await run((db) => saasWebhook(db, { status: 'in_mediation', external_reference: 'saas_1' }))
   await run((db) => saasWebhook(db, { status: 'charged_back', external_reference: 'saas_1' }))
   assert.equal(one(sqlite, "SELECT saas_plan_code AS c FROM trainers WHERE id='t1'").c, 'free')
+})
+
+// Personal trocou de Mercado Pago para Pix com cobrança em aberto: o aviso do
+// Mercado Pago ainda é conferido com a conexão guardada e o aluno é liberado.
+test('aluno: personal troca para Pix com cartão em análise e o aluno é liberado', async () => {
+  const { sqlite, run } = newDatabase()
+  seedStudent(sqlite)
+  sqlite.exec("UPDATE trainer_payout SET mode='mercadopago', pix_key='chave@x.invalid' WHERE trainer_id='t1'")
+  sqlite.prepare("UPDATE trainer_payout SET mp_access_token=? WHERE trainer_id='t1'").run(await seal(env, 'TOKEN-DO-PERSONAL'))
+  const payment = { status: 'in_process', currency_id: 'BRL', transaction_amount: 99.9, payment_type_id: 'credit_card' }
+  fakeMercadoPago(payment)
+  await run((db) => createCardPayment(db, 'acc1', env, card))
+  assert.equal(one(sqlite, "SELECT access_status FROM students WHERE id='s1'").access_status, 'pending')
+  assert.deepEqual((await run((db) => payoutSetMode(db, 't1', { mode: 'pix' }))).data, { ok: true })
+  // Desconectar com a cobrança em aberto é barrado (trocar para Pix não).
+  assert.equal((await run((db) => payoutDisconnect(db, 't1'))).status, 409)
+  const tokens = []
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (url, options = {}) => {
+    tokens.push(String(options.headers?.Authorization || ''))
+    return realFetch(url, options)
+  }
+  payment.status = 'approved'
+  const secret = 'segredo-webhook'
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const signature = Buffer.from(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('id:777;request-id:r1;ts:1;'))).toString('hex')
+  const request = new Request('https://x/api/payments/mercadopago/webhook?data.id=777&trainer=t1', {
+    method: 'POST',
+    body: '{}',
+    headers: { 'x-signature': `ts=1,v1=${signature}`, 'x-request-id': 'r1' },
+  })
+  assert.deepEqual((await run((db) => mercadoPagoWebhook(request, { ...env, MERCADO_PAGO_WEBHOOK_SECRET: secret }, db))).data, { accepted: true })
+  assert.ok(tokens.includes('Bearer TOKEN-DO-PERSONAL'), 'conferiu com a conta do personal')
+  assert.equal(one(sqlite, "SELECT access_status FROM students WHERE id='s1'").access_status, 'active')
+  // Sem cobrança em aberto, desconectar funciona.
+  assert.deepEqual((await run((db) => payoutDisconnect(db, 't1'))).data, { ok: true })
 })
