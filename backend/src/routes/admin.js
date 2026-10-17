@@ -1,3 +1,4 @@
+import { OWNER_SQL } from '../lib/owner.js'
 // Área do administrador da plataforma (o dono do SaaS), em /admin.
 import { payoutModes } from './payout.js'
 import { saasAmount, saasPlans } from './saas.js'
@@ -156,6 +157,7 @@ export async function adminTrainers(db) {
     ).rows.map((row) => [row.id, row.trialEndsAt]),
   )
   const payout = await payoutModes(db)
+  const ownerId = (await db.query(OWNER_SQL).catch(() => ({ rows: [] }))).rows[0]?.id
   for (const sql of queries) {
     try {
       const rows = (await db.query(sql)).rows
@@ -170,7 +172,7 @@ export async function adminTrainers(db) {
         students: Number(row.students || 0),
         activeStudents: Number(row.activeStudents || 0),
         workouts: Number(row.workouts || 0),
-        isOwner: index === 0,
+        isOwner: ownerId ? row.id === ownerId : index === 0,
         payoutMode: payout.get(row.id) || 'none',
         trialEndsAt: trials.get(row.id) || null,
       }))

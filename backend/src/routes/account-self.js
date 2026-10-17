@@ -1,3 +1,4 @@
+import { OWNER_SQL } from '../lib/owner.js'
 // O próprio personal: primeiros passos, uso de armazenamento, exportar os
 // dados e excluir a conta.
 import { isDemoEmail } from '../lib/demo.js'
@@ -119,7 +120,7 @@ export async function deleteOwnAccount(env, db, session, body) {
   const trainer = (await db.query('SELECT id, name, email, password_hash FROM trainers WHERE id=$1', [session.sub])).rows[0]
   if (!trainer) return { error: 'Conta não encontrada.', status: 404 }
   if (isDemoEmail(trainer.email)) return { error: 'A conta de demonstração não pode ser excluída.', status: 403 }
-  const owner = (await db.query('SELECT id FROM trainers ORDER BY created_at, id LIMIT 1')).rows[0]?.id
+  const owner = (await db.query(OWNER_SQL)).rows[0]?.id
   if (owner === trainer.id)
     return { error: 'Esta é a conta do dono da plataforma e não pode ser excluída por aqui.', status: 403 }
   if (String(body?.confirm || '').trim().toUpperCase() !== 'EXCLUIR')

@@ -1,3 +1,4 @@
+import { OWNER_SQL } from '../lib/owner.js'
 // Regras do plano Grátis (migração 041):
 //  - 30 dias com todas as ferramentas (teste completo);
 //  - depois, ferramentas básicas. Ficam só nos planos pagos: pagamento
@@ -27,7 +28,7 @@ export async function planAccess(db, trainerId) {
       await db.query(
         `SELECT t.saas_trial_ends_at AS "trialEndsAt", t.saas_expires_at AS "expiresAt",
            p.price_cents AS "priceCents",
-           (SELECT id FROM trainers ORDER BY created_at, id LIMIT 1) AS "ownerId"
+           (${OWNER_SQL}) AS "ownerId"
          FROM trainers t LEFT JOIN saas_plans p ON p.code=t.saas_plan_code WHERE t.id=$1`,
         [trainerId],
       )
@@ -90,7 +91,7 @@ export async function holdSeatIfUsed(db, trainerId, studentId) {
     const row = (
       await db.query(
         `SELECT p.price_cents AS "priceCents",
-           (SELECT id FROM trainers ORDER BY created_at, id LIMIT 1) AS "ownerId",
+           (${OWNER_SQL}) AS "ownerId",
            (SELECT COUNT(*) FROM workouts w WHERE w.student_id=$2) AS workouts,
            (SELECT COUNT(*) FROM assessments a WHERE a.student_id=$2) AS assessments,
            (SELECT COUNT(*) FROM students s WHERE s.id=$2 AND s.trainer_id=$1) AS mine

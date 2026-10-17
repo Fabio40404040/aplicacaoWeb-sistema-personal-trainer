@@ -1,3 +1,4 @@
+import { OWNER_SQL } from '../lib/owner.js'
 import { trainerLocked } from './plan-access.js'
 import { trainerEmailVerified } from './account-emails.js'
 // Página de cada personal (migração 030). A estrutura do site é uma só; o
@@ -105,7 +106,7 @@ export async function trainerReferrals(db, trainerId) {
 }
 
 async function ownerId(db) {
-  return (await db.query('SELECT id FROM trainers ORDER BY created_at, id LIMIT 1')).rows[0]?.id || null
+  return (await db.query(OWNER_SQL)).rows[0]?.id || null
 }
 
 async function freeSlug(db, base, trainerId) {
