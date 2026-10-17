@@ -50,20 +50,21 @@ let beepEndTimer = 0;
 let beepEnded = null;
 let beepRunId = 0;
 let activeHtmlRunId = 0;
+let lastAlarmKey = null;
 // O pequeno silêncio inicial permite autorizar o <audio> no toque em Iniciar
 // sem soltar um bipe naquele momento. No iPhone, reproduzir o elemento como
 // "muted" não garante que ele poderá tocar com som quando o tempo acabar.
-const BEEP_LEAD = 0.8;
-const BEEP_OFFSETS = [0, 0.9, 1.8, 2.7, 3.6, 4.5];
-const BEEP_STARTS = BEEP_OFFSETS.map((start) => start + BEEP_LEAD);
-const BEEP_LENGTH = 0.24;
-const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
-const BEEP_SPAN = BEEP_OFFSETS.at(-1) + BEEP_LENGTH;
-const BEEP_FREQUENCY = 900;
-const BEEP_LEVEL = 0.82;
+const ALARM_LEAD = 0.8;
+const ALARM_TONES = [
+  { offset: 0, frequency: 659, length: 0.18, level: 0.78 },
+  { offset: 0.27, frequency: 831, length: 0.2, level: 0.82 },
+  { offset: 0.58, frequency: 1047, length: 0.34, level: 0.88 },
+];
+const ALARM_SPAN = Math.max(...ALARM_TONES.map((tone) => tone.offset + tone.length));
+const ALARM_DURATION = ALARM_LEAD + ALARM_SPAN;
 function beepWav() {
-  const rate = 8000;
-  const samples = Math.round(rate * BEEP_DURATION);
+  const rate = 12000;
+  const samples = Math.round(rate * ALARM_DURATION);
   const bytes = new Uint8Array(44 + samples * 2);
   const view = new DataView(bytes.buffer);
   const text = (offset, value) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
@@ -81,9 +82,19 @@ function beepWav() {
   view.setUint32(40, samples * 2, true);
   for (let index = 0; index < samples; index += 1) {
     const time = index / rate;
-    const inTone = BEEP_STARTS.some((start) => time >= start && time < start + BEEP_LENGTH);
-    const value = inTone ? Math.sin(2 * Math.PI * BEEP_FREQUENCY * time) * BEEP_LEVEL : 0;
-    view.setInt16(44 + index * 2, Math.round(value * 32767), true);
+    let value = 0;
+    ALARM_TONES.forEach((tone) => {
+      const elapsed = time - (ALARM_LEAD + tone.offset);
+      if (elapsed < 0 || elapsed >= tone.length) return;
+      // Entrada e saída suaves evitam o estalo de um bipe quadrado. Um
+      // harmônico leve deixa o aviso mais reconhecível nos alto-falantes do celular.
+      const envelope = Math.min(1, elapsed / 0.018, (tone.length - elapsed) / 0.05);
+      const wave =
+        Math.sin(2 * Math.PI * tone.frequency * elapsed) +
+        Math.sin(2 * Math.PI * tone.frequency * 2 * elapsed) * 0.16;
+      value += wave * tone.level * envelope;
+    });
+    view.setInt16(44 + index * 2, Math.round(Math.max(-1, Math.min(1, value)) * 32767), true);
   }
   let binary = "";
   bytes.forEach((byte) => {
@@ -152,7 +163,7 @@ function playHtmlBeep(runId) {
     audio.pause();
     audio.muted = false;
     // O alarme real pula o trecho silencioso usado somente na autorização.
-    audio.currentTime = BEEP_LEAD;
+    audio.currentTime = ALARM_LEAD;
     const playing = audio.play();
     playing?.catch?.(() => {
       if (runId === beepRunId) activeHtmlRunId = 0;
@@ -189,13 +200,20 @@ function stopBeep() {
   beepEnded = null;
   ended?.();
 }
-function beep(onEnd) {
+function beep(alarmKey, onEnd) {
+  // O mesmo encerramento pode ser observado por mais de uma atualização da
+  // interface. A chave garante que ele produza somente um aviso sonoro.
+  if (alarmKey && alarmKey === lastAlarmKey) {
+    onEnd?.();
+    return;
+  }
+  lastAlarmKey = alarmKey;
   stopBeep();
   beepEnded = onEnd || null;
   const runId = beepRunId;
   playHtmlBeep(runId);
   try {
-    navigator.vibrate?.([220, 680, 220, 680, 220, 680, 220, 680, 220, 680, 220]);
+    navigator.vibrate?.([180, 120, 180, 120, 300]);
   } catch {
     /* sem vibração (o iPhone não vibra pelo navegador) */
   }
@@ -203,7 +221,7 @@ function beep(onEnd) {
     () => {
       if (runId === beepRunId) stopBeep();
     },
-    BEEP_SPAN * 1000 + 250,
+    ALARM_SPAN * 1000 + 250,
   );
 }
 
@@ -240,6 +258,7 @@ export function restTimer(exercise) {
     stopRunningTimer = stop;
     // Conta pelo relógio: continua certo mesmo se a aba ficar em segundo plano.
     const endsAt = Date.now() + total * 1000;
+    const alarmKey = {};
     button.classList.add("is-running");
     const tick = () => {
       const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -252,7 +271,7 @@ export function restTimer(exercise) {
       button.classList.add("is-done");
       ringing = true;
       label.textContent = "🔊 Próxima série! · parar som";
-      beep(() => {
+      beep(alarmKey, () => {
         ringing = false;
         if (button.classList.contains("is-done")) label.textContent = "✓ Próxima série!";
       });
@@ -283,6 +302,7 @@ const freeTimer = {
   paint: null,
   stop: null,
   interval: 0,
+  alarmKey: null,
 };
 try {
   const saved = Number(localStorage.getItem(TIMER_KEY));
@@ -297,6 +317,7 @@ const timerLeft = () =>
   freeTimer.endsAt ? Math.max(0, Math.ceil((freeTimer.endsAt - Date.now()) / 1000)) : freeTimer.left || freeTimer.total;
 function timerTick() {
   if (freeTimer.endsAt && timerLeft() === 0) {
+    const alarmKey = freeTimer.alarmKey;
     freeTimer.endsAt = 0;
     freeTimer.left = 0;
     freeTimer.done = true;
@@ -304,7 +325,7 @@ function timerTick() {
     window.clearInterval(freeTimer.interval);
     freeTimer.interval = 0;
     if (stopRunningTimer === freeTimer.stop) stopRunningTimer = null;
-    beep(() => {
+    beep(alarmKey, () => {
       freeTimer.ringing = false;
       freeTimer.paint?.();
     });
@@ -315,7 +336,7 @@ function timerTick() {
 export function freeTimerCard() {
   const card = el("article", "student-tool student-timer");
   card.append(el("h2", "", "⏱ Cronômetro"));
-  card.append(el("p", "student-timer-hint", "Escolha o tempo e toque em Iniciar. Ao terminar, tocam seis bipes de aviso."));
+  card.append(el("p", "student-timer-hint", "Escolha o tempo e toque em Iniciar. Ao terminar, toca um aviso sonoro."));
 
   const RADIUS = 88;
   const LENGTH = 2 * Math.PI * RADIUS;
@@ -374,6 +395,7 @@ export function freeTimerCard() {
     freeTimer.interval = 0;
     if (freeTimer.ringing) stopBeep();
     freeTimer.ringing = false;
+    freeTimer.alarmKey = null;
     if (stopRunningTimer === stopFreeTimer) stopRunningTimer = null;
     freeTimer.paint?.();
   };
@@ -422,6 +444,7 @@ export function freeTimerCard() {
       freeTimer.done = false;
       freeTimer.zeroed = false;
       freeTimer.endsAt = Date.now() + (freeTimer.left || freeTimer.total) * 1000;
+      freeTimer.alarmKey = {};
       freeTimer.left = 0;
       window.clearInterval(freeTimer.interval);
       freeTimer.interval = window.setInterval(timerTick, 250);
