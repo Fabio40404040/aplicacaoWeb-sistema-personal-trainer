@@ -61,6 +61,9 @@ const BEEP_STARTS = BEEP_OFFSETS.map((start) => start + BEEP_LEAD);
 const BEEP_LENGTH = 0.24;
 const BEEP_DURATION = BEEP_STARTS.at(-1) + BEEP_LENGTH;
 const BEEP_SPAN = BEEP_OFFSETS.at(-1) + BEEP_LENGTH;
+const BEEP_FREQUENCY = 900;
+const BEEP_LEVEL = 0.82;
+const WEB_BEEP_LEVEL = 0.58;
 function beepWav() {
   const rate = 8000;
   const samples = Math.round(rate * BEEP_DURATION);
@@ -82,7 +85,7 @@ function beepWav() {
   for (let index = 0; index < samples; index += 1) {
     const time = index / rate;
     const inTone = BEEP_STARTS.some((start) => time >= start && time < start + BEEP_LENGTH);
-    const value = inTone ? Math.sin(2 * Math.PI * 760 * time) * 0.42 : 0;
+    const value = inTone ? Math.sin(2 * Math.PI * BEEP_FREQUENCY * time) * BEEP_LEVEL : 0;
     view.setInt16(44 + index * 2, Math.round(value * 32767), true);
   }
   let binary = "";
@@ -156,11 +159,11 @@ function scheduleWebBeep(runId) {
       const gain = context.createGain();
       const begins = context.currentTime + 0.03 + start;
       const ends = begins + BEEP_LENGTH;
-      tone.frequency.value = 760;
+      tone.frequency.value = BEEP_FREQUENCY;
       // Entrada e saída suaves evitam estalo e deixam o aviso menos agressivo
       // quando o aluno está ouvindo música em outro aplicativo.
       gain.gain.setValueAtTime(0.0001, begins);
-      gain.gain.linearRampToValueAtTime(0.28, begins + 0.018);
+      gain.gain.linearRampToValueAtTime(WEB_BEEP_LEVEL, begins + 0.018);
       gain.gain.exponentialRampToValueAtTime(0.0001, ends);
       tone.connect(gain).connect(context.destination);
       tone.start(begins);
