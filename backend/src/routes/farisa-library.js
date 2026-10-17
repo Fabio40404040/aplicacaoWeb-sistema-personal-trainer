@@ -227,6 +227,7 @@ export async function copyFromLibrary(db, trainerId, body) {
   const missingByKey = new Map()
   const adoptions = []
   const replacements = []
+  const mediaCompletions = new Map()
   const adoptedIds = new Set()
   sources.forEach((source) => {
     const linked = bySource.get(String(source.id))
@@ -237,6 +238,10 @@ export async function copyFromLibrary(db, trainerId, body) {
     const equal = linked || byKey.get(exerciseKey(source)) || sameMedia || withoutMediaByBaseKey.get(exerciseBaseKey(source))
     if (equal) {
       copies.push({ id: equal.id, sourceId: source.id })
+      // Se a FARISA adicionou uma mídia depois da primeira cópia, completa
+      // somente o campo vazio. Uma mídia escolhida pelo personal é preservada.
+      if ((source.gif_id && !equal.gif_id) || (source.video_id && !equal.video_id))
+        mediaCompletions.set(String(equal.id), { id: equal.id, source })
       if (!linked && sameMedia === equal && equal.sourceId && !Number(equal.sourceExists) && !adoptedIds.has(String(equal.id))) {
         adoptedIds.add(String(equal.id))
         replacements.push({ id: equal.id, source })
@@ -261,6 +266,16 @@ export async function copyFromLibrary(db, trainerId, body) {
       `UPDATE exercises SET source_id=$3,name=$4,muscle_group=$5
        WHERE trainer_id=$1 AND id=$2`,
       [trainerId, replacement.id, replacement.source.id, replacement.source.name, replacement.source.muscle_group],
+    )
+  }
+
+  for (const completion of mediaCompletions.values()) {
+    await db.query(
+      `UPDATE exercises SET
+         gif_id=CASE WHEN gif_id IS NULL THEN $3 ELSE gif_id END,
+         video_id=CASE WHEN video_id IS NULL THEN $4 ELSE video_id END
+       WHERE trainer_id=$1 AND id=$2`,
+      [trainerId, completion.id, completion.source.gif_id || null, completion.source.video_id || null],
     )
   }
 
@@ -306,7 +321,7 @@ export async function copyFromLibrary(db, trainerId, body) {
   return {
     data: {
       created: created.length,
-      updated: replacements.length,
+      updated: replacements.length + mediaCompletions.size,
       existing: sources.length - created.length,
       skipped: sources.length - created.length,
       items: copies,

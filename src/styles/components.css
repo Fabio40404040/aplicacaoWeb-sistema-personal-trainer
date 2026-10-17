@@ -5546,19 +5546,18 @@ body.has-support-banner .main-content {
   text-align: left;
 }
 .farisa-video-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px 6px;
+  gap: 12px;
+  padding: 12px 8px;
   border-top: 1px solid var(--line, #e2e8f0);
 }
 .farisa-video-preview {
   display: flex;
   align-items: center;
-  min-width: min(260px, 100%);
-  flex: 1 1 280px;
+  width: 100%;
+  min-width: 0;
   gap: 10px;
   padding: 0;
   border: 0;
@@ -5582,7 +5581,7 @@ body.has-support-banner .main-content {
   color: #1d4ed8;
 }
 .farisa-video-row .farisa-row-actions {
-  flex: 0 1 auto;
+  justify-content: flex-end;
 }
 .farisa-video-unavailable {
   color: var(--ink-600, #64748b);
@@ -5601,9 +5600,15 @@ body.has-support-banner .main-content {
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
-  .farisa-video-row .farisa-row-actions,
-  .farisa-video-row .button {
+  .farisa-video-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .farisa-video-row .farisa-row-actions {
     width: 100%;
+    justify-content: stretch;
+  }
+  .farisa-video-row .button {
+    flex: 1 1 180px;
   }
 }
 .farisa-copied {
@@ -5616,15 +5621,34 @@ body.has-support-banner .main-content {
 .farisa-row.is-copied .farisa-row-info strong {
   color: var(--ink-600, #64748b);
 }
-.farisa-folder summary .farisa-folder-copy,
-.farisa-folder summary .farisa-copied {
+.farisa-folder-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-left: auto;
   margin-right: 8px;
+}
+.farisa-folder-meta .exercise-folder-count,
+.farisa-folder-meta .farisa-folder-copy,
+.farisa-folder-meta .farisa-copied {
+  margin-left: 0;
+  margin-right: 0;
 }
 .farisa-folder-copy {
   padding: 5px 10px;
   min-height: 0;
   font-size: 0.76rem;
+}
+@container (max-width: 620px) {
+  .farisa-folder > summary .farisa-folder-meta {
+    order: 5;
+    width: 100%;
+    margin: 0;
+    justify-content: space-between;
+  }
+  .farisa-folder-meta .farisa-folder-copy {
+    flex: 1 1 auto;
+  }
 }
 
 .site-reset-small {
