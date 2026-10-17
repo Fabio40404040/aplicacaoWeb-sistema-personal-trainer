@@ -248,6 +248,7 @@ function exerciseRow(exercise) {
 
 // "Copiar pasta inteira": só os que ainda não estão em Meus exercícios.
 function folderCopyButton(name, items) {
+  if (!items.length) return null
   const copied = copiedMap()
   const pending = items.filter((item) => !copied.has(String(item.id)))
   if (!pending.length) return el('span', 'farisa-copied', '✓ Pasta em Meus exercícios')
@@ -272,11 +273,46 @@ function gifCard(gif) {
   return card
 }
 
-function videoRow(video) {
-  const row = el('button', 'farisa-video-row')
-  row.type = 'button'
-  row.append(el('span', 'farisa-video-play', '▶'), el('span', '', video.name))
-  row.addEventListener('click', () => void openVideoLightbox(video.id, video.name))
+function exerciseForVideo(video, exercises) {
+  return exercises.find((exercise) => String(exercise.videoId || '') === String(video.id)) || null
+}
+
+function exercisesForVideos(videos, exercises) {
+  const seen = new Set()
+  return videos
+    .map((video) => exerciseForVideo(video, exercises))
+    .filter((exercise) => exercise && !seen.has(String(exercise.id)) && seen.add(String(exercise.id)))
+}
+
+function videoRow(video, exercises) {
+  const row = el('article', 'farisa-video-row')
+  const preview = el('button', 'farisa-video-preview')
+  preview.type = 'button'
+  preview.title = `Assistir ${video.name}`
+  preview.append(el('span', 'farisa-video-play', '▶'), el('span', '', video.name))
+  preview.addEventListener('click', () => void openVideoLightbox(video.id, video.name))
+  const actions = el('div', 'farisa-row-actions')
+  const exercise = exerciseForVideo(video, exercises)
+  if (exercise) {
+    const mine = copiedMap().get(String(exercise.id))
+    if (mine) {
+      actions.append(el('span', 'farisa-copied', '✓ Em Meus exercícios'))
+      const edit = el('button', 'button button--secondary', 'Editar minha cópia')
+      edit.type = 'button'
+      edit.addEventListener('click', () => window.dispatchEvent(new CustomEvent('farisa:edit-exercise', { detail: mine })))
+      actions.append(edit)
+    } else {
+      const label = 'Copiar vídeo e exercício'
+      const copy = el('button', 'button button--secondary', label)
+      copy.type = 'button'
+      copy.title = 'Copia o exercício com este vídeo para Meus exercícios, sem duplicar o arquivo'
+      copy.addEventListener('click', () => void copyExercises([exercise], copy, label))
+      actions.append(copy)
+    }
+  } else {
+    actions.append(el('small', 'farisa-video-unavailable', 'Aguardando vínculo com o exercício'))
+  }
+  row.append(preview, actions)
   return row
 }
 
@@ -359,7 +395,7 @@ export function renderFarisaLibrary() {
       unit = ['GIF', 'GIFs']
     } else if (view === 'videos') {
       folders = groupBy(lib.videos.filter((video) => match(video.name)), (video) => [video.group])
-      renderBody = videoRow
+      renderBody = (video) => videoRow(video, lib.exercises)
       unit = ['vídeo', 'vídeos']
     } else {
       folders = groupBy(lib.exercises.filter((item) => match(item.name)), (item) => exerciseGroups(item))
@@ -380,7 +416,11 @@ export function renderFarisaLibrary() {
           sorted,
           renderBody,
           `${items.length} ${items.length === 1 ? unit[0] : unit[1]}`,
-          view === 'exercicios' ? folderCopyButton(name, sorted) : null,
+          view === 'exercicios'
+            ? folderCopyButton(name, sorted)
+            : view === 'videos'
+              ? folderCopyButton(name, exercisesForVideos(sorted, lib.exercises))
+              : null,
         )
         // GIFs em grade, como na aba GIFs.
         if (view === 'gifs') details.querySelector('.farisa-folder-body').classList.add('gif-grid', 'gif-grid--library')

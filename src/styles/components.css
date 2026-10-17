@@ -5548,14 +5548,29 @@ body.has-support-banner .main-content {
 .farisa-video-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 10px 6px;
-  border: 0;
   border-top: 1px solid var(--line, #e2e8f0);
+}
+.farisa-video-preview {
+  display: flex;
+  align-items: center;
+  min-width: min(260px, 100%);
+  flex: 1 1 280px;
+  gap: 10px;
+  padding: 0;
+  border: 0;
   background: none;
   text-align: left;
   font: inherit;
   cursor: pointer;
+}
+.farisa-video-preview > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
 }
 .farisa-video-play {
   display: grid;
@@ -5565,6 +5580,12 @@ body.has-support-banner .main-content {
   border-radius: 50%;
   background: #dbeafe;
   color: #1d4ed8;
+}
+.farisa-video-row .farisa-row-actions {
+  flex: 0 1 auto;
+}
+.farisa-video-unavailable {
+  color: var(--ink-600, #64748b);
 }
 .farisa-empty {
   color: var(--ink-600, #64748b);
@@ -5579,6 +5600,10 @@ body.has-support-banner .main-content {
   .farisa-row-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
+  }
+  .farisa-video-row .farisa-row-actions,
+  .farisa-video-row .button {
+    width: 100%;
   }
 }
 .farisa-copied {
