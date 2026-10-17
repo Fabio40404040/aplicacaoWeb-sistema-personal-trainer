@@ -14,8 +14,6 @@ import {
   loadTrend,
   progressCard,
   referralsCard,
-  restTimer,
-  freeTimerCard,
   trainingCalendarCard,
   waterCard,
 } from "./student-tools.js";
@@ -651,8 +649,6 @@ function exerciseCard(exercise, uploadedVideos) {
   if (exercise.repetitions) chip(`${exercise.repetitions} reps`);
   if (Number(exercise.restSeconds)) chip(`descanso ${exercise.restSeconds}s`);
   body.append(chips);
-  const timer = restTimer(exercise);
-  if (timer) body.append(timer);
   let trend = null;
   if (exercise.loadEditable && exercise.workoutId) {
     trend = loadTrend(exercise, studentTools, studentRequest);
@@ -946,9 +942,8 @@ function renderPortal(container, data) {
     pending.append(pay, quit);
     plan.append(pending);
   }
-  // Ordem da área: plano → treinos (prontos e ficha) → cronômetro ao lado
-  // de "Meus treinos" → água e agenda → avaliação e progresso → nutrição e
-  // check-in → recursos de outros planos.
+  // Ordem da área: plano → treinos (prontos e ficha) → calendário, água e
+  // agenda → avaliação e progresso → nutrição e check-in → outros recursos.
   container.replaceChildren(plan);
   renderReadyWorkoutLibrary(container, data);
   if (data.access.planCode !== "ready") {
@@ -996,8 +991,6 @@ function renderPortal(container, data) {
     });
     container.append(workouts);
   }
-  // Cronômetro livre, fora das pastas de treino: o aluno escolhe o tempo.
-  container.append(freeTimerCard());
   if (studentTools) container.append(trainingCalendarCard(studentTools, studentRequest));
   if (studentTools) container.append(waterCard(studentTools, studentRequest));
   const referrals = referralsCard(data.referrals, data.name);
@@ -1193,8 +1186,6 @@ export function initStudentAccess() {
       ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)
     )
       return true;
-    // Cronômetro de descanso contando: não redesenha por cima dele.
-    if (container.querySelector(".student-rest.is-running, .student-timer.is-running")) return true;
     return [...container.querySelectorAll("form")].some((form) =>
       [...form.elements].some(
         (field) =>
