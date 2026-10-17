@@ -9,6 +9,7 @@ import { hideStudentExtras, renderStudentExtras } from "./student-extras.js";
 import { renderStudentAgenda } from "./student-agenda.js";
 import { cancelPlanChange, openPlanChange } from "./student-plan.js";
 import { createStudentWhatsappUrl } from "./whatsapp.js";
+import { askConfirm } from "./utils.js";
 import {
   assessmentCard,
   loadTrend,
@@ -608,6 +609,101 @@ function loadEditor(exercise, onSaved) {
   box.append(label, save, note);
   return box;
 }
+
+const studentLocalDay = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+// Contador diário de séries: independente da carga e salvo no servidor para
+// continuar correto depois de atualizar a página ou trocar de aparelho.
+function seriesCounter(exercise) {
+  const total = Math.max(1, Math.min(20, Number(exercise.sets) || 1));
+  const day = studentLocalDay();
+  const key = `${exercise.workoutId}:${exercise.id}:${day}`;
+  let completed = Math.max(0, Math.min(total, Number(studentTools?.setProgress?.[key]) || 0));
+  let saving = false;
+  const box = element("section", "student-set-counter");
+  const head = element("div", "student-set-counter-head");
+  const title = element("strong", "", "Séries concluídas hoje");
+  const count = element("span", "student-set-count");
+  head.append(title, count);
+  const dots = element("div", "student-set-dots");
+  const main = element("button", "student-set-complete");
+  main.type = "button";
+  const actions = element("div", "student-set-actions");
+  const undo = element("button", "", "− Desfazer última");
+  const reset = element("button", "", "Zerar");
+  undo.type = reset.type = "button";
+  const status = element("small", "student-set-status");
+  status.setAttribute("role", "status");
+  actions.append(undo, reset);
+  box.append(head, dots, main, actions, status);
+
+  const paint = () => {
+    const done = completed >= total;
+    box.classList.toggle("is-complete", done);
+    box.classList.toggle("is-saving", saving);
+    count.textContent = `${completed} de ${total}`;
+    dots.replaceChildren(
+      ...Array.from({ length: total }, (_, index) => {
+        const dot = element("span", index < completed ? "is-done" : "");
+        dot.setAttribute("aria-hidden", "true");
+        return dot;
+      }),
+    );
+    main.textContent = done ? "✓ Todas as séries concluídas" : `+ Concluir série ${completed + 1}`;
+    main.disabled = saving || done;
+    undo.disabled = saving || completed === 0;
+    reset.hidden = completed === 0;
+    reset.disabled = saving;
+    box.setAttribute("aria-label", `${completed} de ${total} séries concluídas em ${exercise.name}`);
+  };
+
+  const save = async (next) => {
+    if (saving || next === completed) return;
+    const previous = completed;
+    completed = Math.max(0, Math.min(total, next));
+    saving = true;
+    status.textContent = "Salvando…";
+    paint();
+    try {
+      const result = await studentRequest(`workouts/${exercise.workoutId}/sets`, {
+        exerciseId: exercise.id,
+        day,
+        completedSets: completed,
+      });
+      completed = Number(result.completedSets) || 0;
+      if (studentTools?.setProgress) {
+        if (completed) studentTools.setProgress[key] = completed;
+        else delete studentTools.setProgress[key];
+      }
+      status.textContent = completed === total ? "Exercício concluído." : completed ? "Série marcada." : "Contagem zerada.";
+    } catch (error) {
+      completed = previous;
+      status.textContent = error.message;
+    } finally {
+      saving = false;
+      paint();
+    }
+  };
+
+  main.addEventListener("click", () => void save(completed + 1));
+  undo.addEventListener("click", () => void save(completed - 1));
+  reset.addEventListener("click", async () => {
+    const confirmed = await askConfirm({
+      eyebrow: "Execução das séries",
+      title: `Zerar as séries de ${exercise.name}?`,
+      message: `A marcação de hoje voltará de ${completed} para 0.`,
+      note: "A carga e a ficha do exercício não serão alteradas.",
+      confirmLabel: "Zerar séries",
+    });
+    if (confirmed) void save(0);
+  });
+  paint();
+  return box;
+}
+
 function exerciseCard(exercise, uploadedVideos) {
   const card = element("li", "student-exercise-card");
   const video = matchingUploadedVideo(exercise, uploadedVideos);
@@ -691,6 +787,8 @@ function exerciseCard(exercise, uploadedVideos) {
   }
   if (links.childElementCount) body.append(links);
   card.append(thumb, body);
+  if (exercise.workoutId && studentTools?.setProgressReady !== false)
+    card.append(seriesCounter(exercise));
   if (trend) card.append(trend.node);
   if (details) card.append(details);
   return card;
@@ -1186,6 +1284,7 @@ export function initStudentAccess() {
       ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)
     )
       return true;
+    if (container.querySelector(".student-set-counter.is-saving")) return true;
     return [...container.querySelectorAll("form")].some((form) =>
       [...form.elements].some(
         (field) =>

@@ -970,6 +970,105 @@
   margin-top: 0;
 }
 
+/* Contador diário de execução das séries. */
+.student-set-counter {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #40546e;
+  border-radius: 12px;
+  background: #172233;
+}
+.student-set-counter-head,
+.student-set-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.student-set-counter-head strong {
+  color: #e6edf6;
+  font-size: 0.86rem;
+}
+.student-set-count {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #2a3a50;
+  color: #dce9f8;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.student-set-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.student-set-dots span {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #60738e;
+  border-radius: 50%;
+  background: transparent;
+}
+.student-set-dots span.is-done {
+  border-color: #60a5fa;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.student-set-complete {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid #3d8bfd;
+  border-radius: 11px;
+  background: #1557f0;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.student-set-complete:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+.student-set-actions button {
+  min-height: 36px;
+  padding: 5px 2px;
+  border: 0;
+  background: transparent;
+  color: #9cc3ff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.student-set-actions button:disabled {
+  color: #64748b;
+  cursor: default;
+}
+.student-set-actions button:last-child {
+  color: #fca5a5;
+}
+.student-set-status {
+  min-height: 1.2em;
+  color: #9fb3cc;
+  font-size: 0.75rem;
+}
+.student-set-counter.is-complete {
+  border-color: #2f8f68;
+  background: #153429;
+}
+.student-set-counter.is-complete .student-set-count {
+  background: #1d5b43;
+  color: #d1fae5;
+}
+.student-set-counter.is-complete .student-set-complete {
+  border-color: #2f8f68;
+  background: #1d5b43;
+}
+
 /* ---------- Minha agenda (área do aluno) ---------- */
 .student-agenda-head {
   display: flex;

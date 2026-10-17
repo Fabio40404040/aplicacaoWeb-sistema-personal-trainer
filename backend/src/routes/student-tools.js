@@ -132,6 +132,22 @@ export async function studentTools(db, studentId, workoutIds = [], latestWeightK
         (loadHistory[`${workoutId}:${row.exerciseId}`] ||= []).push({ load: row.load, by: row.by, at: row.at });
       });
     }
+    let setProgressReady = true;
+    const setProgress = {};
+    try {
+      (
+        await db.query(
+          `SELECT workout_id AS "workoutId", exercise_id AS "exerciseId", day,
+             completed_sets AS "completedSets"
+           FROM exercise_set_progress WHERE student_id=$1 AND day >= $2`,
+          [studentId, dayOffset(-1)],
+        )
+      ).rows.forEach((row) => {
+        setProgress[`${row.workoutId}:${row.exerciseId}:${row.day}`] = Number(row.completedSets) || 0;
+      });
+    } catch {
+      setProgressReady = false;
+    }
     return {
       ready: true,
       days,
@@ -144,10 +160,58 @@ export async function studentTools(db, studentId, workoutIds = [], latestWeightK
         days: Object.fromEntries(water.map((row) => [row.day, Number(row.ml) || 0])),
       },
       loadHistory,
+      setProgressReady,
+      setProgress,
     };
   } catch {
     return { ready: false };
   }
+}
+
+// Marca quantas séries o aluno concluiu hoje em um exercício da ficha dele.
+export async function setExerciseProgress(db, accountId, workoutId, body) {
+  const student = await studentOf(db, accountId);
+  if (!student || student.accessStatus !== "active")
+    return { error: "Conta sem acesso ativo.", status: 403 };
+  const exerciseId = String(body?.exerciseId || "");
+  const day = String(body?.day || "");
+  const completedSets = Math.round(Number(body?.completedSets));
+  if (!exerciseId || !validDay(day, 1)) return { error: "Exercício ou data inválida.", status: 400 };
+  if (!(completedSets >= 0 && completedSets <= 20))
+    return { error: "A quantidade de séries deve ficar entre 0 e 20.", status: 400 };
+  const exercise = (
+    await db.query(
+      `SELECT we.sets FROM workout_exercises we
+       JOIN workouts w ON w.id=we.workout_id
+       WHERE we.workout_id=$1 AND we.exercise_id=$2 AND w.student_id=$3
+         AND w.published_at IS NOT NULL LIMIT 1`,
+      [workoutId, exerciseId, student.id],
+    )
+  ).rows[0];
+  if (!exercise) return { error: "Exercício não encontrado na sua ficha.", status: 404 };
+  const prescribed = Math.max(1, Math.min(20, Number(exercise.sets) || 1));
+  if (completedSets > prescribed)
+    return { error: `Este exercício tem ${prescribed} série(s).`, status: 400 };
+  try {
+    if (completedSets === 0)
+      await db.query(
+        `DELETE FROM exercise_set_progress
+         WHERE student_id=$1 AND workout_id=$2 AND exercise_id=$3 AND day=$4`,
+        [student.id, workoutId, exerciseId, day],
+      );
+    else
+      await db.query(
+        `INSERT INTO exercise_set_progress
+           (student_id,trainer_id,workout_id,exercise_id,day,completed_sets,updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP)
+         ON CONFLICT(student_id,workout_id,exercise_id,day)
+         DO UPDATE SET completed_sets=excluded.completed_sets, updated_at=CURRENT_TIMESTAMP`,
+        [student.id, student.trainerId, workoutId, exerciseId, day, completedSets],
+      );
+  } catch {
+    return { error: "O contador de séries ainda não está disponível. Atualize o banco de dados.", status: 503 };
+  }
+  return { data: { exerciseId, day, completedSets, prescribedSets: prescribed } };
 }
 
 // Marca ou desmarca um dia de treino. O recado (opcional) vai para o personal.

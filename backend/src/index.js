@@ -83,7 +83,7 @@ import {
   submitCheckin,
   studentSetLoad,
 } from "./routes/student-portal.js";
-import { clearLoadHistory, setTrainingDay, setWater } from "./routes/student-tools.js";
+import { clearLoadHistory, setExerciseProgress, setTrainingDay, setWater } from "./routes/student-tools.js";
 import { deletePhoto, photoPoses, savePhoto, savePhotoPoses, studentPhoto, trainerPhoto } from "./routes/assessment-photos.js";
 import { deleteSelfPhoto, publishAssessment, saveSelfAssessment, saveSelfPhoto } from "./routes/self-assessment.js";
 import { lockedForAccount, lockedMessage, STUDENT_LOCKED, trainerLocked } from "./routes/plan-access.js";
@@ -599,6 +599,8 @@ async function handleRoutes(request, env) {
         return studentSetLoad(db, session.sub, segments[2], await readJson(request));
       if (request.method === "DELETE" && segments[1] === "workouts" && segments[2] && segments[3] === "load-history")
         return clearLoadHistory(db, session.sub, segments[2], await readJson(request));
+      if (request.method === "POST" && segments[1] === "workouts" && segments[2] && segments[3] === "sets")
+        return setExerciseProgress(db, session.sub, segments[2], await readJson(request));
       if (request.method === "GET" && segments[1] === "assessment-photos" && segments[2] && segments[3])
         return studentPhoto(db, session.sub, segments[2], segments[3]);
       // Autoavaliação: medidas e fotos enviadas pelo aluno (consultoria à distância).
