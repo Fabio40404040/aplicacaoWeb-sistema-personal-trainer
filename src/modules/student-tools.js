@@ -50,8 +50,6 @@ let beepEndTimer = 0;
 let beepEnded = null;
 let beepRunId = 0;
 let activeHtmlRunId = 0;
-let activeSpeechRunId = 0;
-const IS_IOS = /iP(?:hone|ad|od)/u.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 // O pequeno silêncio inicial permite autorizar o <audio> no toque em Iniciar
 // sem soltar um bipe naquele momento. No iPhone, reproduzir o elemento como
 // "muted" não garante que ele poderá tocar com som quando o tempo acabar.
@@ -124,12 +122,6 @@ function ensureBeepAudio() {
 }
 export function unlockSound() {
   requestPlaybackSession();
-  if (IS_IOS && "speechSynthesis" in window) {
-    // Carrega as vozes enquanto o toque em Iniciar ainda está ativo. O aviso
-    // será falado pelo serviço de voz do próprio iOS quando o tempo terminar.
-    window.speechSynthesis.getVoices();
-    return;
-  }
   try {
     const audio = ensureBeepAudio();
     const unlockId = beepRunId;
@@ -149,35 +141,6 @@ export function unlockSound() {
     window.setTimeout(release, 180);
   } catch {
     /* o aviso visual continua disponível */
-  }
-}
-function playSpeechAlarm(runId) {
-  if (!IS_IOS || !("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return false;
-  try {
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const utterance = new SpeechSynthesisUtterance("Tempo encerrado. Próxima série.");
-    const voice = synth.getVoices().find((item) => /^pt(?:-|_)?BR$/iu.test(item.lang));
-    if (voice) utterance.voice = voice;
-    utterance.lang = "pt-BR";
-    utterance.volume = 1;
-    utterance.rate = 0.88;
-    utterance.pitch = 1.05;
-    activeSpeechRunId = runId;
-    utterance.addEventListener("start", () => {
-      if (runId !== beepRunId || activeSpeechRunId !== runId) synth.cancel();
-    });
-    utterance.addEventListener("end", () => {
-      if (runId === beepRunId && activeSpeechRunId === runId) stopBeep();
-    });
-    utterance.addEventListener("error", () => {
-      if (runId === beepRunId && activeSpeechRunId === runId) activeSpeechRunId = 0;
-    });
-    synth.speak(utterance);
-    return true;
-  } catch {
-    activeSpeechRunId = 0;
-    return false;
   }
 }
 function playHtmlBeep(runId) {
@@ -209,7 +172,6 @@ function playHtmlBeep(runId) {
 function stopBeep() {
   beepRunId += 1;
   activeHtmlRunId = 0;
-  activeSpeechRunId = 0;
   window.clearTimeout(beepEndTimer);
   beepEndTimer = 0;
   try {
@@ -217,11 +179,6 @@ function stopBeep() {
     if (beepAudio) beepAudio.currentTime = 0;
   } catch {
     /* o áudio já terminou */
-  }
-  try {
-    window.speechSynthesis?.cancel();
-  } catch {
-    /* navegador sem síntese de voz */
   }
   try {
     navigator.vibrate?.(0);
@@ -236,7 +193,7 @@ function beep(onEnd) {
   stopBeep();
   beepEnded = onEnd || null;
   const runId = beepRunId;
-  if (!playSpeechAlarm(runId)) playHtmlBeep(runId);
+  playHtmlBeep(runId);
   try {
     navigator.vibrate?.([220, 680, 220, 680, 220, 680, 220, 680, 220, 680, 220]);
   } catch {
